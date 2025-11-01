@@ -1,0 +1,6 @@
+IF DB_ID('PlannerDb') IS NULL CREATE DATABASE [PlannerDb];
+GO
+USE [PlannerDb];
+GO
+IF SCHEMA_ID('dbo') IS NULL EXEC('CREATE SCHEMA dbo');
+GO

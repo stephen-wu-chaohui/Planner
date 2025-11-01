@@ -1,0 +1,27 @@
+jobs:
+- deployment: DeployAPI
+  displayName: 'Deploy Planner API'
+  environment: 'production'
+  pool:
+    vmImage: 'windows-latest'
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - task: DownloadBuildArtifacts@1
+          inputs:
+            artifactName: 'drop'
+            downloadPath: '$(System.ArtifactsDirectory)'
+
+        - task: AzureWebApp@1
+          displayName: 'Deploy API to Azure Web App'
+          inputs:
+            azureSubscription: '$(azureSubscription)'
+            appType: 'webApp'
+            appName: '$(webAppNameApi)'
+            package: '$(System.ArtifactsDirectory)/drop/api'
+
+        - script: >
+            dotnet ef database update --project src/Planner.Infrastructure/Planner.Infrastructure.csproj
+            --connection "$(connectionString)"
+          displayName: 'Run EF Core migrations'

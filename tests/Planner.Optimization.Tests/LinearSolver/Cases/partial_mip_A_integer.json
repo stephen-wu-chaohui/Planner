@@ -1,0 +1,78 @@
+{
+	"Description": "Partial MIP: A integer, B continuous",
+	"Request": {
+		"Algorithm": "CBC_MIXED_INTEGER_PROGRAMMING",
+		"Variables": [
+			{
+				"Name": "A",
+				"LowerBound": 0,
+				"UpperBound": 10,
+				"IsInteger": true
+			},
+			{
+				"Name": "B",
+				"LowerBound": 0,
+				"UpperBound": 10,
+				"IsInteger": false
+			}
+		],
+		"Objectives": [
+			{
+				"Name": "Profit",
+				"Coefficients": [ 3.0, 4.0 ],
+				"Direction": "Maximize",
+				"Weight": 1.0
+			}
+		],
+		"Constraints": [
+			{
+				"Name": "Material",
+				"Coefficients": [ 1.0, 2.0 ],
+				"UpperBound": 8.0,
+				"Tag": "Capacity"
+			},
+			{
+				"Name": "Time",
+				"Coefficients": [ 3.0, 1.0 ],
+				"UpperBound": 6.0,
+				"Tag": "Scheduling"
+			}
+		],
+		"Parameters": {
+			"EnableOutput": false,
+			"TimeLimitMs": 2000
+		}
+	},
+	"ExpectedResults": {
+		"Status": "OPTIMAL",
+		"ObjectiveValue": 16,
+		"Variables": [
+			{
+				"Name": "A",
+				"Value": 0.0,
+				"ReducedCost": 0.0
+			},
+			{
+				"Name": "B",
+				"Value": 4,
+				"ReducedCost": 0.0
+			}
+		],
+		"Constraints": [
+			{
+				"Name": "Material",
+				"Tag": "Capacity",
+				"LhsValue": 6.67,
+				"Slack": 1.33,
+				"DualValue": 0.0
+			},
+			{
+				"Name": "Time",
+				"Tag": "Scheduling",
+				"LhsValue": 3.33,
+				"Slack": 2.67,
+				"DualValue": 0.0
+			}
+		]
+	}
+}

@@ -1,0 +1,69 @@
+{
+	"Description": "LP continuous (GLOP)",
+	"Request": {
+		"Algorithm": "GLOP_LINEAR_PROGRAMMING",
+		"Variables": [
+			{
+				"Name": "A",
+				"LowerBound": 0,
+				"UpperBound": 10
+			},
+			{
+				"Name": "B",
+				"LowerBound": 0,
+				"UpperBound": 10
+			}
+		],
+		"Objectives": [
+			{
+				"Name": "Profit",
+				"Coefficients": [ 3.0, 4.0 ],
+				"Direction": "Maximize"
+			}
+		],
+		"Constraints": [
+			{
+				"Name": "Material",
+				"Coefficients": [ 1.0, 2.0 ],
+				"UpperBound": 8.0
+			},
+			{
+				"Name": "Time",
+				"Coefficients": [ 3.0, 1.0 ],
+				"UpperBound": 6.0
+			}
+		]
+	},
+	"ExpectedResults": {
+		"Status": "OPTIMAL",
+		"ObjectiveValue": 11.0,
+		"Variables": [
+			{
+				"Name": "A",
+				"Value": 1.0,
+				"ReducedCost": 0.0
+			},
+			{
+				"Name": "B",
+				"Value": 2.0,
+				"ReducedCost": 0.0
+			}
+		],
+		"Constraints": [
+			{
+				"Name": "Material",
+				"Tag": "Capacity",
+				"LhsValue": 8.0,
+				"Slack": 0.0,
+				"DualValue": 1.0
+			},
+			{
+				"Name": "Time",
+				"Tag": "Scheduling",
+				"LhsValue": 6.0,
+				"Slack": 0.0,
+				"DualValue": 0.5
+			}
+		]
+	}
+}

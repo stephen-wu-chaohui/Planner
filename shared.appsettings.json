@@ -1,0 +1,11 @@
+{
+	"RabbitMq": {
+		"Host": "localhost",
+		"Username": "guest",
+		"Password": "guest"
+	},
+	"MessageContracts": {
+		"LinearSolverRequestQueue": "planner.linear.request",
+		"LinearSolverResultQueue": "planner.linear.result"
+	}
+}

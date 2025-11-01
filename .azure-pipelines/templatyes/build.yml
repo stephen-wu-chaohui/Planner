@@ -1,0 +1,31 @@
+jobs:
+- job: Build
+  displayName: 'Build Planner Solution'
+  pool:
+    vmImage: 'windows-latest'
+
+  steps:
+  - task: UseDotNet@2
+    inputs:
+      packageType: 'sdk'
+      version: '$(dotnetVersion)'
+
+  - script: dotnet restore Planner.sln
+    displayName: 'Restore NuGet packages'
+
+  - script: dotnet build Planner.sln --configuration $(buildConfiguration) --no-restore
+    displayName: 'Build solution'
+
+  - script: dotnet test Planner.sln --configuration $(buildConfiguration) --no-build --verbosity normal
+    displayName: 'Run unit tests'
+
+  - script: dotnet publish src/Planner.API/Planner.API.csproj -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/api
+    displayName: 'Publish API'
+
+  - script: dotnet publish src/Planner.BlazorApp/Planner.BlazorApp.csproj -c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory)/blazor
+    displayName: 'Publish Blazor WASM'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'

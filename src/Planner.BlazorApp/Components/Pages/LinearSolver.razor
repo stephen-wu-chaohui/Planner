@@ -1,0 +1,33 @@
+﻿@page "/linear-solver"
+@rendermode InteractiveServer
+
+@using Planner.Application.Messaging
+@using Planner.Contracts.Messages
+@using Planner.Contracts.Messages.LinearSolver
+
+@inject IMessageHubClient hub
+
+<h3>Solver Results</h3>
+@foreach (var r in results)
+{
+    <div class="card m-2 p-2">
+        <strong>@r.RequestId</strong>
+        <p>Objective: @r.Response.ObjectiveValue</p>
+    </div>
+}
+
+@code {
+    private readonly List<LinearSolverResultMessage> results = new();
+
+    protected override Task OnInitializedAsync()
+    {
+        hub.SubscribeAsync<LinearSolverResultMessage>(MessageRoutes.OptimizationResult,
+            r => InvokeAsync(() => {
+                Console.WriteLine($"MessageHub received data {MessageRoutes.OptimizationResult}.");
+                results.Add(r);
+                StateHasChanged();
+            })
+        );
+        return Task.CompletedTask;
+    }
+}

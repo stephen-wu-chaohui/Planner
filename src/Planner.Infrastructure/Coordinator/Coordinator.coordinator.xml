@@ -1,0 +1,17 @@
+<Coordinator>
+  <TaskGroups>
+    <TaskGroup>
+      <Name>Maintenance</Name>
+      <Tasks>
+        <Task>
+          <ProcedureName>sp_RotateSystemEvents</ProcedureName>
+          <RunTime>02:00:00</RunTime>
+        </Task>
+        <Task>
+          <ProcedureName>sp_UpdateStatistics</ProcedureName>
+          <IntervalMinutes>240</IntervalMinutes>
+        </Task>
+      </Tasks>
+    </TaskGroup>
+  </TaskGroups>
+</Coordinator>
