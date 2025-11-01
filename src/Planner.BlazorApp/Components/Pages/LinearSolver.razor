@@ -2,29 +2,51 @@
 @rendermode InteractiveServer
 
 @using Planner.Application.Messaging
+@using Planner.BlazorApp.DataRepresentation
 @using Planner.Contracts.Messages
 @using Planner.Contracts.Messages.LinearSolver
 
 @inject IMessageHubClient hub
 
-<h3>Solver Results</h3>
-@foreach (var r in results)
+<h3>Linear Solver Results</h3>
+
+@if (results.Count == 0)
 {
-    <div class="card m-2 p-2">
-        <strong>@r.RequestId</strong>
-        <p>Objective: @r.Response.ObjectiveValue</p>
-    </div>
+    <p><em>No results received yet...</em></p>
+} else
+{
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Request ID</th>
+                <th>Status</th>
+                <th>Objective Value</th>
+                <th>Completed At</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in results)
+            {
+                <tr>
+                    <td>@r.RequestId</td>
+                    <td>@r.Status</td>
+                    <td>@r.ObjectiveValue</td>
+                    <td>@r.CompletedAt.ToLocalTime()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 @code {
-    private readonly List<LinearSolverResultMessage> results = new();
+    private readonly List<LinearSolverResultRow> results = new();
 
     protected override Task OnInitializedAsync()
     {
         hub.SubscribeAsync<LinearSolverResultMessage>(MessageRoutes.OptimizationResult,
             r => InvokeAsync(() => {
                 Console.WriteLine($"MessageHub received data {MessageRoutes.OptimizationResult}.");
-                results.Add(r);
+                results.Add(new LinearSolverResultRow(r));
                 StateHasChanged();
             })
         );

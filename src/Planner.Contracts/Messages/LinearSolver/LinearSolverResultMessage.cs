@@ -6,5 +6,6 @@
 public record LinearSolverResultMessage
 {
     public required string RequestId { get; init; }
+    public required DateTime CompletedAt { get; init; }
     public required LinearSolverResponse Response { get; init; }
 }

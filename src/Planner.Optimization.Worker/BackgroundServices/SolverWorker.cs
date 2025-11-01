@@ -16,6 +16,7 @@ public class SolverWorker(IMessageBus bus) : BackgroundService
             await bus.PublishAsync(MessageRoutes.OptimizationResult,
                 new LinearSolverResultMessage {
                     RequestId = message.RequestId,
+                    CompletedAt = DateTime.UtcNow,
                     Response = response
                 }
             );
