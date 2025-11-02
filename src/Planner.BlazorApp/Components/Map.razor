@@ -13,38 +13,9 @@
                Routes="@routes"
                Height="100%" />
 
-
-<style>
-    .map-container {
-        flex: 1; /* fills the available flex space */
-        width: 100%; /* full horizontal stretch */
-        height: 100%; /* safe fallback if parent isn’t flex */
-        background-color: #dfefff;
-        position: relative; /* helpful if you’ll absolutely position map layers */
-    }
-</style>
-
 @code {
-    private List<GoogleMap.RouteDto> routes = new()
-    {
-        new() {
-            VehicleId = "Truck-1",
-            Points = new() {
-                new() { Lat = -31.9505, Lon = 115.8605 },
-                new() { Lat = -31.9783, Lon = 115.8180 },
-                new() { Lat = -32.0671, Lon = 115.8957 },
-                new() { Lat = -31.9505, Lon = 115.8605 }
-            }
-        },
-        new() {
-            VehicleId = "Truck-2",
-            Points = new() {
-                new() { Lat = -31.9505, Lon = 115.8605 },
-                new() { Lat = -32.0569, Lon = 115.7439 },
-                new() { Lat = -31.9505, Lon = 115.8605 }
-            }
-        }
-    };
+    private List<GoogleMap.RouteDto> routes = new();
+
 
     protected override async Task OnInitializedAsync()
     {

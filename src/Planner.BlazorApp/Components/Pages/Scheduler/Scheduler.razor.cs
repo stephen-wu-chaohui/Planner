@@ -34,7 +34,8 @@ public partial class Scheduler
                     new() { Id = "J1", Latitude = -31.9783, Longitude = 115.8180 },
                     new() { Id = "J2", Latitude = -32.0671, Longitude = 115.8957 },
                     new() { Id = "J3", Latitude = -31.9766, Longitude = 115.9213 }
-                ]
+                ],
+                DistanceMatrix = [[0, 3, 5, 7, 9],[3, 0, 2, 6, 8],[5, 2, 0, 4, 7],[7, 6, 4, 0, 5],[9, 8, 7, 5, 0]]
             }
         };
 
@@ -42,11 +43,7 @@ public partial class Scheduler
         var response = await client.PostAsJsonAsync("api/vrp/solve", request);
         if (response.IsSuccessStatusCode)
         {
-            var routes = await response.Content.ReadFromJsonAsync<VrpResultMessage>();
-            if (routes != null)
-            {
-                Console.WriteLine("Received VRP solution from API.");
-            }
+            Console.WriteLine("Received VRP solution from API.");
         }
     }
 }
