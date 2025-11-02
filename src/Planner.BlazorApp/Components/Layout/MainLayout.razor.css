@@ -2,14 +2,20 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 main {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
 }
 
 .sidebar {
     background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    width: 250px;
+    flex-shrink: 0;
 }
 
 .top-row {
@@ -20,6 +26,16 @@ main {
     display: flex;
     align-items: center;
 }
+
+/* Article (main content region) */
+article.content {
+    flex: 1; /* take up all remaining space */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* prevent unwanted scrolls */
+    padding: 0; /* optional: remove inner padding */
+}
+
 
     .top-row ::deep a, .top-row ::deep .btn-link {
         white-space: nowrap;
@@ -71,8 +87,8 @@ main {
     }
 
     .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
+        padding-left: 1px;
+        padding-right: 1px;
     }
 }
 

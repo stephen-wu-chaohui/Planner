@@ -1,0 +1,53 @@
+﻿
+
+.scheduler-layout {
+	display: flex;
+	flex: 1;
+	height: 100%;
+}
+
+.gutter {
+	background-color: #ddd;
+	cursor: col-resize;
+	height: 100%;
+	width: 12px !important; /* ⬅️ match gutterSize above */
+	transition: background-color 0.2s;
+}
+
+.gutter:hover {
+	background-color: #bbb;
+}
+
+.status-bar {
+	height: 30px;
+	background-color: #e0e0e0;
+	border-top: 1px solid #ccc;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 1rem;
+}
+
+
+.scheduler-container {
+	display: flex;
+	height: 100vh; /* Full viewport height */
+	width: 100%;
+	overflow: hidden;
+	flex-direction: column;
+}
+
+.left-pane {
+	flex: 3; /* Takes up 75% of the width */
+	border-right: 2px solid #ccc;
+	padding: 10px;
+	box-sizing: border-box;
+	overflow: auto;
+}
+
+.right-pane {
+	flex: 1; /* Takes up 25% of the width */
+	padding: 10px;
+	box-sizing: border-box;
+	overflow: auto;
+}

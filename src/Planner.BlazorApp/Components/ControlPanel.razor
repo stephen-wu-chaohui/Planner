@@ -1,0 +1,44 @@
+﻿@using System.Net.Http.Json
+
+<div class="control-panel">
+    <h3>Vehicle List</h3>
+
+    <div class="vehicle-list">
+        @foreach (var v in Vehicles)
+        {
+            <div class="vehicle-item">
+                <input @bind="v.Id" placeholder="Vehicle ID" />
+                <button @onclick="() => RemoveVehicle(v)">X</button>
+            </div>
+        }
+    </div>
+
+    <button class="add-btn" @onclick="AddVehicle">+ Add Vehicle</button>
+
+    <div class="button-bar">
+        <button class="clear-btn" @onclick="() => OnClearRoutes.InvokeAsync()">Clear</button>
+        <button class="go-btn" @onclick="() => OnSolve.InvokeAsync(Vehicles)">Go!</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClearRoutes { get; set; }
+    [Parameter] public EventCallback<List<Vehicle>> OnSolve { get; set; }
+
+    public List<Vehicle> Vehicles { get; set; } = new();
+
+    private void AddVehicle()
+    {
+        Vehicles.Add(new Vehicle { Id = $"Truck-{Vehicles.Count + 1}" });
+    }
+
+    private void RemoveVehicle(Vehicle v)
+    {
+        Vehicles.Remove(v);
+    }
+
+    public class Vehicle
+    {
+        public string Id { get; set; } = "";
+    }
+}

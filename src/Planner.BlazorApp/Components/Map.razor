@@ -1,20 +1,28 @@
-﻿@page "/map"
-
+﻿
 @using Planner.Application.Messaging
 @using Planner.Contracts.Messages
 @using Planner.Contracts.Messages.LinearSolver
 @using Planner.Contracts.Messages.VehicleRoutingProblem
 
+@namespace Planner.BlazorApp.Components
 
-@rendermode InteractiveServer
 @inject IMessageHubClient hub  // your existing abstraction over SignalR
 
-<h3>Vehicle Routing Plan (Live)</h3>
+    <GoogleMap DepotLat="-31.9505"
+               DepotLon="115.8605"
+               Routes="@routes"
+               Height="100%" />
 
-<GoogleMap DepotLat="-31.9505"
-           DepotLon="115.8605"
-           Routes="@routes"
-           Height="600px" />
+
+<style>
+    .map-container {
+        flex: 1; /* fills the available flex space */
+        width: 100%; /* full horizontal stretch */
+        height: 100%; /* safe fallback if parent isn’t flex */
+        background-color: #dfefff;
+        position: relative; /* helpful if you’ll absolutely position map layers */
+    }
+</style>
 
 @code {
     private List<GoogleMap.RouteDto> routes = new()
@@ -64,5 +72,12 @@
             });
         }
         return list;
+    }
+
+    public Task ClearRoutesAsync()
+    {
+        routes = new();
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 }

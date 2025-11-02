@@ -1,0 +1,37 @@
+﻿@page "/scheduler"
+@rendermode InteractiveServer
+@using Planner.BlazorApp.Components
+
+@inject IJSRuntime JS
+
+<div class="scheduler-container">
+
+    <div class="scheduler-layout">
+        <div id="leftPane" class="left-pane">
+            <Map/>
+        </div>
+        <div id="rightPane" class="right-pane">
+            <ControlPanel OnClearRoutes="HandleClearRoutes" OnSolve="HandleSolve" />
+        </div>
+    </div>
+
+    <div class="status-bar">
+        Status bar
+    </div>
+</div>
+@code {
+    //private Map? mapRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("initSchedulerSplit");
+    }
+
+    private async Task HandleClearRoutes()
+    {
+        //await mapRef!.ClearRoutesAsync();
+    }
+
+ 
+}
