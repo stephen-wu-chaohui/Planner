@@ -1,8 +1,7 @@
-﻿using Planner.Optimization.LinearSolver;
-using FluentAssertions;
-using Xunit;
-using Planner.Contracts.Messages;
+﻿using FluentAssertions;
 using Planner.Contracts.Messages.LinearSolver;
+using Planner.Optimization.LinearSolver;
+using Planner.Optimization.Solvers;
 
 namespace Planner.Optimization.Tests.LinearSolver;
 
@@ -221,13 +220,13 @@ public class LinearSolverTests
         }
 
         // Constraints (if provided)
-        //foreach (var expCon in expected.Constraints)
-        //{
-        //    var actCon = actual.Constraints.FirstOrDefault(c => c.Name == expCon.Name)
-        //                 ?? throw new Exception($"Constraint {expCon.Name} missing in {test.Description}");
-        //    actCon.LhsValue.Should().BeApproximately(expCon.LhsValue, 0.1, $"LHS {expCon.Name}");
-        //    actCon.Slack.Should().BeApproximately(expCon.Slack, 0.1, $"Slack {expCon.Name}");
-        //}
+        foreach (var expCon in expected.Constraints)
+        {
+            var actCon = actual.Constraints.FirstOrDefault(c => c.Name == expCon.Name)
+                         ?? throw new Exception($"Constraint {expCon.Name} missing in {test.Description}");
+            actCon.LhsValue.Should().BeApproximately(expCon.LhsValue, 0.1, $"LHS {expCon.Name}");
+            actCon.Slack.Should().BeApproximately(expCon.Slack, 0.1, $"Slack {expCon.Name}");
+        }
     }
 
 }

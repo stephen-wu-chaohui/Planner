@@ -1,0 +1,46 @@
+﻿@inject IJSRuntime JS
+@inject IConfiguration Config
+
+<div id="@MapId" style="height:@Height;width:@Width;"></div>
+
+@code {
+    [Parameter] public string MapId { get; set; } = "map";
+    [Parameter] public string Width { get; set; } = "100%";
+    [Parameter] public string Height { get; set; } = "600px";
+    [Parameter] public double DepotLat { get; set; }
+    [Parameter] public double DepotLon { get; set; }
+    [Parameter] public List<RouteDto>? Routes { get; set; }
+
+    private bool _mapReady;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var apiKey = Config["GoogleMaps:BrowserApiKey"];
+            var mapId = Config["GoogleMaps:MapId"];
+            await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
+            await JS.InvokeVoidAsync("initMap", DepotLat, DepotLon, mapId);
+            _mapReady = true;
+
+            // draw initial routes if any
+            if (Routes is not null)
+                await JS.InvokeVoidAsync("updateRoutes", Routes);
+        } else if (_mapReady && Routes is not null)
+        {
+            await JS.InvokeVoidAsync("updateRoutes", Routes);
+        }
+    }
+
+    public class RouteDto
+    {
+        public string VehicleId { get; set; } = "";
+        public List<RoutePoint> Points { get; set; } = new();
+    }
+
+    public class RoutePoint
+    {
+        public double Lat { get; set; }
+        public double Lon { get; set; }
+    }
+}

@@ -1,0 +1,11 @@
+﻿<h4>Lifecycle test</h4>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ OnAfterRenderAsync fired!");
+        }
+    }
+}

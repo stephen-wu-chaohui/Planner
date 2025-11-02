@@ -1,0 +1,66 @@
+﻿@page "/map"
+
+@using Planner.Application.Messaging
+@using Planner.Contracts.Messages
+@using Planner.Contracts.Messages.LinearSolver
+
+
+@rendermode InteractiveServer
+@inject IMessageHubClient hub  // your existing abstraction over SignalR
+
+<h3>Vehicle Routing Plan (Live)</h3>
+
+<GoogleMap DepotLat="-31.9505"
+           DepotLon="115.8605"
+           Routes="@routes"
+           Height="600px" />
+
+@code {
+    private List<GoogleMap.RouteDto> routes = new()
+    {
+        new() {
+            VehicleId = "Truck-1",
+            Points = new() {
+                new() { Lat = -31.9505, Lon = 115.8605 },
+                new() { Lat = -31.9783, Lon = 115.8180 },
+                new() { Lat = -32.0671, Lon = 115.8957 },
+                new() { Lat = -31.9505, Lon = 115.8605 }
+            }
+        },
+        new() {
+            VehicleId = "Truck-2",
+            Points = new() {
+                new() { Lat = -31.9505, Lon = 115.8605 },
+                new() { Lat = -32.0569, Lon = 115.7439 },
+                new() { Lat = -31.9505, Lon = 115.8605 }
+            }
+        }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await hub.SubscribeAsync<LinearSolverResultMessage>(
+            MessageRoutes.OptimizationResult,
+            result => InvokeAsync(() => {
+                routes = ConvertToRoutes(result);
+                StateHasChanged();
+            }));
+    }
+
+    private static List<GoogleMap.RouteDto> ConvertToRoutes(LinearSolverResultMessage msg)
+    {
+        // adapt this based on your real message contract
+        var list = new List<GoogleMap.RouteDto>();
+        // foreach (var vehicle in msg.Vehicles)
+        // {
+        //     list.Add(new GoogleMap.RouteDto {
+        //         VehicleId = vehicle.Id,
+        //         Points = vehicle.Stops.Select(s => new GoogleMap.RoutePoint {
+        //             Lat = s.Latitude,
+        //             Lon = s.Longitude
+        //         }).ToList()
+        //     });
+        // }
+        return list;
+    }
+}

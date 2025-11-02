@@ -38,6 +38,16 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
+app.Use(async (context, next) => {
+    context.Response.OnStarting(() => {
+        // Remove the built-in header if present
+        context.Response.Headers.Remove("Content-Security-Policy");
+        return Task.CompletedTask;
+    });
+    await next();
+});
+
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
