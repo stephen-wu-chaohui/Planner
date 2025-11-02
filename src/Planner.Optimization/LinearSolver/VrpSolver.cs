@@ -6,7 +6,7 @@ namespace Planner.Optimization.Solvers;
 
 public class VrpSolver
 {
-    public VrpResultMessage Solve(VrpRequestMessage request)
+    public static VrpResult Solve(VrpRequest request)
     {
         int numJobs = request.Jobs.Count;
         int numVehicles = request.Vehicles.Count;
@@ -24,7 +24,7 @@ public class VrpSolver
         int transitCallbackIndex = model.RegisterTransitCallback((long fromIndex, long toIndex) => {
             int fromNode = manager.IndexToNode(fromIndex);
             int toNode = manager.IndexToNode(toIndex);
-            return (long)(distanceMatrix[fromNode, toNode] * 1000); // convert km→m for precision
+            return (long)(distanceMatrix[fromNode][toNode] * 1000); // convert km→m for precision
         });
 
         model.SetArcCostEvaluatorOfAllVehicles(transitCallbackIndex);
@@ -37,7 +37,7 @@ public class VrpSolver
         // Solve
         var solution = model.SolveWithParameters(searchParameters);
 
-        var result = new VrpResultMessage();
+        var result = new VrpResult();
 
         if (solution != null)
         {

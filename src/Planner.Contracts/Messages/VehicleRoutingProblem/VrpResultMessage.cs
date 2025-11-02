@@ -2,6 +2,13 @@
 
 public class VrpResultMessage
 {
+    public required string RequestId { get; init; }
+    public required DateTime CompletedAt { get; init; }
+    public required VrpResult Response { get; init; }
+}
+
+public class VrpResult
+{
     public List<VehicleRoute> Vehicles { get; set; } = new();
     public double TotalDistance { get; set; }
     public double ObjectiveValue { get; set; }

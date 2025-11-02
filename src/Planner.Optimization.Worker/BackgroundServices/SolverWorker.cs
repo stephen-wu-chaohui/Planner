@@ -9,11 +9,11 @@ public class SolverWorker(IMessageBus bus) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        bus.Subscribe<LinearSolverRequestMessage>(MessageRoutes.OptimizationRequest, async message => {
-            Console.WriteLine($"[SolverWorker].Subscribe({MessageRoutes.OptimizationRequest})!");
+        bus.Subscribe<LinearSolverRequestMessage>(MessageRoutes.LPSolverRequest, async message => {
+            Console.WriteLine($"[SolverWorker].Subscribe({MessageRoutes.LPSolverRequest})!");
             var response = LinearSolverBuilder.Solve(message.Request);
 
-            await bus.PublishAsync(MessageRoutes.OptimizationResult,
+            await bus.PublishAsync(MessageRoutes.LPSolverResult,
                 new LinearSolverResultMessage {
                     RequestId = message.RequestId,
                     CompletedAt = DateTime.UtcNow,
@@ -21,7 +21,7 @@ public class SolverWorker(IMessageBus bus) : BackgroundService
                 }
             );
         });
-        Console.WriteLine($"[SolverWorker].ExecuteAsync({MessageRoutes.OptimizationRequest}) starts.");
+        Console.WriteLine($"[SolverWorker].ExecuteAsync({MessageRoutes.LPSolverRequest}) starts.");
         return Task.CompletedTask;
     }
 }

@@ -12,6 +12,7 @@ Host.CreateDefaultBuilder(args)
 
         // Register the worker itself
         services.AddHostedService<SolverWorker>();
+        services.AddHostedService<VRPSolverWorker>();
     })
     .ConfigureLogging(logging => {
         logging.ClearProviders();

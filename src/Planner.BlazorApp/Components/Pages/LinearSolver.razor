@@ -1,4 +1,4 @@
-﻿@page "/linear-solver"
+﻿@page "/"
 @rendermode InteractiveServer
 
 @using Planner.Application.Messaging
@@ -8,7 +8,12 @@
 
 @inject IMessageHubClient hub
 
-<h3>Linear Solver Results</h3>
+<PageTitle>Home</PageTitle>
+<h1>Linear Solver Inside</h1>
+
+<h3>Welcome to the Linear Solver, perfect for optimizing your workflows!</h3>
+<p>Please use any API clients to interact with the Linear Solver service...</p>
+
 
 @if (results.Count == 0)
 {
@@ -43,9 +48,9 @@
 
     protected override Task OnInitializedAsync()
     {
-        hub.SubscribeAsync<LinearSolverResultMessage>(MessageRoutes.OptimizationResult,
+        hub.SubscribeAsync<LinearSolverResultMessage>(MessageRoutes.LPSolverResult,
             r => InvokeAsync(() => {
-                Console.WriteLine($"MessageHub received data {MessageRoutes.OptimizationResult}.");
+                Console.WriteLine($"MessageHub received data {MessageRoutes.LPSolverResult}.");
                 results.Add(new LinearSolverResultRow(r));
                 StateHasChanged();
             })

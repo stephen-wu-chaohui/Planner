@@ -26,7 +26,9 @@ builder.Services.AddMessagingBus();
 
 // Register your background service
 builder.Services.AddHostedService<CoordinatorService>();
-builder.Services.AddHostedService<OptimizationResultListener>();
+builder.Services.AddHostedService<LPResultListener>();
+builder.Services.AddHostedService<VRPResultListener>();
+
 
 var app = builder.Build();
 

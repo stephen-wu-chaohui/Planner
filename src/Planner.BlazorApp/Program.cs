@@ -21,6 +21,7 @@ builder.Services.AddSingleton(sp => {
 
 builder.Services.AddScoped<IMessageHubClient, OptimizationResultReceiver>();
 
+
 var app = builder.Build();
 
 // app.UseMessageHub();

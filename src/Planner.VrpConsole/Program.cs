@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Planner.Contracts.Helper;
 using Planner.Contracts.Messages.VehicleRoutingProblem;
 using Planner.Optimization.Solvers;
 using System.Text.Json;
 
 // Load configuration
 var config = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile("appsettings.json", optional: false) // This extension method is in Microsoft.Extensions.Configuration.Json
     .Build();
 
 var apiKey = config["GoogleMaps:ApiKey"];
@@ -50,14 +51,14 @@ Console.WriteLine("✅ Distance matrix loaded.");
 
 // Step 2: Solve VRP
 var solver = new VrpSolver();
-var request = new VrpRequestMessage {
+var request = new VrpRequest {
     Depot = depot,
     Jobs = jobs,
     Vehicles = vehicles,
     DistanceMatrix = distanceMatrix
 };
 
-var result = solver.Solve(request);
+var result = VrpSolver.Solve(request);
 
 // Step 3: Print results
 Console.WriteLine("\n🧮 VRP Solution:");
@@ -73,7 +74,7 @@ Console.WriteLine($"Solver Status: {result.SolverStatus}");
 return;
 
 // ------------------- Helper --------------------
-static async Task<double[,]> GetDistanceMatrixAsync(string apiKey, List<(string id, double lat, double lon)> points)
+static async Task<double[][]> GetDistanceMatrixAsync(string apiKey, List<(string id, double lat, double lon)> points)
 {
     using var http = new HttpClient();
 
@@ -102,7 +103,7 @@ static async Task<double[,]> GetDistanceMatrixAsync(string apiKey, List<(string 
         }
     }
 
-    return matrix;
+    return MatrixConverter.ToJagged(matrix);
 }
 
 

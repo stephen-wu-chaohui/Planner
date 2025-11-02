@@ -3,6 +3,7 @@
 @using Planner.Application.Messaging
 @using Planner.Contracts.Messages
 @using Planner.Contracts.Messages.LinearSolver
+@using Planner.Contracts.Messages.VehicleRoutingProblem
 
 
 @rendermode InteractiveServer
@@ -39,28 +40,29 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await hub.SubscribeAsync<LinearSolverResultMessage>(
-            MessageRoutes.OptimizationResult,
+        await hub.SubscribeAsync<VrpResultMessage>(
+            MessageRoutes.VRPSolverResult,
             result => InvokeAsync(() => {
+                Console.WriteLine($"MessageHub received data {MessageRoutes.LPSolverResult}.");
                 routes = ConvertToRoutes(result);
                 StateHasChanged();
             }));
     }
 
-    private static List<GoogleMap.RouteDto> ConvertToRoutes(LinearSolverResultMessage msg)
+    private static List<GoogleMap.RouteDto> ConvertToRoutes(VrpResultMessage msg)
     {
         // adapt this based on your real message contract
         var list = new List<GoogleMap.RouteDto>();
-        // foreach (var vehicle in msg.Vehicles)
-        // {
-        //     list.Add(new GoogleMap.RouteDto {
-        //         VehicleId = vehicle.Id,
-        //         Points = vehicle.Stops.Select(s => new GoogleMap.RoutePoint {
-        //             Lat = s.Latitude,
-        //             Lon = s.Longitude
-        //         }).ToList()
-        //     });
-        // }
+        foreach (var vehicle in msg.Response.Vehicles)
+        {
+            list.Add(new GoogleMap.RouteDto {
+                VehicleId = vehicle.VehicleId,
+                Points = vehicle.Stops.Select(s => new GoogleMap.RoutePoint {
+                    Lat = s.Latitude,
+                    Lon = s.Longitude
+                }).ToList()
+            });
+        }
         return list;
     }
 }

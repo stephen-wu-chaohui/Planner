@@ -1,12 +1,20 @@
-﻿namespace Planner.Contracts.Messages.VehicleRoutingProblem;
+﻿
+namespace Planner.Contracts.Messages.VehicleRoutingProblem;
 
 public class VrpRequestMessage
+{
+    public required string RequestId { get; init; }
+    public required VrpRequest Request { get; init; }
+}
+
+public class VrpRequest
 {
     public List<JobDto> Jobs { get; set; } = new();
     public List<VehicleDto> Vehicles { get; set; } = new();
     public DepotDto Depot { get; set; } = new();
-    public double[,] DistanceMatrix { get; set; } = new double[0, 0];
+    public double[][] DistanceMatrix { get; set; } = [];
 }
+
 
 public class JobDto
 {

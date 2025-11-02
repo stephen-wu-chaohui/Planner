@@ -1,5 +1,4 @@
 ﻿using Google.OrTools.LinearSolver;
-using Planner.Contracts.Messages;
 using Planner.Contracts.Messages.LinearSolver;
 
 namespace Planner.Optimization.LinearSolver;

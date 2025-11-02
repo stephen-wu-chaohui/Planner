@@ -15,7 +15,7 @@ public class OptimizationController(IMessageBus bus) : ControllerBase
         if (request == null)
             return BadRequest("Missing or invalid request payload.");
 
-        await bus.PublishAsync(MessageRoutes.OptimizationRequest, request);
+        await bus.PublishAsync(MessageRoutes.LPSolverRequest, request);
         return Accepted(new { status = "queued", projectId = request.RequestId });
     }
 }
