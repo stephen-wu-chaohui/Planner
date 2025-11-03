@@ -1,0 +1,113 @@
+﻿
+@using Planner.Application.Messaging
+@using Planner.Contracts.Messages
+@using Planner.Contracts.Messages.LinearSolver
+@using Planner.Contracts.Messages.VehicleRoutingProblem
+
+@namespace Planner.BlazorApp.Components
+
+@inject IConfiguration config
+
+@inject IMessageHubClient hub  // your existing abstraction over SignalR
+<GoogleMap @ref="map"
+    DepotLat="-33.6130056"
+    DepotLon="117.9778895"
+    Routes="@routes"
+    Height="100%"
+    JobPositionPicked="OnJobPositionPicked"/>
+
+@code {
+    private List<GoogleMap.RouteDto> routes = new();
+    private GoogleMap? map;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await hub.SubscribeAsync<VrpResultMessage>(
+            MessageRoutes.VRPSolverResult,
+            result => InvokeAsync(() => {
+                Console.WriteLine($"Map.MessageHub received data {MessageRoutes.LPSolverResult}.");
+                routes = ConvertToRoutes(result);
+                StateHasChanged();
+            }));
+    }
+
+    private static List<GoogleMap.RouteDto> ConvertToRoutes(VrpResultMessage msg)
+    {
+        // adapt this based on your real message contract
+        var list = new List<GoogleMap.RouteDto>();
+        foreach (var vehicle in msg.Response.Vehicles)
+        {
+            list.Add(new GoogleMap.RouteDto {
+                VehicleId = vehicle.VehicleId,
+                Points = vehicle.Stops.Select(s => new GoogleMap.RoutePoint {
+                    Lat = s.Latitude,
+                    Lon = s.Longitude
+                }).ToList()
+            });
+        }
+        return list;
+    }
+
+    public Task ClearRoutesAsync()
+    {
+        routes = new();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public List<JobDto> jobs = new()
+        {
+            new JobDto { Id = "B", Latitude = -32.0250327, Longitude = 116.9055291 },
+            new JobDto { Id = "C", Latitude = -32.3316774, Longitude = 117.317502 },
+            new JobDto { Id = "D", Latitude = -33.0595350, Longitude = 116.898521 },
+            new JobDto { Id = "E", Latitude = -33.8617059, Longitude = 116.3375766 },
+            new JobDto { Id = "F", Latitude = -33.9831934, Longitude = 115.7769375 },
+            new JobDto { Id = "G", Latitude = -33.8190335, Longitude = 115.6942373 },
+            new JobDto { Id = "H", Latitude = -34.2110860, Longitude = 115.095343 }
+        };
+
+
+    private Task OnJobPositionPicked((double lat, double lng) args)
+    {
+        // Handle job position picked event
+        Console.WriteLine($"Job position picked at Lat: {args.lat}, Lng: {args.lng}");
+
+        jobs.Add(new JobDto {
+            Id = $"Job-{jobs.Count + 1}",
+            Latitude = args.lat,
+            Longitude = args.lng
+        });
+        return Task.CompletedTask;
+    }
+
+    public async Task HandleSolveAsync(List<ControlPanel.Vehicle> vehicles)
+    {
+        routes = new();
+        StateHasChanged();
+
+        var depot = new DepotDto { Id = "Depot", Latitude = -31.9505, Longitude = 115.8605 };
+        var allPoints = jobs.Prepend(new JobDto { Id = depot.Id, Latitude = depot.Latitude, Longitude = depot.Longitude }).ToArray();
+
+        var distanceMatrix = allPoints.Select(j0 => allPoints.Select(
+            j2 =>  100 * Math.Sqrt(Math.Pow(j2.Latitude - j0.Latitude, 2) + Math.Pow(j2.Longitude - j0.Longitude, 2))).ToArray()
+        ).ToArray();
+
+        var request = new VrpRequestMessage {
+            RequestId = $"Planner-{DateTime.Now:HHmmss}",
+            Request = new VrpRequest {
+                Depot = depot,
+                Vehicles = [.. vehicles.Select(v => new VehicleDto { Id = v.Id })],
+                Jobs = jobs,
+                DistanceMatrix = distanceMatrix
+            }
+        };
+
+        using var client = new HttpClient { BaseAddress = new Uri(config["Planner.Api:BaseUrl"]!) };
+        var response = await client.PostAsJsonAsync(config["Planner.Api:VRP.Solver.Endpoint"]!, request);
+        if (response.IsSuccessStatusCode)
+        {
+            var endPoint = config["Planner.Api:VRP.Solver.Endpoint"]!;
+            Console.WriteLine($"VRP solution request successfully sent to {endPoint}.");
+        }
+    }
+}

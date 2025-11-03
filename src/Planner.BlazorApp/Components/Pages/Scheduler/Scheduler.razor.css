@@ -7,7 +7,7 @@
 }
 
 .gutter {
-	background-color: #ddd;
+	background-color: darkred;
 	cursor: col-resize;
 	height: 100%;
 	width: 12px !important; /* ⬅️ match gutterSize above */
@@ -40,7 +40,7 @@
 .left-pane {
 	flex: 3; /* Takes up 75% of the width */
 	border-right: 2px solid #ccc;
-	padding: 10px;
+	padding: 1px;
 	box-sizing: border-box;
 	overflow: auto;
 }

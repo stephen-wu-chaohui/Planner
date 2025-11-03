@@ -8,7 +8,7 @@
 
     <div class="scheduler-layout">
         <div id="leftPane" class="left-pane">
-            <Map/>
+            <RouteCentre @ref="center" />
         </div>
         <div id="rightPane" class="right-pane">
             <ControlPanel OnClearRoutes="HandleClearRoutes" OnSolve="HandleSolve" />
@@ -20,7 +20,7 @@
     </div>
 </div>
 @code {
-    //private Map? mapRef;
+    private RouteCentre? center;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -28,10 +28,39 @@
             await JS.InvokeVoidAsync("initSchedulerSplit");
     }
 
-    private async Task HandleClearRoutes()
+    private async Task HandleSolve(List<ControlPanel.Vehicle> vehicles)
     {
-        //await mapRef!.ClearRoutesAsync();
+        await center!.HandleSolveAsync(vehicles);
     }
 
+    private async Task HandleClearRoutes()
+    {
+        await center!.ClearRoutesAsync();
+    }
+
+
+    /*
+        var request = new VrpRequestMessage {
+            RequestId = $"Planner-{DateTime.Now:HHmmss}",
+            Request = new VrpRequest {
+                Depot = new DepotDto { Id = "Depot", Latitude = -31.9505, Longitude = 115.8605 },
+                Vehicles = [.. vehicles.Select(v => new VehicleDto { Id = v.Id })],
+                Jobs =
+                [
+                    new() { Id = "J1", Latitude = -31.9783, Longitude = 115.8180 },
+                    new() { Id = "J2", Latitude = -32.0671, Longitude = 115.8957 },
+                    new() { Id = "J3", Latitude = -31.9766, Longitude = 115.9213 }
+                ],
+                DistanceMatrix = [[0, 3, 5, 7, 9],[3, 0, 2, 6, 8],[5, 2, 0, 4, 7],[7, 6, 4, 0, 5],[9, 8, 7, 5, 0]]
+            }
+        };
+
+        using var client = new HttpClient { BaseAddress = new Uri("https://localhost:7085/") };
+        var response = await client.PostAsJsonAsync("api/vrp/solve", request);
+        if (response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Received VRP solution from API.");
+        }
+     */
  
 }

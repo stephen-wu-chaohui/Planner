@@ -9,39 +9,44 @@
 @inject IMessageHubClient hub
 
 <PageTitle>Home</PageTitle>
-<h1>Linear Solver Inside</h1>
 
-<h3>Welcome to the Linear Solver, perfect for optimizing your workflows!</h3>
-<p>Please use any API clients to interact with the Linear Solver service...</p>
+<section class="p-4">
+
+    <h1>Linear Solver Inside</h1>
+
+    <h3>Welcome to the Linear Solver, perfect for optimizing your workflows!</h3>
+    <p>Please use any API clients to interact with the Linear Solver service...</p>
 
 
-@if (results.Count == 0)
-{
-    <p><em>No results received yet...</em></p>
-} else
-{
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <th>Request ID</th>
-                <th>Status</th>
-                <th>Objective Value</th>
-                <th>Completed At</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var r in results)
-            {
+    @if (results.Count == 0)
+    {
+        <p><em>No results received yet...</em></p>
+    } else
+    {
+        <table class="table table-striped table-bordered">
+            <thead>
                 <tr>
-                    <td>@r.RequestId</td>
-                    <td>@r.Status</td>
-                    <td>@r.ObjectiveValue</td>
-                    <td>@r.CompletedAt.ToLocalTime()</td>
+                    <th>Request ID</th>
+                    <th>Status</th>
+                    <th>Objective Value</th>
+                    <th>Completed At</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-}
+            </thead>
+            <tbody>
+                @foreach (var r in results)
+                {
+                    <tr>
+                        <td>@r.RequestId</td>
+                        <td>@r.Status</td>
+                        <td>@r.ObjectiveValue</td>
+                        <td>@r.CompletedAt.ToLocalTime()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+</section>
 
 @code {
     private readonly List<LinearSolverResultRow> results = new();
