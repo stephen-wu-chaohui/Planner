@@ -1,7 +1,6 @@
 ﻿namespace Planner.Contracts.Messages.LinearSolver;
 
-public record LinearExpression
-{
+public record LinearExpression {
     public double[] Coefficients { get; init; } = [];
     public double? LowerBound { get; init; }
     public double? UpperBound { get; init; }

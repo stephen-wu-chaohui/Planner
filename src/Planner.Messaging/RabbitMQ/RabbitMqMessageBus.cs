@@ -5,10 +5,8 @@ using System.Text.Json;
 
 namespace Planner.Messaging.RabbitMQ;
 
-public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus
-{
-    public Task PublishAsync<T>(string queueName, T message)
-    {
+public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
+    public Task PublishAsync<T>(string queueName, T message) {
         using var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
         channel.QueuePurge(queueName);
@@ -25,8 +23,7 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus
         return Task.CompletedTask;
     }
 
-    public void Subscribe<T>(string queueName, Func<T, Task> onMessage)
-    {
+    public void Subscribe<T>(string queueName, Func<T, Task> onMessage) {
         var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
         Console.WriteLine($"Subscribe.channel.QueueDeclare({queueName})");
@@ -34,18 +31,14 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus
 
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.Received += async (_, ea) => {
-            try
-            {
+            try {
                 var json = Encoding.UTF8.GetString(ea.Body.ToArray());
                 Console.WriteLine($"[RabbitMqMessageBus].Received({queueName}, {json})");
                 var obj = JsonSerializer.Deserialize<T>(json);
-                if (obj != null)
-                {
+                if (obj != null) {
                     await onMessage(obj);
                 }
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 Console.WriteLine($"[RabbitMqMessageBus] Error: {ex.Message}");
             }
         };

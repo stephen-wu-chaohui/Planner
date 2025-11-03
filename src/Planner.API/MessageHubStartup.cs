@@ -3,10 +3,8 @@ using Planner.Infrastructure.SignalR;
 
 namespace Planner.API;
 
-public static class MessageHubStartup
-{
-    public static IServiceCollection AddMessageHub(this IServiceCollection services, IConfiguration config)
-    {
+public static class MessageHubStartup {
+    public static IServiceCollection AddMessageHub(this IServiceCollection services, IConfiguration config) {
         services.AddSignalR(); // Add SignalR
         services.AddCors(options => {
             var client = config["SignalR:Client"]!;   // your Blazor app
@@ -22,8 +20,7 @@ public static class MessageHubStartup
         return services;
     }
 
-    public static WebApplication UseMessageHub(this WebApplication app)
-    {
+    public static WebApplication UseMessageHub(this WebApplication app) {
         var route = app.Configuration["SignalR:Route"]!;
         app.UseCors("SignalRPolicy");
         app.MapHub<PlannerHub>(route).RequireCors("SignalRPolicy");

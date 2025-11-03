@@ -1,13 +1,11 @@
 ﻿using FluentAssertions;
 using Planner.Contracts.Messages.LinearSolver;
 using Planner.Optimization.LinearSolver;
-using Planner.Optimization.Solvers;
 
 namespace Planner.Optimization.Tests.LinearSolver;
 
 
-public record LinearSolverTestCase
-{
+public record LinearSolverTestCase {
     public required string Description { get; init; }
     public required LinearSolverRequest Request { get; init; }
 
@@ -17,11 +15,9 @@ public record LinearSolverTestCase
     public required LinearSolverResponse ExpectedResults { get; init; }
 }
 
-public class LinearSolverTests
-{
+public class LinearSolverTests {
     [Fact]
-    public void Should_Solve_Simple_Maximization()
-    {
+    public void Should_Solve_Simple_Maximization() {
         // Arrange
         var request = new LinearSolverRequest {
             Algorithm = "CBC_MIXED_INTEGER_PROGRAMMING",
@@ -67,8 +63,7 @@ public class LinearSolverTests
     }
 
     [Fact]
-    public void Should_Ignore_Inactive_Constraints()
-    {
+    public void Should_Ignore_Inactive_Constraints() {
         // Arrange
         var request = new LinearSolverRequest {
             Algorithm = "GLOP_LINEAR_PROGRAMMING",
@@ -111,8 +106,7 @@ public class LinearSolverTests
     }
 
     [Fact]
-    public void Should_Combine_Multi_Objectives_By_Weight()
-    {
+    public void Should_Combine_Multi_Objectives_By_Weight() {
         // Arrange
         var request = new LinearSolverRequest {
             Algorithm = "GLOP_LINEAR_PROGRAMMING",
@@ -159,8 +153,7 @@ public class LinearSolverTests
     }
 
     [Fact]
-    public void Should_Return_Slack_And_DualValues_For_Constraints()
-    {
+    public void Should_Return_Slack_And_DualValues_For_Constraints() {
         // Arrange
         var request = new LinearSolverRequest {
             Algorithm = "GLOP_LINEAR_PROGRAMMING",
@@ -201,8 +194,7 @@ public class LinearSolverTests
 
     [Theory]
     [ClassData(typeof(LinearSolverRequestDataFromJson))]
-    public void Should_Match_Expected_SolverResponses(LinearSolverTestCase test)
-    {
+    public void Should_Match_Expected_SolverResponses(LinearSolverTestCase test) {
         // Act
         var actual = LinearSolverBuilder.Solve(test.Request);
         var expected = test.ExpectedResults;
@@ -212,16 +204,14 @@ public class LinearSolverTests
         actual.ObjectiveValue.Should().BeApproximately(expected.ObjectiveValue, 0.1, $"Objective in {test.Description}");
 
         // Variables
-        foreach (var expVar in expected.Variables)
-        {
+        foreach (var expVar in expected.Variables) {
             var actVar = actual.Variables.FirstOrDefault(v => v.Name == expVar.Name)
                          ?? throw new Exception($"Variable {expVar.Name} missing in {test.Description}");
             actVar.Value.Should().BeApproximately(expVar.Value, 0.05, $"Var {expVar.Name} in {test.Description}");
         }
 
         // Constraints (if provided)
-        foreach (var expCon in expected.Constraints)
-        {
+        foreach (var expCon in expected.Constraints) {
             var actCon = actual.Constraints.FirstOrDefault(c => c.Name == expCon.Name)
                          ?? throw new Exception($"Constraint {expCon.Name} missing in {test.Description}");
             actCon.LhsValue.Should().BeApproximately(expCon.LhsValue, 0.1, $"LHS {expCon.Name}");

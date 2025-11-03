@@ -4,10 +4,8 @@ using Planner.Infrastructure.Persistence;
 
 namespace Planner.API;
 
-public static class APIExtension
-{
-    public static void MapTaskEndpoints(this WebApplication app)
-    {
+public static class APIExtension {
+    public static void MapTaskEndpoints(this WebApplication app) {
 
         // ---- TASK ENDPOINTS ----
         var taskGroup = app.MapGroup("/api/tasks");

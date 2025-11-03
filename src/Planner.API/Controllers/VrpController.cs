@@ -7,15 +7,13 @@ namespace Planner.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class VrpController(IMessageBus bus) : ControllerBase
-{
+public class VrpController(IMessageBus bus) : ControllerBase {
 
     /// <summary>
     /// Accept a VRP request and send it to the optimization worker
     /// </summary>
     [HttpPost("solve")]
-    public async Task<IActionResult> Solve([FromBody] VrpRequestMessage message)
-    {
+    public async Task<IActionResult> Solve([FromBody] VrpRequestMessage message) {
         var request = message.Request;
         if (request == null || request.Jobs.Count == 0 || request.Vehicles.Count == 0)
             return BadRequest("Invalid request.");

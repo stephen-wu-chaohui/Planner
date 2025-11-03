@@ -10,8 +10,7 @@ var config = new ConfigurationBuilder()
     .Build();
 
 var apiKey = config["GoogleMaps:ApiKey"];
-if (string.IsNullOrEmpty(apiKey))
-{
+if (string.IsNullOrEmpty(apiKey)) {
     Console.WriteLine("❌ Missing GoogleMaps.ApiKey in appsettings.json");
     return;
 }
@@ -62,8 +61,7 @@ var result = VrpSolver.Solve(request);
 
 // Step 3: Print results
 Console.WriteLine("\n🧮 VRP Solution:");
-foreach (var route in result.Vehicles)
-{
+foreach (var route in result.Vehicles) {
     Console.WriteLine($"🚚 {route.VehicleId}: {string.Join(" → ", route.Stops.Select(s => s.JobId))}");
     Console.WriteLine($"   Distance: {route.RouteDistance:F2} km\n");
 }
@@ -74,8 +72,7 @@ Console.WriteLine($"Solver Status: {result.SolverStatus}");
 return;
 
 // ------------------- Helper --------------------
-static async Task<double[][]> GetDistanceMatrixAsync(string apiKey, List<(string id, double lat, double lon)> points)
-{
+static async Task<double[][]> GetDistanceMatrixAsync(string apiKey, List<(string id, double lat, double lon)> points) {
     using var http = new HttpClient();
 
     string origins = string.Join("|", points.Select(p => $"{p.lat},{p.lon}"));
@@ -89,14 +86,11 @@ static async Task<double[][]> GetDistanceMatrixAsync(string apiKey, List<(string
     int n = points.Count;
     var matrix = new double[n, n];
 
-    for (int i = 0; i < n; i++)
-    {
+    for (int i = 0; i < n; i++) {
         var elements = rows[i].GetProperty("elements");
-        for (int j = 0; j < n; j++)
-        {
+        for (int j = 0; j < n; j++) {
             var status = elements[j].GetProperty("status").GetString();
-            if (status == "OK")
-            {
+            if (status == "OK") {
                 var dist = elements[j].GetProperty("distance").GetProperty("value").GetDouble(); // meters
                 matrix[i, j] = dist / 1000.0; // convert to km
             } else matrix[i, j] = double.PositiveInfinity;

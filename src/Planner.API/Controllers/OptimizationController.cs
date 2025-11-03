@@ -7,11 +7,9 @@ namespace Planner.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OptimizationController(IMessageBus bus) : ControllerBase
-{
+public class OptimizationController(IMessageBus bus) : ControllerBase {
     [HttpPost("linearsolve")]
-    public async Task<IActionResult> LinearSolveAsync([FromBody] LinearSolverRequestMessage request)
-    {
+    public async Task<IActionResult> LinearSolveAsync([FromBody] LinearSolverRequestMessage request) {
         if (request == null)
             return BadRequest("Missing or invalid request payload.");
 

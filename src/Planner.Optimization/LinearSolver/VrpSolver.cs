@@ -4,10 +4,8 @@ using Planner.Contracts.Messages.VehicleRoutingProblem;
 
 namespace Planner.Optimization.Solvers;
 
-public class VrpSolver
-{
-    public static VrpResult Solve(VrpRequest request)
-    {
+public class VrpSolver {
+    public static VrpResult Solve(VrpRequest request) {
         int numJobs = request.Jobs.Count;
         int numVehicles = request.Vehicles.Count;
         int depotIndex = 0;
@@ -26,12 +24,21 @@ public class VrpSolver
             int toNode = manager.IndexToNode(toIndex);
             return (long)(distanceMatrix[fromNode][toNode] * 1000); // convert km→m for precision
         });
-
         model.SetArcCostEvaluatorOfAllVehicles(transitCallbackIndex);
+
+        // Add the time dimension
+        // slackMax: waiting time allowed
+        // horizon: upper bound for any vehicle's total working time
+        model.AddDimension(
+            transitCallbackIndex,
+            slack_max: 0,
+            capacity: 600 * 1000,  // 500km
+            fix_start_cumul_to_zero: true,
+            name: "Distance");
 
         // First solution strategy
         var searchParameters = operations_research_constraint_solver.DefaultRoutingSearchParameters();
-        searchParameters.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.PathCheapestArc;
+        searchParameters.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.GlobalCheapestArc;
         searchParameters.TimeLimit = new Google.Protobuf.WellKnownTypes.Duration { Seconds = 5 };
 
         // Solve
@@ -39,15 +46,12 @@ public class VrpSolver
 
         var result = new VrpResult();
 
-        if (solution != null)
-        {
-            for (int v = 0; v < numVehicles; v++)
-            {
+        if (solution != null) {
+            for (int v = 0; v < numVehicles; v++) {
                 var route = new VehicleRoute { VehicleId = request.Vehicles[v].Id };
                 double routeDistance = 0;
                 var index = model.Start(v);
-                while (!model.IsEnd(index))
-                {
+                while (!model.IsEnd(index)) {
                     int nodeIndex = manager.IndexToNode(index);
                     if (nodeIndex > 0) // skip depot
                     {
@@ -82,8 +86,7 @@ public class VrpSolver
             result.TotalDistance = result.Vehicles.Sum(r => r.RouteDistance);
             result.ObjectiveValue = result.TotalDistance;
             result.SolverStatus = "Success";
-        } else
-        {
+        } else {
             result.SolverStatus = "No Solution Found";
         }
 

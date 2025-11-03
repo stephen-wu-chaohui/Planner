@@ -1,7 +1,6 @@
 ﻿namespace Planner.Contracts.Messages.LinearSolver;
 
-public record LinearSolverResponse
-{
+public record LinearSolverResponse {
     public string Status { get; init; } = "";
     public double ObjectiveValue { get; init; }
     public List<LinearVariableResult> Variables { get; init; } = [];

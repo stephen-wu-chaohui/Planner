@@ -1,14 +1,11 @@
 ﻿namespace Planner.Contracts.Helper;
 
-public static class MatrixConverter
-{
-    public static double[][] ToJagged(double[,] matrix)
-    {
+public static class MatrixConverter {
+    public static double[][] ToJagged(double[,] matrix) {
         int rows = matrix.GetLength(0);
         int cols = matrix.GetLength(1);
         var result = new double[rows][];
-        for (int i = 0; i < rows; i++)
-        {
+        for (int i = 0; i < rows; i++) {
             result[i] = new double[cols];
             for (int j = 0; j < cols; j++)
                 result[i][j] = matrix[i, j];
@@ -16,8 +13,7 @@ public static class MatrixConverter
         return result;
     }
 
-    public static double[,] ToRectangular(double[][] matrix)
-    {
+    public static double[,] ToRectangular(double[][] matrix) {
         int rows = matrix.Length;
         int cols = matrix[0].Length;
         var result = new double[rows, cols];

@@ -3,16 +3,13 @@ using Planner.Contracts.Messages.LinearSolver;
 
 namespace Planner.Optimization.LinearSolver;
 
-public static class LinearSolverBuilder
-{
-    public static Solver BuildSolver(LinearSolverRequest request, out Variable[] variables)
-    {
+public static class LinearSolverBuilder {
+    public static Solver BuildSolver(LinearSolverRequest request, out Variable[] variables) {
         Solver solver = Solver.CreateSolver(request.Algorithm)
             ?? throw new InvalidOperationException($"Unsupported algorithm: {request.Algorithm}");
 
         // Apply solver parameters
-        if (request.Parameters is { } p)
-        {
+        if (request.Parameters is { } p) {
             if (p.EnableOutput)
                 solver.EnableOutput();
 
@@ -34,8 +31,7 @@ public static class LinearSolverBuilder
 
         // Variables
         variables = new Variable[request.Variables.Count];
-        for (int i = 0; i < request.Variables.Count; i++)
-        {
+        for (int i = 0; i < request.Variables.Count; i++) {
             var v = request.Variables[i];
             variables[i] = v.IsInteger
                 ? solver.MakeIntVar(v.LowerBound, v.UpperBound, v.Name)
@@ -43,15 +39,13 @@ public static class LinearSolverBuilder
         }
 
         // Constraints
-        foreach (var c in request.Constraints.Where(c => c.IsActive))
-        {
+        foreach (var c in request.Constraints.Where(c => c.IsActive)) {
             var constraint = solver.MakeConstraint(
                 c.LowerBound ?? double.NegativeInfinity,
                 c.UpperBound ?? double.PositiveInfinity,
                 c.Name ?? string.Empty);
 
-            for (int j = 0; j < c.Coefficients.Length; j++)
-            {
+            for (int j = 0; j < c.Coefficients.Length; j++) {
                 double coeff = c.Coefficients[j];
                 if (Math.Abs(coeff) > 1e-9)
                     constraint.SetCoefficient(variables[j], coeff);
@@ -59,15 +53,12 @@ public static class LinearSolverBuilder
         }
 
         // Combined objective
-        if (request.Objectives.Count > 0)
-        {
+        if (request.Objectives.Count > 0) {
             var firstDir = request.Objectives[0].Direction ?? LinearSolverDirection.Maximize;
             var objective = solver.Objective();
 
-            foreach (var o in request.Objectives)
-            {
-                for (int j = 0; j < o.Coefficients.Length; j++)
-                {
+            foreach (var o in request.Objectives) {
+                for (int j = 0; j < o.Coefficients.Length; j++) {
                     double coeff = o.Coefficients[j] * o.Weight;
                     if (Math.Abs(coeff) > 1e-9)
                         objective.SetCoefficient(
@@ -85,8 +76,7 @@ public static class LinearSolverBuilder
         return solver;
     }
 
-    public static LinearSolverResponse Solve(LinearSolverRequest request)
-    {
+    public static LinearSolverResponse Solve(LinearSolverRequest request) {
         var solver = BuildSolver(request, out var vars);
         var status = solver.Solve();
 
@@ -96,8 +86,7 @@ public static class LinearSolverBuilder
         };
 
         // Variable results
-        foreach (var v in vars)
-        {
+        foreach (var v in vars) {
             response.Variables.Add(new LinearVariableResult {
                 Name = v.Name(),
                 Value = v.SolutionValue(),
@@ -106,8 +95,7 @@ public static class LinearSolverBuilder
         }
 
         // Constraint results
-        foreach (var c in solver.constraints())
-        {
+        foreach (var c in solver.constraints()) {
             double lhs = 0;
             foreach (var v in vars)
                 lhs += c.GetCoefficient(v) * v.SolutionValue();

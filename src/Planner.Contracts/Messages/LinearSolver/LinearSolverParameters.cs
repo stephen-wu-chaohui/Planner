@@ -1,7 +1,6 @@
 ﻿namespace Planner.Contracts.Messages.LinearSolver;
 
-public record LinearSolverParameters
-{
+public record LinearSolverParameters {
     public int? TimeLimitMs { get; init; }
     public double? Tolerance { get; init; }
     public bool EnableOutput { get; init; } = false;

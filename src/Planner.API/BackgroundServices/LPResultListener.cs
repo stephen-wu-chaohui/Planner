@@ -5,12 +5,10 @@ using Planner.Messaging;
 
 namespace Planner.API.BackgroundServices;
 
-public class LPResultListener(IMessageBus bus, IMessageHubPublisher hub) : BackgroundService
-{
+public class LPResultListener(IMessageBus bus, IMessageHubPublisher hub) : BackgroundService {
     private const string busQueue = MessageRoutes.LPSolverResult;
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) {
         bus.Subscribe<LinearSolverResultMessage>(busQueue, async result => {
             await hub.PublishAsync(busQueue, result);
         });

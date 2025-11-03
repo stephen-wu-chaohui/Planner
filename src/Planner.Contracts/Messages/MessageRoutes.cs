@@ -1,7 +1,6 @@
 ﻿namespace Planner.Contracts.Messages;
 
-public static class MessageRoutes
-{
+public static class MessageRoutes {
     public const string LPSolverRequest = "LP.solver.request";
     public const string LPSolverResult = "LP.solver.result";
 
