@@ -1,7 +1,7 @@
 ﻿using Planner.Contracts.Messages;
 using Planner.Contracts.Messages.VehicleRoutingProblem;
 using Planner.Messaging;
-using Planner.Optimization.Solvers;
+using Planner.Optimization.VehicleRoutingProblem;
 
 namespace Planner.Optimization.Worker;
 
@@ -15,7 +15,7 @@ public class VRPSolverWorker(IMessageBus bus, ILogger<VRPSolverWorker> logger) :
                 new VrpResultMessage {
                     RequestId = message.RequestId,
                     CompletedAt = DateTime.UtcNow,
-                    Response = response
+                    Result = response
                 }
             );
         });

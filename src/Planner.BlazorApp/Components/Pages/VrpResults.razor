@@ -1,0 +1,100 @@
+﻿@page "/vrp-results"
+@using Planner.Contracts.Messages.VehicleRoutingProblem
+@using Planner.Domain.Entities
+
+
+<div class="container mt-3">
+    <h2 class="mb-3">Vehicle Routing Problem Results</h2>
+
+    @if (Results.Count == 0)
+    {
+        <div class="alert alert-info">No VRP results available yet.</div>
+    }
+    else
+    {
+        @foreach (var message in Results.OrderByDescending(m => m.CompletedAt))
+        {
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span>🧾 Request <strong>@message.RequestId</strong></span>
+                    <small>Completed @message.CompletedAt.ToLocalTime().ToString("g")</small>
+                </div>
+                <div class="card-body">
+                    @foreach (var route in message.Result.Routes)
+                    {
+                        <details class="mb-3" open="@route.Used">
+                            <summary class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>🚚 @route.VehicleName</strong>
+                                    @if (!route.Used)
+                                    {
+                                        <span class="text-muted ms-2">(Idle)</span>
+                                    }
+                                </div>
+                                <div>
+                                    <span class="badge bg-secondary me-1">@($"{route.TotalMinutes:F0} min")</span>
+                                    <span class="badge bg-info me-1">@($"{route.DistanceKm:F1} km")</span>
+                                    <span class="badge bg-success">@($"{route.Cost:F2} rate units")</span>
+                                </div>
+                            </summary>
+
+                            @if (route.Stops.Any())
+                            {
+                                <table class="table table-sm table-striped mt-2">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:5%">#</th>
+                                            <th>Job</th>
+                                            <th>Type</th>
+                                            <th class="text-center">Arrive</th>
+                                            <th class="text-center">Depart</th>
+                                            <th class="text-center">Pallets</th>
+                                            <th class="text-center">Weight</th>
+                                            <th class="text-center">Refrig</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < route.Stops.Count; i++)
+                                        {
+                                            var stop = route.Stops[i];
+                                            <tr>
+                                                <td>@(i + 1)</td>
+                                                <td>@stop.JobName</td>
+                                                <td>@JobTypeIcon(stop.JobType)</td>
+                                                <td class="text-center">@stop.ArrivalTime</td>
+                                                <td class="text-center">@stop.DepartureTime</td>
+                                                <td class="text-center">@stop.PalletLoad</td>
+                                                <td class="text-center">@stop.WeightLoad</td>
+                                                <td class="text-center">@stop.RefrigeratedLoad</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            else
+                            {
+                                <p class="text-muted mt-2">No jobs assigned.</p>
+                            }
+                        </details>
+                    }
+                    <div class="text-end mt-3">
+                        <strong>Total Fleet Cost: </strong>
+                        <span class="text-success">@message.Result.TotalCost:F2 rate units</span>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public List<VrpResultMessage> Results { get; set; } = new();
+
+    protected string JobTypeIcon(JobType type) => type switch
+    {
+        JobType.Depot => "🏠 Depot",
+        JobType.Pickup => "📦 Pickup",
+        JobType.Delivery => "📬 Delivery",
+        _ => type.ToString()
+    };
+}

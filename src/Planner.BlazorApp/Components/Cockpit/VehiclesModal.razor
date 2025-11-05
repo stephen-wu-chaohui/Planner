@@ -1,0 +1,214 @@
+﻿@using System.Text.Json
+@using Planner.Contracts.Messages.VehicleRoutingProblem
+@using Planner.Domain.Entities
+
+@if (Visible) {
+    <div class="modal fade show d-block" tabindex="-1" role="dialog"
+         style="background-color:rgba(0,0,0,.4);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">🚚 Vehicles</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="OnClose"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>
+                            <button class="btn btn-sm btn-success me-1" @onclick="AddNew">➕ Add</button>
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="LoadFromFile">📂 Load</button>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="SaveToFile">💾 Save</button>
+                        </div>
+                        <small class="text-muted">Stored at: wwwroot/data/vehicles.json</small>
+                    </div>
+
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Max Pallets</th>
+                                <th>Max Weight</th>
+                                <th>Shift Limit (min)</th>
+                                <th>Hourly Cost</th>
+                                <th>Distance Fee/km</th>
+                                <th>Base Cost</th>
+                                <th style="width: 100px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in Vehicles) {
+                                <tr>
+                                    <td>@v.Id</td>
+                                    <td>@v.Name</td>
+                                    <td>@v.MaxPallets</td>
+                                    <td>@v.MaxWeight</td>
+                                    <td>@v.ShiftLimitMinutes</td>
+                                    <td>@v.DriverRatePerHour</td>
+                                    <td>@v.FuelRatePerKm</td>
+                                    <td>@v.BaseFee</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(v))">✏️</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(v))">🗑️</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="OnClose">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Modal -->
+@if (Editing is not null) {
+    <div class="modal fade show d-block" tabindex="-1"
+         style="background-color:rgba(0,0,0,.4); z-index:1060;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@((IsNew ? "Add" : "Edit") + " Vehicle")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" @bind="Editing.Name" />
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <label class="form-label">Max Pallets</label>
+                            <input class="form-control" type="number" @bind="Editing.MaxPallets" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Max Weight</label>
+                            <input class="form-control" type="number" @bind="Editing.MaxWeight" />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Shift Limit (minutes)</label>
+                        <input class="form-control" type="number" @bind="Editing.ShiftLimitMinutes" />
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <label class="form-label">Hourly Rate</label>
+                            <input class="form-control" type="number" step="0.1" @bind="Editing.DriverRatePerHour" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Distance Fee / km</label>
+                            <input class="form-control" type="number" step="0.01" @bind="Editing.FuelRatePerKm" />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Base Cost</label>
+                        <input class="form-control" type="number" step="0.1" @bind="Editing.BaseFee" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveEdit">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public List<Vehicle> Vehicles { get; set; } = new();
+
+    private const string FilePath = "wwwroot/data/vehicles.json";
+    private Vehicle? Editing;
+    private bool IsNew;
+
+    private void AddNew() {
+        Editing = new Vehicle {
+            Id = NextId(),
+            Name = $"Vehicle {Vehicles.Count + 1}",
+            MaxPallets = 20,
+            MaxWeight = 10000,
+            ShiftLimitMinutes = 360,
+            DriverRatePerHour = 100,
+            FuelRatePerKm = 0.5,
+            BaseFee = 120
+        };
+        IsNew = true;
+    }
+
+    private void Edit(Vehicle v) {
+        Editing = new Vehicle {
+            Id = v.Id,
+            Name = v.Name,
+            MaxPallets = v.MaxPallets,
+            MaxWeight = v.MaxWeight,
+            ShiftLimitMinutes = v.ShiftLimitMinutes,
+            DriverRatePerHour = v.DriverRatePerHour,
+            FuelRatePerKm = v.FuelRatePerKm,
+            BaseFee = v.BaseFee
+        };
+        IsNew = false;
+    }
+
+    private async Task SaveEdit() {
+        if (Editing is null) return;
+
+        if (IsNew) {
+            Vehicles.Add(Editing);
+        } else {
+            var existing = Vehicles.FirstOrDefault(x => x.Id == Editing.Id);
+            if (existing is not null) {
+                existing.Name = Editing.Name;
+                existing.MaxPallets = Editing.MaxPallets;
+                existing.MaxWeight = Editing.MaxWeight;
+                existing.ShiftLimitMinutes = Editing.ShiftLimitMinutes;
+                existing.DriverRatePerHour = Editing.DriverRatePerHour;
+                existing.FuelRatePerKm = Editing.FuelRatePerKm;
+                existing.BaseFee = Editing.BaseFee;
+            }
+        }
+
+        Editing = null;
+        await SaveToFile();
+    }
+
+    private void CloseEditModal() => Editing = null;
+
+    private async Task Delete(Vehicle v) {
+        Vehicles.Remove(v);
+        await SaveToFile();
+    }
+
+    private async Task LoadFromFile() {
+        try {
+            if (!File.Exists(FilePath)) {
+                Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+                await File.WriteAllTextAsync(FilePath, "[]");
+            }
+
+            var json = await File.ReadAllTextAsync(FilePath);
+            var data = JsonSerializer.Deserialize<List<Vehicle>>(json) ?? new();
+            Vehicles.Clear();
+            Vehicles.AddRange(data);
+        } catch (Exception ex) {
+            Console.WriteLine($"LoadFromFile error: {ex.Message}");
+        }
+    }
+
+    private async Task SaveToFile() {
+        try {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            var json = JsonSerializer.Serialize(Vehicles, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(FilePath, json);
+        } catch (Exception ex) {
+            Console.WriteLine($"SaveToFile error: {ex.Message}");
+        }
+    }
+
+    private int NextId() => Vehicles.Count == 0 ? 0 : Vehicles.Max(v => v.Id) + 1;
+}

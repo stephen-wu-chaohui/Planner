@@ -1,0 +1,66 @@
+[
+  {
+    "Id": 0,
+    "Name": "A",
+    "Address": "",
+    "Latitude": -31.876158562509378,
+    "Longitude": 115.81708848632813,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 1,
+    "Name": "B",
+    "Address": "",
+    "Latitude": -31.875867015282534,
+    "Longitude": 115.86412370361329,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 2,
+    "Name": "C",
+    "Address": "",
+    "Latitude": -31.873534604256506,
+    "Longitude": 115.92420518554688,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 3,
+    "Name": "D",
+    "Address": "",
+    "Latitude": -31.91084609416372,
+    "Longitude": 115.81125199951173,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 4,
+    "Name": "E",
+    "Address": "",
+    "Latitude": -31.90851456903421,
+    "Longitude": 115.86618364013673,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 5,
+    "Name": "F",
+    "Address": "",
+    "Latitude": -31.903268421498577,
+    "Longitude": 115.93004167236329,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 6,
+    "Name": "G",
+    "Address": "",
+    "Latitude": -31.97523110888197,
+    "Longitude": 115.80816209472657,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 7,
+    "Name": "K",
+    "Address": "",
+    "Latitude": -31.988044458793404,
+    "Longitude": 115.9358781591797,
+    "DefaultJobType": "Delivery"
+  }
+]
