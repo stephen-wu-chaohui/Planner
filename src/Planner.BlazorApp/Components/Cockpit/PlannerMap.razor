@@ -11,7 +11,7 @@
     [Parameter] public double DepotLon { get; set; }
     [Parameter] public List<MapMarker>? Customers { get; set; }
     [Parameter] public List<MapRoute>? Routes { get; set; }
-    [Parameter] public EventCallback<(double lat, double lng)> JobPositionPicked { get; set; }
+    [Parameter] public EventCallback<MapPosition> JobPositionPicked { get; set; }
 
     private DotNetObjectReference<PlannerMap>? dotNetRef;
 
@@ -44,9 +44,9 @@
     }
 
     [JSInvokable]
-    public Task OnMapClick(double lat, double lng) {
+    public Task OnMapClick(MapPosition position) {
         if (JobPositionPicked.HasDelegate) 
-            JobPositionPicked.InvokeAsync((lat, lng));
+            JobPositionPicked.InvokeAsync(position);
         return Task.CompletedTask;
     }
 

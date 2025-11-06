@@ -7,7 +7,7 @@ public class OptimizationResultNotifier(IHubContext<PlannerHub> hubContext) : IM
     public Task PublishAsync<T>(string method, T message) where T : class {
         // Broadcast to all connected SignalR clients
         hubContext.Clients.All.SendAsync(method, message);
-        Console.WriteLine($"Broadcast {method}, {message}");
+        Console.WriteLine($"[{DateTime.Now}] Broadcast {method}");
         return Task.CompletedTask;
     }
 }

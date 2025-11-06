@@ -14,4 +14,10 @@ public class MapMarker {
     public long RefrigeratedLoad { get; set; }
 }
 
+public class MapPosition {
+    public double Lat { get; set; }
+    public double Lng { get; set; }
+    public string Address { get; set; } = string.Empty;
+    public string Region { get; set; } = string.Empty;
+}
 

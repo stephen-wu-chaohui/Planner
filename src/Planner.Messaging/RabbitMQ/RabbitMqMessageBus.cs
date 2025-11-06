@@ -10,7 +10,7 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
         using var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
         channel.QueuePurge(queueName);
-        Console.WriteLine($"PublishAsync.channel.QueueDeclare({queueName})");
+        Console.WriteLine($"[{DateTime.Now}] PublishAsync.channel.QueueDeclare({queueName})");
 
         var json = JsonSerializer.Serialize(message);
         var body = Encoding.UTF8.GetBytes(json);
@@ -19,31 +19,31 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
                              routingKey: queueName,
                              basicProperties: null,
                              body: body);
-        Console.WriteLine($"RabbitMqMessageBus.PublishAsync({queueName}, {json})");
+        Console.WriteLine($"[{DateTime.Now}] RabbitMqMessageBus.PublishAsync({queueName})");
         return Task.CompletedTask;
     }
 
     public void Subscribe<T>(string queueName, Func<T, Task> onMessage) {
         var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
-        Console.WriteLine($"Subscribe.channel.QueueDeclare({queueName})");
+        Console.WriteLine($"[{DateTime.Now}] Subscribe.channel.QueueDeclare({queueName})");
         channel.QueuePurge(queueName);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.Received += async (_, ea) => {
             try {
                 var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-                Console.WriteLine($"[RabbitMqMessageBus].Received({queueName}, {json})");
+                Console.WriteLine($"[{DateTime.Now}] [RabbitMqMessageBus].Received({queueName})");
                 var obj = JsonSerializer.Deserialize<T>(json);
                 if (obj != null) {
                     await onMessage(obj);
                 }
             } catch (Exception ex) {
-                Console.WriteLine($"[RabbitMqMessageBus] Error: {ex.Message}");
+                Console.WriteLine($"[{DateTime.Now}] [RabbitMqMessageBus] Error: {ex.Message}");
             }
         };
 
         channel.BasicConsume(queue: queueName, autoAck: true, consumer);
-        Console.WriteLine($"[RabbitMqMessageBus].Subscribe({queueName})");
+        Console.WriteLine($"[{DateTime.Now}] [RabbitMqMessageBus].Subscribe({queueName})");
     }
 }

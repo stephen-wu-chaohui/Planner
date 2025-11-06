@@ -157,6 +157,15 @@
     private Job? Editing;
     private bool IsNew;
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (Customers?.Count > 0 && Jobs.Count == 0)
+        {
+            await CreateJobsForAllCustomers();
+        }
+    }
+
+
     private async Task CreateJobsForAllCustomers() {
         if (Customers == null || Customers.Count == 0) {
             Console.WriteLine("No customers available to create jobs.");

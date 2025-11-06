@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Planner.Application.Messaging;
 using Planner.BlazorApp.Components;
+using Planner.BlazorApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json"), optional: false, reloadOnChange: true);
@@ -17,7 +18,10 @@ builder.Services.AddSingleton(sp => {
         .Build();
 });
 
+// 👇 Add this line to enable HttpClient for dependency injection
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IMessageHubClient, OptimizationResultReceiver>();
+builder.Services.AddScoped<DataCenterService>();
 
 
 var app = builder.Build();

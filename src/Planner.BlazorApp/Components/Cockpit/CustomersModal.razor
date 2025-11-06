@@ -127,13 +127,15 @@
         IsNew = true;
     }
 
-    public void OpenForNewCustomer(double latitude, double longitude)
+    public void OpenForNewCustomer(MapPosition pos)
     {
         Editing = new Customer {
             Id = NextId(),
+            Name = pos.Region,
+            Address = pos.Address,
             DefaultJobType = "Delivery",
-            Latitude = latitude,
-            Longitude = longitude
+            Latitude = pos.Lat,
+            Longitude = pos.Lng
         };
         IsNew = true;
 

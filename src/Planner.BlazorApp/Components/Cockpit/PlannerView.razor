@@ -2,13 +2,13 @@
 @rendermode InteractiveServer
 
 @using Planner.Application.Messaging
+@using Planner.BlazorApp.Services
 @using Planner.Contracts.Messages
 @using Planner.Contracts.Messages.VehicleRoutingProblem
 @using Planner.Domain.Entities
 @using static Planner.BlazorApp.Components.Cockpit.PlannerMap
 
-
-@inject IMessageHubClient Hub
+@inject DataCenterService DataCenter
 
 <div class="position-relative w-100 h-100" style="overflow:hidden;"
      @oncontextmenu:preventDefault="true"
@@ -34,18 +34,18 @@
 
     <!-- Modals -->
     <CustomersModal Visible="@ShowCustomersModal"
-                    Customers="@Customers"
+                    Customers="@DataCenter.Customers"
                     OnClose="@(() => @ShowCustomersModal = false)"
                     @ref="customersModal" />
 
     <VehiclesModal Visible="@ShowVehiclesModal"
-                   Vehicles="@Vehicles"
+                   Vehicles="@DataCenter.Vehicles"
                    OnClose="@(() => @ShowVehiclesModal = false)" />
 
     <JobsModal Visible="@ShowJobsModal"
                Jobs="@Jobs"
-               Customers="@Customers"
-               Vehicles="@Vehicles"
+               Customers="@DataCenter.Customers"
+               Vehicles="@DataCenter.Vehicles"
                OnClose="@(() => @ShowJobsModal = false)"
                OnSolve="@SolveVrp" />
 
@@ -58,10 +58,13 @@
 
 @code {
     // --- State collections ---
-    private readonly List<Customer> Customers = new();
-    private readonly List<Vehicle> Vehicles = new();
+    // private readonly List<Customer> Customers = new();
+    // private readonly List<Vehicle> Vehicles = new();
     private readonly List<Job> Jobs = new();
     private readonly List<VehicleRoute> Routes = new();
+
+    private double saturation = 0.85;
+    private double lightness = 0.55;
 
     private (double Latitude, double Longitude) Depot = (-31.953823, 115.876140);
 
@@ -69,10 +72,10 @@
     private List<MapRoute> MapRoutes => Routes.Select(r => new MapRoute
     {
         RouteName = r.VehicleName,
-        Color = "#4285F4",
+        Color = ColourHelper.ColourFromString(r.VehicleName, saturation, lightness) ?? "#FF0000",
         Points = r.Stops.Select(s =>
         {
-            var c = Customers.FirstOrDefault(x => x.Id == s.JobId);
+            var c = DataCenter.Customers.FirstOrDefault(x => x.Id == s.JobId);
             return new MapMarker
             {
                 Lat = c?.Latitude ?? 0,
@@ -82,8 +85,7 @@
         }).ToList()
     }).ToList();
 
-    private List<MapMarker> MapCustomers => Customers.Select(c => new MapMarker
-    {
+    private List<MapMarker> MapCustomers => DataCenter.Customers.Select(c => new MapMarker {
         Lat = c.Latitude,
         Lng = c.Longitude,
         Label = c.Name
@@ -100,10 +102,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Hub.SubscribeAsync<VrpResultMessage>(
-            MessageRoutes.VRPSolverResult,
-            async msg => await OnVrpResultReceived(msg)
-        );
+        await DataCenter.InitializeAsync();
+        DataCenter.VrpResultReceived += async msg => await OnVrpResultReceived(msg);
+        await InvokeAsync(StateHasChanged);
     }
 
     // --- Context Menu Logic ---
@@ -131,40 +132,23 @@
     // --- SignalR Result Handler ---
     private async Task OnVrpResultReceived(VrpResultMessage msg)
     {
-        Console.WriteLine($"[PlannerView] Received VRP result {msg.RequestId}");
+        Console.WriteLine($"[{DateTime.Now}] VRP result received. {msg.RequestId}");
+        saturation = 0.85;
+        lightness = 0.25;
         Routes.Clear();
         Routes.AddRange(msg.Result.Routes);
         await InvokeAsync(StateHasChanged);
-        return;
-
-        if (mapRef is null) return;
-
-        // await mapRef.ClearRoutesAsync();
-        foreach (var route in msg.Result.Routes.Where(r => r.Used))
-        {
-            // we’ll later load coordinates from Customers
-            var points = route.Stops.Select(s =>
-            {
-                var c = Customers.FirstOrDefault(x => x.Id == s.JobId);
-                return new MapMarker
-                {
-                    Lat = c?.Latitude ?? 0,
-                    Lng = c?.Longitude ?? 0,
-                    Label = c?.Name ?? s.JobName,
-                    JobType = s.JobType.ToString(),
-                    Color = "#4285F4",
-                    RouteName = route.VehicleName
-                };
-            }).ToList();
-
-            await mapRef.DrawRouteAsync(route.VehicleName, "#4285F4", points);
-        }
-        await mapRef.FitToBoundsAsync();
     }
 
     // --- Solve VRP trigger (called from JobsModal) ---
     private async Task SolveVrp()
     {
+        HideMenu();
+        ShowJobsModal = false;
+
+        saturation = 0.85;
+        lightness = 0.75;
+
         var vrpJobs = Jobs.Prepend(new Job {
             Id = 0,
             CustomerId = -1,
@@ -175,7 +159,7 @@
         var MakeDistanceMatrix = () =>
         {
             var size = vrpJobs.Count(); // +1 for depot
-            var points = vrpJobs.Select(j => Customers.FirstOrDefault(c => c.Id == j.CustomerId) is { } customer ? (customer.Latitude, customer.Longitude) : Depot).ToArray();
+            var points = vrpJobs.Select(j => DataCenter.Customers.FirstOrDefault(c => c.Id == j.CustomerId) is { } customer ? (customer.Latitude, customer.Longitude) : Depot).ToArray();
 
             var matrix = new double[size][];
             var rand = new Random();
@@ -202,21 +186,24 @@
             Request = new VrpRequest
             {
                 Jobs = vrpJobs.ToList(),
-                Vehicles = Vehicles,
+                Vehicles = DataCenter.Vehicles,
                 DistanceKm = MakeDistanceMatrix(),
                 TravelMinutes = MakeTravelMinutes,
             },
             CompletedAt = DateTime.UtcNow
         };
 
-        Console.WriteLine($"[PlannerView] Sending VRP request {request.RequestId}");
         using var client = new HttpClient { BaseAddress = new Uri("https://localhost:7085/") };
         var response = await client.PostAsJsonAsync("api/vrp/solve", request);
         if (response.IsSuccessStatusCode) {
-            Console.WriteLine("Received VRP solution from API.");
+            Console.WriteLine($"[{DateTime.Now}]VRP request successfully sent.  Please wait for a few minutes to get the result.");
+        } else
+        {
+            Console.WriteLine($"[{DateTime.Now}]VRP request failed to sent.  Please check the connection.");
         }
-
+        await InvokeAsync(StateHasChanged);
     }
+
     private Task HighlightRoute(string args)
     {
         //throw new NotImplementedException();
@@ -228,15 +215,13 @@
 
     }
 
-
     private CustomersModal? customersModal;
 
-    private Task JobPositionPicked((double lat, double lng) args)
-    {
+    private Task JobPositionPicked(MapPosition args) {
         if (!(ShowContextMenu || ShowCustomersModal || ShowJobsModal || ShowRoutesModal || ShowVehiclesModal))
         {
             ShowCustomersModal = true;
-            customersModal?.OpenForNewCustomer(args.lat, args.lng);
+            customersModal?.OpenForNewCustomer(args);
         }
         return Task.CompletedTask;
     }

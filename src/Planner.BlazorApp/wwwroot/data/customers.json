@@ -1,66 +1,98 @@
 [
   {
     "Id": 0,
-    "Name": "A",
-    "Address": "",
-    "Latitude": -31.876158562509378,
-    "Longitude": 115.81708848632813,
+    "Name": "Redcliffe",
+    "Address": "Morgan Park, 1 Morgan Rd, Redcliffe WA 6104, Australia",
+    "Latitude": -31.945811880340017,
+    "Longitude": 115.94411790527344,
     "DefaultJobType": "Delivery"
   },
   {
     "Id": 1,
-    "Name": "B",
-    "Address": "",
-    "Latitude": -31.875867015282534,
-    "Longitude": 115.86412370361329,
+    "Name": "Bayswater",
+    "Address": "Riverside Gardens, King William St, Bayswater WA 6053, Australia",
+    "Latitude": -31.93002031399519,
+    "Longitude": 115.92292785644531,
     "DefaultJobType": "Delivery"
   },
   {
     "Id": 2,
-    "Name": "C",
-    "Address": "",
-    "Latitude": -31.873534604256506,
-    "Longitude": 115.92420518554688,
+    "Name": "East Victoria Park",
+    "Address": "12 Mofflyn Cir, East Victoria Park WA 6101, Australia",
+    "Latitude": -31.990897765011383,
+    "Longitude": 115.89091524315249,
     "DefaultJobType": "Delivery"
   },
   {
     "Id": 3,
-    "Name": "D",
-    "Address": "",
-    "Latitude": -31.91084609416372,
-    "Longitude": 115.81125199951173,
+    "Name": "Willetton",
+    "Address": "13A Cambrian Pl, Willetton WA 6155, Australia",
+    "Latitude": -32.04533283885849,
+    "Longitude": 115.88748201561343,
     "DefaultJobType": "Delivery"
   },
   {
     "Id": 4,
-    "Name": "E",
-    "Address": "",
-    "Latitude": -31.90851456903421,
-    "Longitude": 115.86618364013673,
+    "Name": "Melville",
+    "Address": "1F Kitchener Rd, Melville WA 6156, Australia",
+    "Latitude": -32.036020039737565,
+    "Longitude": 115.7978747768439,
     "DefaultJobType": "Delivery"
   },
   {
     "Id": 5,
-    "Name": "F",
-    "Address": "",
-    "Latitude": -31.903268421498577,
-    "Longitude": 115.93004167236329,
+    "Name": "Yokine",
+    "Address": "Parking lot, 10 Wordsworth Ave, Yokine WA 6060, Australia",
+    "Latitude": -31.907931678521077,
+    "Longitude": 115.85725724853516,
     "DefaultJobType": "Delivery"
   },
   {
     "Id": 6,
-    "Name": "G",
-    "Address": "",
-    "Latitude": -31.97523110888197,
-    "Longitude": 115.80816209472657,
+    "Name": "Wembley Downs",
+    "Address": "2A Kylie St, Wembley Downs WA 6019, Australia",
+    "Latitude": -31.916966066537213,
+    "Longitude": 115.77966630615235,
     "DefaultJobType": "Delivery"
   },
   {
     "Id": 7,
-    "Name": "K",
-    "Address": "",
-    "Latitude": -31.988044458793404,
-    "Longitude": 115.9358781591797,
+    "Name": "Claremont",
+    "Address": "8 Warden St, Claremont WA 6010, Australia",
+    "Latitude": -31.977852166925867,
+    "Longitude": 115.78859269775391,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 8,
+    "Name": "Hilton",
+    "Address": "238 Carrington St, Hilton WA 6163, Australia",
+    "Latitude": -32.067890779495066,
+    "Longitude": 115.77934357159035,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 9,
+    "Name": "Beeliar",
+    "Address": "15 Giralia Gardens, Beeliar WA 6164, Australia",
+    "Latitude": -32.1301304016415,
+    "Longitude": 115.81161591045753,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 10,
+    "Name": "Banjup",
+    "Address": "275 Liddelow Rd, Banjup WA 6164, Australia",
+    "Latitude": -32.1583278461949,
+    "Longitude": 115.88955017559425,
+    "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 11,
+    "Name": "Atwell",
+    "Address": "22B Halcyon Way, Atwell WA 6164, Australia",
+    "Latitude": -32.146277731217715,
+    "Longitude": 115.86516608416879,
     "DefaultJobType": "Delivery"
   }
 ]

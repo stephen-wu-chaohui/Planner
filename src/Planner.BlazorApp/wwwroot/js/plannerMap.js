@@ -8,7 +8,7 @@ window.loadGoogleMaps = (apiKey) => {
     return new Promise((resolve, reject) => {
         if (window.google && google.maps && google.maps.marker) { resolve(); return; }
         const s = document.createElement("script");
-        s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&callback=mapInteropInit`;
+        s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker,places&callback=mapInteropInit`;
         s.async = true;
         s.onload = resolve;
         s.onerror = reject;
@@ -23,6 +23,7 @@ window.plannerMap = {
     directionsRenderers: [],
     routeLabels: [],
     directionsService: null,
+    geocoder: null,
     activeRoute: null,
 
     // --- Initialization ---
@@ -33,18 +34,46 @@ window.plannerMap = {
             mapId: apiMapId
         });
         this.directionsService = new google.maps.DirectionsService();
+        this.geocoder = new google.maps.Geocoder();
+
     },
 
     registerClickHandler: function (dotnetRef, clickHandlerName) {
-
+        var me = this;
         this.map.addListener("click", function (e) {
             const domEvent = e.domEvent;
-            if (domEvent.ctrlKey) {
-                const lat = e.latLng.lat();
-                const lng = e.latLng.lng();
-
-                dotnetRef.invokeMethodAsync(clickHandlerName, lat, lng);
+            if (!domEvent.ctrlKey) {
+                return;
             }
+            const latLng = e.latLng;
+            me.geocoder.geocode({ location: latLng }).then((response) => {
+                const infowindow = new google.maps.InfoWindow();
+                let address = '', region = '';
+                if (response.results && response.results.length > 0) {
+                    address = response.results[0].formatted_address;
+                    infowindow.setPosition(latLng);
+                    infowindow.setContent(address);
+                    infowindow.open(map);
+                    console.log("Address:", address);
+
+                    const components = response.results[0].address_components;
+                    region = components.find(c =>
+                        c.types.includes("locality")
+                    )?.long_name;
+                    console.log("Region:", region);
+
+                    const lat = e.latLng.lat();
+                    const lng = e.latLng.lng();
+
+                    dotnetRef.invokeMethodAsync(clickHandlerName, { lat, lng, address, region });
+
+                } else {
+                    console.log("No address found");
+                }
+            }).catch((error) => {
+                console.error("Geocoder error:", error);
+            });
+
         });
     },
 
