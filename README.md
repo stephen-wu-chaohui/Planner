@@ -1,4 +1,10 @@
-﻿# Planner — Fleet Optimization and Visualization Platform
+﻿<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
+  <img alt="Planner — Clean Architecture • OR-Tools VRP • RabbitMQ • Azure" src="assets/banner-light.svg">
+</picture>
+
+# Planner — Fleet Optimization and Visualization Platform
 
 **Planner** is a modular .NET 8 and Blazor-based system that demonstrates how **optimization algorithms** (Google OR-Tools) can be integrated into a **clean, message-driven architecture** for intelligent **fleet management**.  
 It combines optimization science with modern .NET engineering to create a purpose-driven, scalable, and interactive platform.
@@ -235,5 +241,7 @@ The **LinearPoster** component allows posting raw JSON to `/api/Optimization/lin
 Planner demonstrates how a **.NET 8 developer** can integrate **Google OR-Tools** into a **clean, message-driven, real-time optimization platform** — uniting algorithmic logic, modern web architecture, and interactive visualization.
 
 ---
+👉 [📘 Full Project Documentation →](docs/README.md)
 
+---
 ✅ *Built with .NET 8 · Blazor Server · SignalR · RabbitMQ · Google OR-Tools*
