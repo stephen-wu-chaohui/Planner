@@ -1,23 +1,27 @@
-﻿@page "/"
+﻿@page "/LinearSolver"
 @rendermode InteractiveServer
 
 @using Planner.Application.Messaging
-@using Planner.BlazorApp.DataRepresentation
+@using Planner.BlazorApp.Components.Shared
 @using Planner.Contracts.Messages
 @using Planner.Contracts.Messages.LinearSolver
 
 @inject IMessageHubClient hub
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Linear Solver</PageTitle>
 
 <section class="p-4">
 
     <h1>Linear Solver Inside</h1>
 
     <h3>Welcome to the Linear Solver, perfect for optimizing your workflows!</h3>
-    <p>Please use any API clients to interact with the Linear Solver service...</p>
+    <p>Please use any API clients to interact with the Linear Solver service, or: </p>
+    <button class="btn btn-primary" @onclick="() => ShowPoster = true">Open Linear Poster</button>
 
+    <LinearPoster Visible="@ShowPoster" OnCloseClicked="() => ShowPoster = false" />
+</section>
 
+<section class="p-4">
     @if (results.Count == 0)
     {
         <p><em>No results received yet...</em></p>
@@ -49,6 +53,9 @@
 </section>
 
 @code {
+
+    private bool ShowPoster;
+
     private readonly List<LinearSolverResultRow> results = new();
 
     protected override Task OnInitializedAsync()
@@ -62,4 +69,12 @@
         );
         return Task.CompletedTask;
     }
+
+    private record LinearSolverResultRow(LinearSolverResultMessage Message) {
+        public string? RequestId => Message.RequestId;
+        public string? Status => Message.Response.Status;
+        public double ObjectiveValue => Message.Response.ObjectiveValue;
+        public DateTime CompletedAt => Message.CompletedAt;
+    }
+
 }

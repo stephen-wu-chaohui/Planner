@@ -1,0 +1,92 @@
+﻿@inject HttpClient Http
+@inject IWebHostEnvironment Env
+
+<div class="modal fade @(Visible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Post JSON to API</h5>
+                <button type="button" class="btn-close" @onclick="OnClose"></button>
+            </div>
+
+            <div class="modal-body d-flex flex-column" style="height: 70vh;">
+                <div class="mb-2 text-muted small">@Url</div>
+
+                <textarea class="form-control flex-grow-1 font-monospace"
+                          placeholder="{ &quot;variables&quot;: ... }"
+                          @bind="RequestBody"></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="OnClose">Close</button>
+                <button class="btn btn-success" @onclick="InvokePost">Invoke</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(ResponseText)) {
+    <div class="mt-3">
+        <h6>Response:</h6>
+        <pre class="bg-dark text-light p-3 rounded">@ResponseText</pre>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnCloseClicked { get; set; }
+    [Parameter] public string Url { get; set; } = "https://localhost:7085/api/Optimization/linearsolve";
+
+    private string RequestBody { get; set; } = string.Empty;
+    private string? ResponseText { get; set; }
+
+    private string RequestFilePath => Path.Combine(Env.WebRootPath, "data", "linearsolver.request.json");
+
+    protected override async Task OnParametersSetAsync() {
+        if (Visible)
+            await LoadRequestFromFileAsync();
+    }
+
+    private async Task LoadRequestFromFileAsync() {
+        try {
+            if (File.Exists(RequestFilePath)) {
+                RequestBody = await File.ReadAllTextAsync(RequestFilePath);
+            }
+        } catch (Exception ex) {
+            ResponseText = $"Error loading JSON file: {ex.Message}";
+        }
+    }
+
+    private async Task SaveRequestToFileAsync() {
+        try {
+            var dir = Path.GetDirectoryName(RequestFilePath);
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            await File.WriteAllTextAsync(RequestFilePath, RequestBody);
+        } catch (Exception ex) {
+            ResponseText = $"Error saving JSON file: {ex.Message}";
+        }
+    }
+
+    private async Task InvokePost() {
+        try {
+            var content = new StringContent(RequestBody, System.Text.Encoding.UTF8, "application/json");
+            var response = await Http.PostAsync(Url, content);
+            ResponseText = await response.Content.ReadAsStringAsync();
+
+            // Save after successful invoke
+            await SaveRequestToFileAsync();
+
+            await OnCloseClicked.InvokeAsync();
+
+        } catch (Exception ex) {
+            ResponseText = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task OnClose() {
+        ResponseText = null;
+        await OnCloseClicked.InvokeAsync();
+    }
+}

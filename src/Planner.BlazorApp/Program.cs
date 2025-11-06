@@ -20,8 +20,8 @@ builder.Services.AddSingleton(sp => {
 
 // 👇 Add this line to enable HttpClient for dependency injection
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<IMessageHubClient, OptimizationResultReceiver>();
-builder.Services.AddScoped<DataCenterService>();
+builder.Services.AddSingleton<IMessageHubClient, OptimizationResultReceiver>();
+builder.Services.AddSingleton<DataCenterService>();
 
 
 var app = builder.Build();

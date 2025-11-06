@@ -1,4 +1,5 @@
-﻿@page "/planner-view"
+﻿@page "/"
+@page "/planner-view"
 @rendermode InteractiveServer
 
 @using Planner.Application.Messaging
@@ -9,6 +10,7 @@
 @using static Planner.BlazorApp.Components.Cockpit.PlannerMap
 
 @inject DataCenterService DataCenter
+@inject IConfiguration configuration
 
 <div class="position-relative w-100 h-100" style="overflow:hidden;"
      @oncontextmenu:preventDefault="true"
@@ -193,13 +195,13 @@
             CompletedAt = DateTime.UtcNow
         };
 
-        using var client = new HttpClient { BaseAddress = new Uri("https://localhost:7085/") };
-        var response = await client.PostAsJsonAsync("api/vrp/solve", request);
+        using var client = new HttpClient { BaseAddress = new Uri(configuration["Planner.Api:BaseUrl"]!) };
+        var response = await client.PostAsJsonAsync(configuration["Planner.Api:VRP.Solver.Endpoint"], request);
         if (response.IsSuccessStatusCode) {
-            Console.WriteLine($"[{DateTime.Now}]VRP request successfully sent.  Please wait for a few minutes to get the result.");
+            Console.WriteLine($"[{DateTime.Now}] VRP request successfully sent.  Please wait for a few minutes to get the result.");
         } else
         {
-            Console.WriteLine($"[{DateTime.Now}]VRP request failed to sent.  Please check the connection.");
+            Console.WriteLine($"[{DateTime.Now}] VRP request failed to sent.  Please check the connection.");
         }
         await InvokeAsync(StateHasChanged);
     }

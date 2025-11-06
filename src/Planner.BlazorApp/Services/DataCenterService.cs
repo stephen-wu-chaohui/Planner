@@ -4,9 +4,9 @@ using Planner.Domain.Entities;
 
 namespace Planner.BlazorApp.Services;
 
-public class DataCenterService(HttpClient http, IMessageHubClient Hub) {
-    public List<Customer> Customers { get; private set; } = new();
-    public List<Vehicle> Vehicles { get; private set; } = new();
+public class DataCenterService(HttpClient http, IMessageHubClient Hub, IConfiguration configuration) {
+    public List<Customer> Customers { get; private set; } = [];
+    public List<Vehicle> Vehicles { get; private set; } = [];
 
     public event Action? DataLoaded; // Optional: notify UI when data refreshed
     public event Action<VrpResultMessage>? VrpResultReceived;
@@ -43,13 +43,17 @@ public class DataCenterService(HttpClient http, IMessageHubClient Hub) {
     }
 
     public async Task LoadCustomersAsync() {
-        Customers = await http.GetFromJsonAsync<List<Customer>>("https://localhost:7014/data/customers.json")
-                    ?? new();
+        var url = configuration["DataEndpoints:Customers"] ?? "";
+        if (!string.IsNullOrEmpty(url)) {
+            Customers = await http.GetFromJsonAsync<List<Customer>>(url) ?? [];
+        }
     }
 
     public async Task LoadVehiclesAsync() {
-        Vehicles = await http.GetFromJsonAsync<List<Vehicle>>("https://localhost:7014/data/vehicles.json")
-                    ?? new();
+        var url = configuration["DataEndpoints:Vehicles"] ?? "";
+        if (!string.IsNullOrEmpty(url)) {
+            Vehicles = await http.GetFromJsonAsync<List<Vehicle>>(url) ?? [];
+        }
     }
 
     // Future extension points:

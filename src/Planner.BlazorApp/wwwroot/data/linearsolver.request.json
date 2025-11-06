@@ -1,0 +1,46 @@
+{
+    "RequestId": "Pilbara region",
+    "Request": {
+        "Algorithm": "GLOP_LINEAR_PROGRAMMING",
+        "Variables": [
+            {
+                "Name": "A",
+                "LowerBound": 0,
+                "UpperBound": 10
+            },
+            {
+                "Name": "B",
+                "LowerBound": 0,
+                "UpperBound": 10
+            }
+        ],
+        "Objectives": [
+            {
+                "Name": "Profit",
+                "Coefficients": [
+                    3.0,
+                    4.0
+                ],
+                "Direction": "Maximize"
+            }
+        ],
+        "Constraints": [
+            {
+                "Name": "Material",
+                "Coefficients": [
+                    1.0,
+                    2.0
+                ],
+                "UpperBound": 8.0
+            },
+            {
+                "Name": "Time",
+                "Coefficients": [
+                    3.0,
+                    1.0
+                ],
+                "UpperBound": 6.0
+            }
+        ]
+    }
+}
