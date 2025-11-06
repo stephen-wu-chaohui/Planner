@@ -1,4 +1,6 @@
+﻿using Azure.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Planner.API;
 using Planner.API.BackgroundServices;
 using Planner.Infrastructure.Coordinator;
@@ -10,6 +12,20 @@ builder.Configuration
     .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json"), optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
+
+// 🔹 Connect to Azure App Configuration
+string? appConfigEndpoint = builder.Configuration["AppConfig:Endpoint"];
+if (!string.IsNullOrEmpty(appConfigEndpoint)) {
+    builder.Configuration.AddAzureAppConfiguration(options => {
+        options.Connect(new Uri(appConfigEndpoint), new DefaultAzureCredential())
+               .Select(KeyFilter.Any, LabelFilter.Null)
+               .Select(KeyFilter.Any, builder.Environment.EnvironmentName)
+               .ConfigureKeyVault(kv => {
+                   kv.SetCredential(new DefaultAzureCredential());
+               });
+    });
+}
+
 
 // Add services
 builder.Services.AddDbContext<PlannerDbContext>(options =>

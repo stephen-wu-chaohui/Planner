@@ -1,10 +1,25 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using Azure.Identity;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Planner.Application.Messaging;
 using Planner.BlazorApp.Components;
 using Planner.BlazorApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json"), optional: false, reloadOnChange: true);
+
+// 🔹 Connect to Azure App Configuration
+string? appConfigEndpoint = builder.Configuration["AppConfig:Endpoint"];
+if (!string.IsNullOrEmpty(appConfigEndpoint)) {
+    builder.Configuration.AddAzureAppConfiguration(options => {
+        options.Connect(new Uri(appConfigEndpoint), new DefaultAzureCredential())
+               .Select(KeyFilter.Any, LabelFilter.Null)
+               .Select(KeyFilter.Any, builder.Environment.EnvironmentName)
+               .ConfigureKeyVault(kv => {
+                   kv.SetCredential(new DefaultAzureCredential());
+               });
+    });
+}
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

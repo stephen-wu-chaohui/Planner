@@ -94,5 +94,13 @@
     "Latitude": -32.146277731217715,
     "Longitude": 115.86516608416879,
     "DefaultJobType": "Delivery"
+  },
+  {
+    "Id": 12,
+    "Name": "Kenwick",
+    "Address": "408 Bickley Rd, Kenwick WA 6107, Australia",
+    "Latitude": -32.02793696394367,
+    "Longitude": 115.98672817024955,
+    "DefaultJobType": "Delivery"
   }
 ]
