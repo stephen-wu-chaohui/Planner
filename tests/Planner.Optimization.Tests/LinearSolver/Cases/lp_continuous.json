@@ -1,4 +1,4 @@
-{
+﻿{
 	"Description": "LP continuous (GLOP)",
 	"Request": {
 		"Algorithm": "GLOP_LINEAR_PROGRAMMING",
