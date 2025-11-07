@@ -12,11 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
   
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_API }}
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -24,6 +19,11 @@ jobs:
 
       - name: Publish API
         run: dotnet publish src/Planner.API/Planner.API.csproj -c Release -o ./publish
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_API }}
 
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v3
