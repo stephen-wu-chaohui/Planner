@@ -1,10 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\Planner.API\Planner.API.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
     <PackageReference Include="Azure.Identity" Version="1.17.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.1" />
@@ -23,6 +19,14 @@
   <ItemGroup>
     <Content Remove="..\Planner.API\appsettings*.json" />
     <Content Remove="..\Planner.Optimization.Worker\appsettings*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Planner.Application\Planner.Application.csproj" />
+    <ProjectReference Include="..\Planner.Contracts\Planner.Contracts.csproj" />
+    <ProjectReference Include="..\Planner.Domain\Planner.Domain.csproj" />
+    <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
+    <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
