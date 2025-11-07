@@ -1,0 +1,28 @@
+name: Deploy Planner.BlazorApp to Azure
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/Planner.BlazorApp/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish Blazor App
+        run: dotnet publish src/Planner.BlazorApp/Planner.BlazorApp.csproj -c Release -o ./publish
+
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: planner-blazorapp
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_BLAZOR }}
+          package: ./publish
