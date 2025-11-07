@@ -20,6 +20,11 @@ if (File.Exists(sharedConfigPath)) {
     logger.LogWarning("shared.appsettings.json not found — continuing with environment & Azure config.");
 }
 
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables();
+
 // 🔹 Connect to Azure App Configuration
 string? appConfigEndpoint = builder.Configuration["AppConfig:Endpoint"];
 if (!string.IsNullOrEmpty(appConfigEndpoint)) {
@@ -37,10 +42,12 @@ if (!string.IsNullOrEmpty(appConfigEndpoint)) {
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+
 // 👇 Add this
+var hubUrl = builder.Configuration["SignalR:HubUrl"];
 builder.Services.AddSingleton(sp => {
     return new HubConnectionBuilder()
-        .WithUrl("https://localhost:7085/plannerHub")  // must match API endpoint
+        .WithUrl(hubUrl!)  // must match API endpoint
         .WithAutomaticReconnect()
         .Build();
 });

@@ -23,6 +23,7 @@ if (File.Exists(sharedConfigPath)) {
 }
 
 builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
@@ -39,6 +40,11 @@ if (!string.IsNullOrEmpty(appConfigEndpoint)) {
     });
 }
 
+// ---------------------------------------------
+// 3️⃣ Add logging & services as usual
+// ---------------------------------------------
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // Add services
 builder.Services.AddDbContext<PlannerDbContext>(options =>
