@@ -483,3 +483,9 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 /src/Shared
+/publish-api
+/publish-blazor
+/PS deployment.ps1
+/publish-api.zip
+/publish-blazor.zip
+/setup-planner-cicd.ps1

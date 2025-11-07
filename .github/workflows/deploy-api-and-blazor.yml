@@ -1,0 +1,119 @@
+﻿name: Deploy Planner API & Blazor to Azure
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/Planner.API/**'
+      - 'src/Planner.BlazorApp/**'
+      - '.github/workflows/deploy-api-and-blazor.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-planner
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  API_PROJECT: 'src/Planner.API/Planner.API.csproj'
+  BLAZOR_PROJECT: 'src/Planner.BlazorApp/Planner.BlazorApp.csproj'
+  API_APP_NAME: 'planner-api'              # <-- confirm in Azure Portal
+  BLAZOR_APP_NAME: 'planner-blazorapp'     # <-- confirm in Azure Portal
+
+jobs:
+  build:
+    name: Build & Publish (API + Blazor)
+    runs-on: ubuntu-latest
+    outputs:
+      api_changed: ${{ steps.filter.outputs.api }}
+      blazor_changed: ${{ steps.filter.outputs.blazor }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api:
+              - 'src/Planner.API/**'
+            blazor:
+              - 'src/Planner.BlazorApp/**'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish API
+        if: steps.filter.outputs.api == 'true'
+        run: dotnet publish ${{ env.API_PROJECT }} -c Release -o ./publish/api
+
+      - name: Publish Blazor WebAssembly
+        if: steps.filter.outputs.blazor == 'true'
+        run: dotnet publish ${{ env.BLAZOR_PROJECT }} -c Release -o ./publish/blazor
+
+      - name: Upload API artifact
+        if: steps.filter.outputs.api == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-publish
+          path: ./publish/api
+
+      - name: Upload Blazor artifact
+        if: steps.filter.outputs.blazor == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: blazor-publish
+          path: ./publish/blazor
+
+  deploy_api:
+    name: Deploy API
+    needs: build
+    runs-on: ubuntu-latest
+    if: needs.build.outputs.api_changed == 'true'
+    steps:
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-publish
+          path: ./api
+
+      - name: Azure Login (Service Principal)
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy API to Azure WebApp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.API_APP_NAME }}
+          package: ./api
+
+  deploy_blazor:
+    name: Deploy Blazor (after API)
+    needs: [build, deploy_api]
+    runs-on: ubuntu-latest
+    if: needs.build.outputs.blazor_changed == 'true'
+    steps:
+      - name: Download Blazor artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: blazor-publish
+          path: ./blazor
+
+      - name: Azure Login (Service Principal)
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Blazor to Azure WebApp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.BLAZOR_APP_NAME }}
+          package: ./blazor
