@@ -5,11 +5,18 @@ using Planner.Optimization.Worker;
 
 Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((context, config) => {
+        var sharedConfigPath = Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json");
+        if (File.Exists(sharedConfigPath)) {
+            config.AddJsonFile(sharedConfigPath, optional: true, reloadOnChange: true);
+            Console.WriteLine($"Loaded shared.appsettings.json from {sharedConfigPath}");
+        } else {
+            Console.WriteLine("shared.appsettings.json not found — continuing with environment & Azure config.");
+        }
+
         var env = context.HostingEnvironment;
 
         // Always load local and environment settings first
         config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-              .AddJsonFile("shared.appsettings.json", optional: true, reloadOnChange: true)
               .AddEnvironmentVariables();
 
         // Read current configuration to check for Azure App Config endpoint

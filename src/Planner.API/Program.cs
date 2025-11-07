@@ -8,8 +8,21 @@ using Planner.Infrastructure.Persistence;
 using Planner.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+// ✅ Try to load shared.appsettings.json only if it exists
+var sharedConfigPath = Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json");
+var loggerFactory = LoggerFactory.Create(config => {
+    config.AddConsole();
+});
+var logger = loggerFactory.CreateLogger("Startup");
+
+if (File.Exists(sharedConfigPath)) {
+    builder.Configuration.AddJsonFile(sharedConfigPath, optional: true, reloadOnChange: true);
+    logger.LogInformation("Loaded shared.appsettings.json from {Path}", sharedConfigPath);
+} else {
+    logger.LogWarning("shared.appsettings.json not found — continuing with environment & Azure config.");
+}
+
 builder.Configuration
-    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json"), optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 

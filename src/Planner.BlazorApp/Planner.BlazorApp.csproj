@@ -15,7 +15,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Content Include="..\Shared\shared.appsettings.json" Link="shared.appsettings.json">
+    <Content Include="..\Shared\shared.appsettings.json" Link="shared.appsettings.json" Condition="Exists('..\Shared\shared.appsettings.json')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
