@@ -20,6 +20,11 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="..\Planner.API\appsettings*.json" />
+    <Content Remove="..\Planner.Optimization.Worker\appsettings*.json" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
