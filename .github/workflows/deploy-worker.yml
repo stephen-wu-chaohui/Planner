@@ -1,74 +1,36 @@
-﻿name: Deploy Planner Optimization Worker
-
+﻿name: Deploy Planner.Optimization.Worker to Azure Web App (Continuous WebJob)
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
-      - "src/Planner.Optimization.Worker/**"
-      - ".github/workflows/deploy-worker.yml"
-
-env:
-  ACR_NAME: plannerregistry
-  RESOURCE_GROUP: PlannerRG
-  CONTAINER_APP_NAME: planner-worker
-  CONTAINER_ENV: planner-env
-  DOCKERFILE_PATH: src/Planner.Optimization.Worker/Dockerfile
-  IMAGE_NAME: planner-worker
+      - 'src/Planner.Optimization.Worker/**'
+      - '.github/workflows/deploy-worker.yml'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-    # Checkout code
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Login to Azure using your service principal
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    # ACR login
-    - name: Login to ACR
-      run: az acr login --name $ACR_NAME
+      - name: Restore dependencies
+        run: dotnet restore src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj
 
-    # Generate version tag
-    - name: Set image version
-      id: version
-      run: echo "VERSION=v$(date +'%Y.%m.%d.%H%M')" >> $GITHUB_OUTPUT
+      - name: Build
+        run: dotnet build src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj -c Release --no-restore
 
-    # Build Docker image
-    - name: Build Docker Image
-      run: |
-        docker build \
-          -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ steps.version.outputs.VERSION }} \
-          -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
-          -f $DOCKERFILE_PATH .
+      - name: Publish
+        run: dotnet publish src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj -c Release -o publish --no-build
 
-    # Push both tags to ACR
-    - name: Push image to ACR
-      run: |
-        docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ steps.version.outputs.VERSION }}
-        docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
-
-    # Update container app
-    - name: Deploy to Azure Container Apps
-      run: |
-        az containerapp update \
-          --name $CONTAINER_APP_NAME \
-          --resource-group $RESOURCE_GROUP \
-          --image $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ steps.version.outputs.VERSION }} \
-          --set-env-vars RABBITMQ_HOST="rabbitmq" \
-                          RABBITMQ_USER="guest" \
-                          RABBITMQ_PASS="guest"
-
-    # Output deployed version
-    - name: Show deployed revision
-      run: |
-        echo "Deployed version: ${{ steps.version.outputs.VERSION }}"
-        az containerapp show \
-          --name $CONTAINER_APP_NAME \
-          --resource-group $RESOURCE_GROUP \
-          --query "properties.latestRevisionName" -o tsv
+      - name: Deploy as WebJob
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: planner-worker
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_WORKER }}
+          package: ./publish
