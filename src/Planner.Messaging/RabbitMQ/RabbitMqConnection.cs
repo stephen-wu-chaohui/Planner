@@ -17,15 +17,26 @@ public class RabbitMqConnection : IRabbitMqConnection {
 
 
     public RabbitMqConnection(IConfiguration configuration, ILogger<RabbitMqConnection> logger) {
+
+        var host = configuration["RabbitMq:Host"] ?? "localhost";
+        var user = configuration["RabbitMq:User"] ?? "guest";
+        var pass = configuration["RabbitMq:Pass"] ?? "guest";
+        var portStr = configuration["RabbitMq:Port"] ?? "5672";
+
+        int port = int.TryParse(portStr, out var parsed) ? parsed : 5672;
+
+        _logger = logger;
+        _logger.LogCritical($"RabbitMQ Config: Host={host}, User={user}, Pass={pass}, Port={port}");
+
         _factory = new ConnectionFactory {
-            HostName = configuration["RabbitMq:HostName"] ?? "localhost",
-            UserName = configuration["RabbitMq:UserName"] ?? "guest",
-            Password = configuration["RabbitMq:Password"] ?? "guest",
-            Port = int.TryParse(configuration["RabbitMq:Port"], out var port) ? port : 5672,
+            HostName = host,
+            UserName = user,
+            Password = pass,
+            Port = port,
             DispatchConsumersAsync = true
         };
         _lock = new object();
-        _logger = logger;
+
         TryConnect();
     }
 
@@ -43,7 +54,7 @@ public class RabbitMqConnection : IRabbitMqConnection {
                     _logger.LogInformation("✅ RabbitMQ connection established to {HostName}", _connection.Endpoint.HostName);
                     return;
                 } catch (Exception ex) {
-                    _logger.LogWarning(ex, "Failed to connect to RabbitMQ. Retry {Attempt}/{Max}", i + 1, maxRetries);
+                    _logger.LogWarning("Failed to connect to RabbitMQ. Retry {Attempt}/{Max}", i + 1, maxRetries);
                     Thread.Sleep(TimeSpan.FromSeconds(Math.Min(5 * (i + 1), 30))); // backoff
                 }
             }

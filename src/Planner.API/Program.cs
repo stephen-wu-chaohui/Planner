@@ -24,8 +24,7 @@ if (File.Exists(sharedConfigPath)) {
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
 
 // 🔹 Connect to Azure App Configuration
 string? appConfigEndpoint = builder.Configuration["AppConfig:Endpoint"];
@@ -39,6 +38,8 @@ if (!string.IsNullOrEmpty(appConfigEndpoint)) {
                });
     });
 }
+// 🔹 Load environment variables last to allow overrides
+builder.Configuration.AddEnvironmentVariables();
 
 // ---------------------------------------------
 // 3️⃣ Add logging & services as usual
