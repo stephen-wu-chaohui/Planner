@@ -1,0 +1,121 @@
+﻿name: Deploy All Planner Apps (API, Blazor, Worker)
+
+on:
+  workflow_dispatch:   # You can run manually from GitHub Actions UI
+  push:
+    tags:
+      - 'v*'           # e.g., pushing v1.0.0 will deploy all
+
+permissions:
+  contents: write       # allow creating tags
+
+jobs:
+  bump-version:
+    name: Bump Version Tag
+    runs-on: windows_latest
+    outputs:
+      new_tag: ${{ steps.bump.outputs.new_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # required to access previous tags
+
+      - name: Get latest tag and bump
+        id: bump
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $latest_tag"
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+          patch=$((patch+1))
+          new_tag="v$major.$minor.$patch"
+          echo "Bumping to: $new_tag"
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+
+      - name: Create and push new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag ${{ steps.bump.outputs.new_tag }}
+          git push origin ${{ steps.bump.outputs.new_tag }}
+
+  deploy-api:
+    name: Deploy Planner.API
+    runs-on: windows_latest
+    needs: bump-version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/Planner.API/Planner.API.csproj
+
+      - name: Build
+        run: dotnet build src/Planner.API/Planner.API.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish src/Planner.API/Planner.API.csproj -c Release -o publish --no-build
+
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: planner-api
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_API }}
+          package: ./publish
+
+  deploy-blazor:
+    name: Deploy Planner.BlazorApp
+    runs-on: windows_latest
+    needs: deploy-api
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/Planner.BlazorApp/Planner.BlazorApp.csproj
+
+      - name: Build
+        run: dotnet build src/Planner.BlazorApp/Planner.BlazorApp.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish src/Planner.BlazorApp/Planner.BlazorApp.csproj -c Release -o publish --no-build /p:UseAppHost=false
+
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: planner-blazorapp
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_BLAZOR }}
+          package: ./publish
+
+  deploy-worker:
+    name: Deploy Planner.Optimization.Worker
+    runs-on: windows_latest
+    needs: deploy-blazor
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj
+
+      - name: Build
+        run: dotnet build src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish src/Planner.O

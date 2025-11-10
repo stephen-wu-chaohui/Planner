@@ -1,32 +1,21 @@
-﻿name: Deploy Planner.BlazorApp to Azure Web App
+﻿name: Deploy Blazor App
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'src/Planner.BlazorApp/**'
-      - '.github/workflows/deploy-blazor.yml'
+    branches: [ main ]
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest   # 👈 change from ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET 8
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
-      - name: Restore dependencies
-        run: dotnet restore src/Planner.BlazorApp/Planner.BlazorApp.csproj
-
-      - name: Build
-        run: dotnet build src/Planner.BlazorApp/Planner.BlazorApp.csproj -c Release --no-restore
-
-      - name: Publish
-        run: dotnet publish src/Planner.BlazorApp/Planner.BlazorApp.csproj -c Release -o publish --no-build /p:UseAppHost=false
+      - name: Publish Blazor app
+        run: dotnet publish src/Planner.BlazorApp/Planner.BlazorApp.csproj -c Release -o publish /p:UseAppHost=false
 
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v3
