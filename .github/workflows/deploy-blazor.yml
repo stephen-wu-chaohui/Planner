@@ -1,25 +1,40 @@
-﻿name: Deploy Blazor App
+﻿name: Deploy Blazor App to Azure Web App (Windows)
+
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
-    runs-on: windows-latest   # 👈 change from ubuntu-latest
+    runs-on: windows-latest
+
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
 
-      - name: Publish Blazor app
-        run: dotnet publish src/Planner.BlazorApp/Planner.BlazorApp.csproj -c Release -o publish /p:UseAppHost=false
+    - name: Restore dependencies
+      run: dotnet restore .\Planner.BlazorApp\Planner.BlazorApp.csproj
 
-      - name: Deploy to Azure WebApp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: planner-blazorapp
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_BLAZOR }}
-          package: ./publish
+    - name: Build
+      run: dotnet build .\Planner.BlazorApp\Planner.BlazorApp.csproj --configuration Release --no-restore
+
+    - name: Publish
+      run: dotnet publish .\Planner.BlazorApp\Planner.BlazorApp.csproj --configuration Release --no-build -o .\publish
+
+    # 🔐 Login to Azure using Service Principal
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # 🚀 Deploy to Azure Web App
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: 'planner-blazorapp'
+        package: '.\publish'

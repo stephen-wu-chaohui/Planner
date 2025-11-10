@@ -491,3 +491,7 @@ $RECYCLE.BIN/
 /setup-planner-cicd.ps1
 /temp
 /src/SharedXX
+/src/Planner.BlazorApp/Properties/launchSettings.json
+/src/Planner.API/Properties/launchSettings.json
+/src/Planner.API/Properties/launchSettings.json
+/src/Planner.BlazorApp/Properties/launchSettings.json
