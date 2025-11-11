@@ -12,21 +12,16 @@ public class DataCenterService(HttpClient http, IMessageHubClient Hub, IConfigur
     public event Action<VrpResultMessage>? VrpResultReceived;
 
     private bool _initialized;
-    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public async Task InitializeAsync() {
-        await _initLock.WaitAsync();
-        try {
-            if (_initialized)
-                return; // already done
-            await LoadCustomersAsync();
-            await LoadVehiclesAsync();
-            DataLoaded?.Invoke();
-            await SetupHubSubscriptionsAsync();
-            _initialized = true;
-        } finally {
-            _initLock.Release();
-        }
+        if (_initialized)
+            return; // already done
+        await SetupHubSubscriptionsAsync();
+        await LoadCustomersAsync();
+        await LoadVehiclesAsync();
+        DataLoaded?.Invoke();
+
+        _initialized = true;
     }
 
 

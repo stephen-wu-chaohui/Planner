@@ -114,8 +114,8 @@
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (firstRender) {
             DataCenter.VrpResultReceived += async msg => await OnVrpResultReceived(msg);
-            DataCenter.DataLoaded += WhenCustomersChanged;
             await DataCenter.InitializeAsync();
+            WhenCustomersChanged();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -148,7 +148,7 @@
         Console.WriteLine($"[{DateTime.Now}] VRP result received. {msg.RequestId}");
         Routes = msg.Result.Routes;
         saturation = 0.85;
-        lightness = 0.25;
+        lightness = 0.55;
         WhenRoutesChanged();
         await InvokeAsync(StateHasChanged);
     }
