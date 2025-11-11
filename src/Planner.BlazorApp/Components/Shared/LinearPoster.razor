@@ -1,5 +1,6 @@
 ﻿@inject HttpClient Http
 @inject IWebHostEnvironment Env
+@inject IConfiguration configuration
 
 <div class="modal fade @(Visible ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
     <div class="modal-dialog modal-lg">
@@ -35,10 +36,11 @@
 @code {
     [Parameter] public bool Visible { get; set; }
     [Parameter] public EventCallback OnCloseClicked { get; set; }
-    [Parameter] public string Url { get; set; } = "https://localhost:7085/api/Optimization/linearsolve";
 
     private string RequestBody { get; set; } = string.Empty;
     private string? ResponseText { get; set; }
+
+    private string Url => configuration["Planner.Api:BaseUrl"]! + "/api/Optimization/linearsolve";
 
     private string RequestFilePath => Path.Combine(Env.WebRootPath, "data", "linearsolver.request.json");
 

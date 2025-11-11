@@ -10,7 +10,6 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
         using var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
         channel.QueuePurge(queueName);
-        Console.WriteLine($"[{DateTime.Now}] PublishAsync.channel.QueueDeclare({queueName})");
 
         var json = JsonSerializer.Serialize(message);
         var body = Encoding.UTF8.GetBytes(json);

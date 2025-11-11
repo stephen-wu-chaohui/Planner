@@ -46,7 +46,8 @@ builder.Services.AddRazorComponents()
 
 
 // 👇 Add this
-var hubUrl = builder.Configuration["SignalR:HubUrl"];
+var hubUrl = $"{builder.Configuration["SignalR:Server"]}{builder.Configuration["SignalR:Route"]}";
+Console.WriteLine("Connecting to SignalR Hub at: " + hubUrl);
 builder.Services.AddSingleton(sp => {
     return new HubConnectionBuilder()
         .WithUrl(hubUrl!)  // must match API endpoint

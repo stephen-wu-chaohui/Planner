@@ -5,6 +5,7 @@
 @using Planner.BlazorApp.Components.Shared
 @using Planner.Contracts.Messages
 @using Planner.Contracts.Messages.LinearSolver
+@using System.Text.Json
 
 @inject IMessageHubClient hub
 
@@ -16,13 +17,17 @@
 
     <h3>Welcome to the Linear Solver, perfect for optimizing your workflows!</h3>
     <p>Please use any API clients to interact with the Linear Solver service, or: </p>
-    <button class="btn btn-primary" @onclick="() => ShowPoster = true">Open Linear Poster</button>
+
+    <button class="btn btn-primary" disabled="@(!string.IsNullOrEmpty(ExceptionMessage))" @onclick="() => ShowPoster = true">Open Linear Poster</button>
 
     <LinearPoster Visible="@ShowPoster" OnCloseClicked="() => ShowPoster = false" />
 </section>
 
 <section class="p-4">
-    @if (results.Count == 0)
+    @if (!string.IsNullOrEmpty(ExceptionMessage))
+    {
+        <p><b>@ExceptionMessage</b></p>
+    } else if (results.Count == 0)
     {
         <p><em>No results received yet...</em></p>
     } else
@@ -55,18 +60,36 @@
 @code {
 
     private bool ShowPoster;
+    private string ExceptionMessage = "";
 
     private readonly List<LinearSolverResultRow> results = new();
 
     protected override Task OnInitializedAsync()
     {
-        hub.SubscribeAsync<LinearSolverResultMessage>(MessageRoutes.LPSolverResult,
-            r => InvokeAsync(() => {
-                Console.WriteLine($"MessageHub received data {MessageRoutes.LPSolverResult}.");
-                results.Add(new LinearSolverResultRow(r));
-                StateHasChanged();
-            })
-        );
+        try
+        {
+            hub.SubscribeAsync<LinearSolverResultMessage>(MessageRoutes.LPSolverResult,
+                r => InvokeAsync(() => {
+                    Console.WriteLine($"MessageHub received data {MessageRoutes.LPSolverResult}.");
+                    try
+                    {
+                        var busQueue = (r.RequestId ?? "unknown") + "_" + MessageRoutes.LPSolverResult;
+                        var FilePath = $"wwwroot/data/{busQueue}-{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}.json";
+                        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+                        var json = JsonSerializer.Serialize(r, new JsonSerializerOptions { WriteIndented = true });
+                        File.WriteAllText(FilePath, json);
+                    } catch(Exception ex)
+                    {
+                        Console.WriteLine($"[{DateTime.Now.ToString()}] Exception: {ex.Message} .");
+                    }
+                    results.Add(new LinearSolverResultRow(r));
+                    StateHasChanged();
+                })
+            );
+        } catch(Exception ex)
+        {
+            ExceptionMessage = ex.Message;
+        }
         return Task.CompletedTask;
     }
 

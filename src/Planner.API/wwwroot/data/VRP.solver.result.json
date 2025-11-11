@@ -1,0 +1,235 @@
+{
+  "RequestId": "696ac661-e144-43ce-9736-63b70d76244e",
+  "CompletedAt": "2025-11-10T22:21:10.1844266Z",
+  "Result": {
+    "Routes": [
+      {
+        "VehicleId": 0,
+        "VehicleName": "Vehicle 1",
+        "Used": true,
+        "Stops": [
+          {
+            "JobId": 0,
+            "JobName": "Depot",
+            "JobType": 0,
+            "ArrivalTime": 0,
+            "DepartureTime": 0,
+            "PalletLoad": 0,
+            "WeightLoad": 0,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 2,
+            "JobName": "East Victoria Park",
+            "JobType": 2,
+            "ArrivalTime": 8,
+            "DepartureTime": 38,
+            "PalletLoad": 0,
+            "WeightLoad": 0,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 12,
+            "JobName": "Kenwick",
+            "JobType": 2,
+            "ArrivalTime": 46,
+            "DepartureTime": 76,
+            "PalletLoad": 2,
+            "WeightLoad": 100,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 3,
+            "JobName": "Willetton",
+            "JobType": 2,
+            "ArrivalTime": 80,
+            "DepartureTime": 110,
+            "PalletLoad": 4,
+            "WeightLoad": 200,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 4,
+            "JobName": "Melville",
+            "JobType": 2,
+            "ArrivalTime": 112,
+            "DepartureTime": 142,
+            "PalletLoad": 6,
+            "WeightLoad": 300,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 7,
+            "JobName": "Claremont",
+            "JobType": 2,
+            "ArrivalTime": 155,
+            "DepartureTime": 185,
+            "PalletLoad": 8,
+            "WeightLoad": 400,
+            "RefrigeratedLoad": 0
+          }
+        ],
+        "TotalMinutes": 191.540042936892,
+        "DistanceKm": 20.770021468445993,
+        "Cost": 449.618415629043
+      },
+      {
+        "VehicleId": 1,
+        "VehicleName": "Vehicle 2",
+        "Used": true,
+        "Stops": [
+          {
+            "JobId": 0,
+            "JobName": "Depot",
+            "JobType": 0,
+            "ArrivalTime": 0,
+            "DepartureTime": 0,
+            "PalletLoad": 0,
+            "WeightLoad": 0,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 8,
+            "JobName": "Hilton",
+            "JobType": 2,
+            "ArrivalTime": 26,
+            "DepartureTime": 56,
+            "PalletLoad": 0,
+            "WeightLoad": 0,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 9,
+            "JobName": "Beeliar",
+            "JobType": 2,
+            "ArrivalTime": 70,
+            "DepartureTime": 100,
+            "PalletLoad": 2,
+            "WeightLoad": 100,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 10,
+            "JobName": "Banjup",
+            "JobType": 2,
+            "ArrivalTime": 106,
+            "DepartureTime": 136,
+            "PalletLoad": 4,
+            "WeightLoad": 200,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 11,
+            "JobName": "Atwell",
+            "JobType": 2,
+            "ArrivalTime": 139,
+            "DepartureTime": 169,
+            "PalletLoad": 6,
+            "WeightLoad": 300,
+            "RefrigeratedLoad": 0
+          }
+        ],
+        "TotalMinutes": 211.5466399930059,
+        "DistanceKm": 45.77331999650296,
+        "Cost": 495.46439331992804
+      },
+      {
+        "VehicleId": 2,
+        "VehicleName": "Vehicle 3",
+        "Used": true,
+        "Stops": [
+          {
+            "JobId": 0,
+            "JobName": "Depot",
+            "JobType": 0,
+            "ArrivalTime": 0,
+            "DepartureTime": 0,
+            "PalletLoad": 0,
+            "WeightLoad": 0,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 0,
+            "JobName": "Redcliffe",
+            "JobType": 2,
+            "ArrivalTime": 2,
+            "DepartureTime": 32,
+            "PalletLoad": 0,
+            "WeightLoad": 0,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 1,
+            "JobName": "Bayswater",
+            "JobType": 2,
+            "ArrivalTime": 36,
+            "DepartureTime": 66,
+            "PalletLoad": 2,
+            "WeightLoad": 100,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 6,
+            "JobName": "Wembley Downs",
+            "JobType": 2,
+            "ArrivalTime": 69,
+            "DepartureTime": 99,
+            "PalletLoad": 4,
+            "WeightLoad": 200,
+            "RefrigeratedLoad": 0
+          },
+          {
+            "JobId": 5,
+            "JobName": "Yokine",
+            "JobType": 2,
+            "ArrivalTime": 101,
+            "DepartureTime": 131,
+            "PalletLoad": 6,
+            "WeightLoad": 300,
+            "RefrigeratedLoad": 0
+          }
+        ],
+        "TotalMinutes": 141.0922940246191,
+        "DistanceKm": 10.546147012309541,
+        "Cost": 360.42689688051996
+      },
+      {
+        "VehicleId": 3,
+        "VehicleName": "Vehicle 4",
+        "Used": false,
+        "Stops": [],
+        "TotalMinutes": 0,
+        "DistanceKm": 0,
+        "Cost": 0
+      },
+      {
+        "VehicleId": 4,
+        "VehicleName": "Vehicle 5",
+        "Used": false,
+        "Stops": [],
+        "TotalMinutes": 0,
+        "DistanceKm": 0,
+        "Cost": 0
+      },
+      {
+        "VehicleId": 5,
+        "VehicleName": "Vehicle 6",
+        "Used": false,
+        "Stops": [],
+        "TotalMinutes": 0,
+        "DistanceKm": 0,
+        "Cost": 0
+      },
+      {
+        "VehicleId": 6,
+        "VehicleName": "Vehicle 7",
+        "Used": false,
+        "Stops": [],
+        "TotalMinutes": 0,
+        "DistanceKm": 0,
+        "Cost": 0
+      }
+    ],
+    "TotalCost": 1305.509705829491
+  }
+}

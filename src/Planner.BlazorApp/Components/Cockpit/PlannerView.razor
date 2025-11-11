@@ -1,5 +1,4 @@
 ﻿@page "/"
-@page "/planner-view"
 @rendermode InteractiveServer
 
 @using Planner.Application.Messaging
@@ -104,9 +103,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await DataCenter.InitializeAsync();
-        DataCenter.VrpResultReceived += async msg => await OnVrpResultReceived(msg);
-        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await DataCenter.InitializeAsync();
+            DataCenter.VrpResultReceived += async msg => await OnVrpResultReceived(msg);
+            await InvokeAsync(StateHasChanged);
+        } catch
+        {
+        }
     }
 
     // --- Context Menu Logic ---
