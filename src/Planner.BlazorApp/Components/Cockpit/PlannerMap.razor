@@ -16,6 +16,8 @@
     private DotNetObjectReference<PlannerMap>? dotNetRef;
 
     private bool _initialized;
+    public List<MapMarker>? existingCustomers = null;
+    public List<MapRoute>? existingRoutes = null;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -23,7 +25,7 @@
         {
             dotNetRef = DotNetObjectReference.Create(this);
 
-            var apiKey = Config["GoogleMaps:BrowserApiKey"];
+            var apiKey = Config["GoogleMaps:ApiKey"];
             var apiMapId = Config["GoogleMaps:MapId"];
             await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
             await JS.InvokeVoidAsync("plannerMap.initMap", DepotLat, DepotLon, apiMapId);
@@ -38,9 +40,16 @@
         if (!_initialized) {
             return;
         }
-
-        await JS.InvokeVoidAsync("plannerMap.updateRoutes", Routes);
-        await JS.InvokeVoidAsync("plannerMap.updateCustomers", Customers);
+        if (Routes != existingRoutes)
+        {
+            await JS.InvokeVoidAsync("plannerMap.updateRoutes", Routes);
+            existingRoutes = Routes;
+        }
+        if (Customers != existingCustomers)
+        {
+            await JS.InvokeVoidAsync("plannerMap.updateCustomers", Customers);
+            existingCustomers = Customers;
+        }
     }
 
     [JSInvokable]

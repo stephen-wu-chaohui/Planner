@@ -110,9 +110,6 @@ window.plannerMap = {
 
     // --- Cleanup ---
     clearRoutes: function () {
-        // return;
-        this.markers.forEach(m => m.map = null);
-        this.markers = [];
         this.directionsRenderers.forEach(r => r.setMap(null));
         this.directionsRenderers = [];
         this.routeLabels.forEach(l => l.setMap(null));

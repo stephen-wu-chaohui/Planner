@@ -19,6 +19,9 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
                              basicProperties: null,
                              body: body);
         Console.WriteLine($"[{DateTime.Now}] RabbitMqMessageBus.PublishAsync({queueName})");
+        bool logRabbitMq = Environment.GetEnvironmentVariable("LOG_RABBITMQ") == "true";
+        if (logRabbitMq)
+            Console.WriteLine($"{json}");
         return Task.CompletedTask;
     }
 
@@ -33,6 +36,9 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
             try {
                 var json = Encoding.UTF8.GetString(ea.Body.ToArray());
                 Console.WriteLine($"[{DateTime.Now}] [RabbitMqMessageBus].Received({queueName})");
+                bool logRabbitMq = Environment.GetEnvironmentVariable("LOG_RABBITMQ") == "true";
+                if (logRabbitMq)
+                    Console.WriteLine($"{json}");
                 var obj = JsonSerializer.Deserialize<T>(json);
                 if (obj != null) {
                     await onMessage(obj);
