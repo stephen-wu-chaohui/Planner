@@ -65,7 +65,7 @@ jobs:
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: planner-api
+          app-name: PlannerAPI
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_API }}
           package: ./publish
 
@@ -119,3 +119,10 @@ jobs:
 
       - name: Publish
         run: dotnet publish src/Planner.O
+
+      - name: Deploy as WebJob
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: planner-optimization-worker
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_WORKER }}
+          package: ./publish

@@ -31,6 +31,6 @@ jobs:
       - name: Deploy as WebJob
         uses: azure/webapps-deploy@v3
         with:
-          app-name: planner-worker
+          app-name: planner-optimization-worker
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE_WORKER }}
           package: ./publish
