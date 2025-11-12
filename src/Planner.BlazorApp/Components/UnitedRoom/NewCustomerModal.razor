@@ -1,0 +1,79 @@
+﻿
+@using Planner.Domain.Entities
+@inherits LayoutComponentBase
+
+<div class="modal fade @(isVisible ? "show d-block" : "")" tabindex="-1" style="background:rgba(0,0,0,0.4)">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">New Customer</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@newCustomer" OnValidSubmit="Save">
+                    <div class="mb-2">
+                        <label class="form-label">Name</label>
+                        <InputText @bind-Value="newCustomer.Name" class="form-control" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Addres</label>
+                        <InputText @bind-Value="newCustomer.Address" class="form-control" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label">Latitude</label>
+                            <InputNumber @bind-Value="newCustomer.Latitude" class="form-control" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Longitude</label>
+                            <InputNumber @bind-Value="newCustomer.Longitude" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">Default Job Type</label>
+                        <select class="form-select" @bind="newCustomer.DefaultJobType">
+                            <option>Pickup</option>
+                            <option>Delivery</option>
+                        </select>
+                    </div>
+
+                    <div class="mt-3 text-end">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="Close">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isVisible;
+    private Customer newCustomer = new();
+
+    [Parameter] public EventCallback<Customer> OnCustomerCreated { get; set; }
+
+    public void Open(MapPosition args) {
+        newCustomer = new Customer {
+            Latitude = args.Lat,
+            Longitude = args.Lng,
+            Name = args.Region,
+            Address = args.Address,
+            DefaultJobType = "Delivery"
+        };
+        isVisible = true;
+        StateHasChanged();
+    }
+
+    private async Task Save() {
+        // persist to service or emit event
+        if (OnCustomerCreated.HasDelegate)
+            await OnCustomerCreated.InvokeAsync(newCustomer);
+
+        isVisible = false;
+    }
+
+    private void Close() => isVisible = false;
+}

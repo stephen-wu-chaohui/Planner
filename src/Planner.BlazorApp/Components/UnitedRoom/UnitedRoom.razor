@@ -1,0 +1,67 @@
+﻿@page "/united-room"
+@rendermode InteractiveServer
+
+@using Planner.Application.Messaging
+@using Planner.BlazorApp.Components.Cockpit
+@using Planner.BlazorApp.Services
+@using Planner.Contracts.Messages
+@using Planner.Contracts.Messages.VehicleRoutingProblem
+@using Planner.Domain.Entities
+@using static Planner.BlazorApp.Components.Cockpit.PlannerMap
+
+@inject DataCenterService DataCenter
+@inject IConfiguration configuration
+
+
+<div class="planner-view d-flex flex-column h-100">
+    <!-- Top toolbar -->
+    <div class="toolbar p-2 d-flex align-items-center">
+        <button class="btn  btn-primary me-2" @onclick=@(() => OpenTab("Customers"))>Optimization</button>
+        <h5 class="me-auto mb-0">United room</h5>
+    </div>
+
+    <!-- Map area -->
+    <div class="flex-fill position-relative">
+        <!-- Full-screen Google Map -->
+        <PlannerMap @ref="mapRef"
+                    DepotLat="@DataCenter.Depot.Latitude" DepotLon="@DataCenter.Depot.Longitude"
+                    JobPositionPicked="JobPositionPicked"
+                    Routes="@DataCenter.MapRoutes" Customers="@DataCenter.MapCustomers" />
+    </div>
+
+    <!-- Tabbed Modal -->
+    <PlannerEntitiesModal @ref="entitiesModal" />
+
+    <NewCustomerModal @ref="newCustomerModal" OnCustomerCreated="HandleNewCustomer" />
+</div>
+
+@code {
+
+    PlannerEntitiesModal? entitiesModal;
+    private void OpenTab(string tab) {
+        entitiesModal?.OpenTab(tab);
+    }
+
+    private PlannerMap? mapRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            DataCenter.CollectionChanged += async msg => await InvokeAsync(StateHasChanged);
+            await DataCenter.InitializeAsync();
+        }
+    }
+
+    private NewCustomerModal? newCustomerModal;
+
+    private Task JobPositionPicked(MapPosition args) {
+        newCustomerModal?.Open(args);
+        return Task.CompletedTask;
+    }
+
+    private void HandleNewCustomer(Customer customer) {
+        Console.WriteLine($"New customer added: {customer.Name} ({customer.Latitude}, {customer.Longitude})");
+
+        // optionally refresh lists:
+        DataCenter.AddNewCustomer(customer);
+    }
+}

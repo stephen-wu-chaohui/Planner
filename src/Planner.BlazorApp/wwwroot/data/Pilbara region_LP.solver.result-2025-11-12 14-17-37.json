@@ -1,0 +1,36 @@
+{
+  "RequestId": "Pilbara region",
+  "CompletedAt": "2025-11-12T06:17:37.2398206Z",
+  "Response": {
+    "Status": "OPTIMAL",
+    "ObjectiveValue": 16.8,
+    "Variables": [
+      {
+        "Name": "A",
+        "Value": 0.7999999999999998,
+        "ReducedCost": 0
+      },
+      {
+        "Name": "B",
+        "Value": 3.6,
+        "ReducedCost": 4.440892098500626E-16
+      }
+    ],
+    "Constraints": [
+      {
+        "Name": "Material",
+        "Tag": null,
+        "LhsValue": 8,
+        "Slack": 0,
+        "DualValue": 1.7999999999999996
+      },
+      {
+        "Name": "Time",
+        "Tag": null,
+        "LhsValue": 6,
+        "Slack": 0,
+        "DualValue": 0.40000000000000024
+      }
+    ]
+  }
+}

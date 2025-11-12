@@ -1,0 +1,94 @@
+﻿@using Planner.Contracts.Messages.VehicleRoutingProblem
+
+<div>
+    @if (Routes.Count == 0) {
+        <div class="alert alert-info mb-0">
+            No routes available. Run <strong>“Solve VRP”</strong> in Jobs first.
+        </div>
+    } else {
+        <div class="d-flex justify-content-between mb-2">
+            <h6><b>Routes</b></h6>
+            <p><i>Current result of opimization.</i></p>
+        </div>
+
+        <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Vehicle</th>
+                    <th>Jobs Served</th>
+                    <th>Distance (km)</th>
+                    <th>Duration (min)</th>
+                    <th>Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Routes) {
+                    <tr class="vehicle-row @(!r.Used ? "text-muted" : "")">
+                        <td><strong>@r.VehicleName</strong></td>
+                        <td>@r.Stops.Count</td>
+                        <td>@($"{r.DistanceKm:F1}")</td>
+                        <td>@($"{r.TotalMinutes:F0}")</td>
+                        <td>@($"{r.Cost:F2}")</td>
+                    </tr>
+                    @if (r.Stops.Any()) {
+                        <tr>
+                            <td colspan="5" class="p-0">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Job</th>
+                                            <th>Type</th>
+                                            <th>Arrival</th>
+                                            <th>Departure</th>
+                                            <th>Pallets</th>
+                                            <th>Weight</th>
+                                            <th>Refrig</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < r.Stops.Count; i++) {
+                                            var s = r.Stops[i];
+                                            <tr>
+                                                <td>@(i + 1)</td>
+                                                <td>@s.JobName</td>
+                                                <td>@s.JobType</td>
+                                                <td>@Readble(s.ArrivalTime)</td>
+                                                <td>@Readble(s.DepartureTime)</td>
+                                                <td>@s.PalletLoad</td>
+                                                <td>@s.WeightLoad</td>
+                                                <td>@s.RefrigeratedLoad</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<style>
+    .vehicle-row {
+        background-color: #2b2b2b; /* dark gray */
+        color: #f1f1f1; /* light text */
+    }
+
+    .vehicle-row.text-muted {
+        opacity: 0.6;
+    }
+</style>
+
+@code {
+    [Parameter] public List<VehicleRoute> Routes { get; set; } = new();
+
+    private string Readble(double minutesFromStart)
+    {
+        var startTime = new DateTime(2025, 1, 1, 8, 30, 0); // 8:30 AM
+        var arrival = startTime.AddMinutes(minutesFromStart);
+        return arrival.ToString("hh:mm tt");
+    }
+}

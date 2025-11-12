@@ -1,0 +1,8 @@
+﻿.toolbar {
+	height: 48px;
+	border-bottom: 1px solid #333;
+}
+
+.modal.show {
+	display: block;
+}

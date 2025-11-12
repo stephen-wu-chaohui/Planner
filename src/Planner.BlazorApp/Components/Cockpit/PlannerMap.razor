@@ -32,6 +32,8 @@
             await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
 
             _initialized = true;
+
+            await OnParametersSetAsync();
         }
     }
 

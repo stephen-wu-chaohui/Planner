@@ -1,0 +1,156 @@
+﻿
+@inherits LayoutComponentBase
+@using Planner.Application.Messaging
+@using Planner.BlazorApp.Services
+@using Planner.Contracts.Messages
+@using Planner.Contracts.Messages.VehicleRoutingProblem
+@using Planner.Domain.Entities
+@using static Planner.BlazorApp.Components.Cockpit.PlannerMap
+
+@inject DataCenterService DataCenter
+@inject IConfiguration configuration
+
+<div>
+    <div class="modal fade @((IsVisible && !IsWaiting) ? "show d-block" : "")" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">Assign Jobs to Fleet</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link @(ActiveTab == "Customers" ? "active" : "")"
+                               @onclick=@(() => SetTab("Customers"))>Customers</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ActiveTab == "Vehicles" ? "active" : "")"
+                               @onclick=@(() => SetTab("Vehicles"))>Vehicles</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ActiveTab == "Jobs" ? "active" : "")"
+                               @onclick=@(() => SetTab("Jobs"))>Jobs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ActiveTab == "Routes" ? "active" : "")"
+                               @onclick=@(() => SetTab("Routes"))>Routes</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content mt-3">
+                        @if (ActiveTab == "Customers")
+                        {
+                            <CustomersTab Customers="@DataCenter.Customers" />
+                        }
+                        else if (ActiveTab == "Vehicles")
+                        {
+                            <VehiclesTab Vehicles="@DataCenter.Vehicles" />
+                        }
+                        else if (ActiveTab == "Jobs")
+                        {
+                            <JobsTab Jobs="@DataCenter.Jobs" Customers="@DataCenter.Customers" Vehicles="@DataCenter.Vehicles" OnSolve="@DataCenter.SolveVrp" />
+                        }
+                        else if (ActiveTab == "Routes")
+                        {
+                            <RoutesTab Routes="@DataCenter.Routes" />
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting / Optimization Modal -->
+    <div class="modal fade @(IsWaiting ? "show d-block" : "")" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content text-center p-3">
+                <div class="modal-body">
+                    <h6>Optimization Running...</h6>
+                    <p>Please wait for about @remainingMinutes minute(s).</p>
+                    <div class="spinner-border text-primary mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tab-content {
+        height: 60vh;
+        overflow-y: auto;
+    }
+</style>
+
+@code {
+    private bool IsVisible { get; set; }
+    private bool IsWaiting { get; set; }
+    private string ActiveTab { get; set; } = "Customers";
+    private double remainingMinutes;
+    private System.Timers.Timer? waitTimer;
+
+    public void OpenTab(string tab)
+    {
+        // if currently waiting, show waiting modal instead
+        if (IsWaiting) {
+            IsVisible = false;
+            StateHasChanged();
+            return;
+        }
+        ActiveTab = tab;
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    private void SetTab(string tab)
+    {
+        ActiveTab = tab;
+    }
+
+    private void Close()
+    {
+        IsVisible = false;
+    }
+
+    public void StartOptimizationWait(double estimatedMinutes = 2) {
+        // hide main modal
+        IsVisible = false;
+
+        IsWaiting = true;
+        remainingMinutes = estimatedMinutes;
+
+        waitTimer?.Dispose();
+        waitTimer = new System.Timers.Timer(60000); // 1 minute interval
+        waitTimer.Elapsed += (_, _) => {
+            remainingMinutes -= 1;
+            if (remainingMinutes <= 0) {
+                EndOptimizationWait();
+            }
+            InvokeAsync(StateHasChanged);
+        };
+        waitTimer.Start();
+    }
+
+    public void EndOptimizationWait() {
+        waitTimer?.Stop();
+        waitTimer?.Dispose();
+        IsWaiting = false;
+        remainingMinutes = 0;
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            DataCenter.VrpResultReceived += async (msg) => {
+                EndOptimizationWait();
+                ActiveTab = "Routes";
+                IsVisible = true;
+                await InvokeAsync(StateHasChanged);
+            };
+            DataCenter.StartWait += async (waitingMinutes) => {
+                StartOptimizationWait(waitingMinutes);
+                await InvokeAsync(StateHasChanged);
+            };
+        }
+    }
+}
