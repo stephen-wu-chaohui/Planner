@@ -1,13 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-Planner.Optimization.Worker-b77e4311-86ba-4e76-8ee4-6bb0671a990e</UserSecretsId>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishSingleFile>false</PublishSingleFile>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,12 +25,6 @@
     <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
     <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
     <ProjectReference Include="..\Planner.Optimization\Planner.Optimization.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Settings.job">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

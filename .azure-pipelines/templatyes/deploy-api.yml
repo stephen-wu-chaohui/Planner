@@ -1,27 +1,58 @@
+﻿name: Deploy Planner API
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "src/Planner.API/**"
+      - ".github/workflows/deploy-api.yml"
+
 jobs:
-- deployment: DeployAPI
-  displayName: 'Deploy Planner API'
-  environment: 'production'
-  pool:
-    vmImage: 'windows-latest'
-  strategy:
-    runOnce:
-      deploy:
-        steps:
-        - task: DownloadBuildArtifacts@1
-          inputs:
-            artifactName: 'drop'
-            downloadPath: '$(System.ArtifactsDirectory)'
+  build-and-deploy:
+    runs-on: windows-latest
 
-        - task: AzureWebApp@1
-          displayName: 'Deploy API to Azure Web App'
-          inputs:
-            azureSubscription: '$(azureSubscription)'
-            appType: 'webApp'
-            appName: '$(webAppNameApi)'
-            package: '$(System.ArtifactsDirectory)/drop/api'
+    env:
+      AZURE_RG: PlannerRG
+      APP_SERVICE_PLAN: planner-service-plan
+      APP_NAME: planner-api
 
-        - script: >
-            dotnet ef database update --project src/Planner.Infrastructure/Planner.Infrastructure.csproj
-            --connection "$(connectionString)"
-          displayName: 'Run EF Core migrations'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Ensure Web App exists
+        run: |
+          if (-not (az webapp show -n $env:APP_NAME -g $env:AZURE_RG --query "name" -o tsv)) {
+            echo "Creating WebApp $env:APP_NAME ..."
+            az webapp create `
+              -g $env:AZURE_RG `
+              -n $env:APP_NAME `
+              --plan $env:APP_SERVICE_PLAN `
+              --runtime "DOTNET|8.0"
+          } else {
+            echo "Web App $env:APP_NAME already exists."
+          }
+
+      - name: Restore
+        working-directory: src/Planner.API
+        run: dotnet restore
+
+      - name: Build
+        working-directory: src/Planner.API
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        working-directory: src/Planner.API
+        run: dotnet publish --configuration Release --no-build --output ../publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE_API }}
+          package: src/publish

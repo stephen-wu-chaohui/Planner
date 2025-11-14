@@ -8,7 +8,7 @@ namespace Planner.Optimization.Worker;
 public class SolverWorker(IMessageBus bus) : BackgroundService {
     protected override Task ExecuteAsync(CancellationToken stoppingToken) {
         bus.Subscribe<LinearSolverRequestMessage>(MessageRoutes.LPSolverRequest, async message => {
-            Console.WriteLine($"[SolverWorker].Subscribe({MessageRoutes.LPSolverRequest})!");
+            Console.WriteLine($"[SolverWorker] received {MessageRoutes.LPSolverRequest}!");
             var response = LinearSolverBuilder.Solve(message.Request);
 
             await bus.PublishAsync(MessageRoutes.LPSolverResult,
@@ -19,7 +19,7 @@ public class SolverWorker(IMessageBus bus) : BackgroundService {
                 }
             );
         });
-        Console.WriteLine($"[SolverWorker].ExecuteAsync({MessageRoutes.LPSolverRequest}) starts.");
+        Console.WriteLine($"[SolverWorker] started {MessageRoutes.LPSolverRequest}.");
         return Task.CompletedTask;
     }
 }

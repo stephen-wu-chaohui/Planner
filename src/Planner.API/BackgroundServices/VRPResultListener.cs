@@ -10,6 +10,7 @@ public class VRPResultListener(IMessageBus bus, IMessageHubPublisher hub) : Back
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken) {
         bus.Subscribe<VrpResultMessage>(busQueue, async result => {
+            Console.WriteLine($"[VRPResultListener] forward {busQueue} to SignalR!");
             await hub.PublishAsync(busQueue, result);
         });
         return Task.CompletedTask;

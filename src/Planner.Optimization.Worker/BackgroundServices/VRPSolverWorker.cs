@@ -8,7 +8,7 @@ namespace Planner.Optimization.Worker;
 public class VRPSolverWorker(IMessageBus bus, ILogger<VRPSolverWorker> logger) : BackgroundService {
     protected override Task ExecuteAsync(CancellationToken stoppingToken) {
         bus.Subscribe<VrpRequestMessage>(MessageRoutes.VRPSolverRequest, async message => {
-            Console.WriteLine($"[SolverWorker].Subscribe({MessageRoutes.VRPSolverRequest})!");
+            Console.WriteLine($"[VrpSolver] received {MessageRoutes.VRPSolverRequest}!");
             var response = VrpSolver.Solve(message.Request);
 
             await bus.PublishAsync(MessageRoutes.VRPSolverResult,
