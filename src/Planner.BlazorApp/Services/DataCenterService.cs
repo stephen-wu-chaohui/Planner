@@ -1,10 +1,9 @@
 ﻿using Planner.Application.Messaging;
-using Planner.BlazorApp.Components;
-using Planner.BlazorApp.Components.Cockpit;
+using Planner.BlazorApp.Components.DispatchCenter;
 using Planner.Contracts.Messages;
 using Planner.Contracts.Messages.VehicleRoutingProblem;
 using Planner.Domain.Entities;
-using static Planner.BlazorApp.Components.Cockpit.PlannerMap;
+using static Planner.BlazorApp.Components.DispatchCenter.PlannerMap;
 
 namespace Planner.BlazorApp.Services;
 
@@ -108,7 +107,7 @@ public class DataCenterService(HttpClient http, IMessageHubClient Hub, IConfigur
     }
 
 
-    // --- Solve VRP trigger (called from JobsModal) ---
+    // --- Solve VRP trigger (called from JobsTab) ---
     public async Task SolveVrp() {
         var vrpJobs = Jobs.Prepend(new Job {
             Id = 0,

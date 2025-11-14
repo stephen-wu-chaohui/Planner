@@ -1,4 +1,4 @@
-﻿namespace Planner.BlazorApp.Components.Cockpit;
+﻿namespace Planner.BlazorApp.Services;
 
 using System;
 using System.Security.Cryptography;

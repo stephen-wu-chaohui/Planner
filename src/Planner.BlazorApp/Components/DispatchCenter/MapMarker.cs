@@ -1,4 +1,4 @@
-﻿namespace Planner.BlazorApp.Components;
+﻿namespace Planner.BlazorApp.Components.DispatchCenter;
 
 public class MapMarker {
     public double Lat { get; set; }
