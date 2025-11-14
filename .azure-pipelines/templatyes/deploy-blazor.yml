@@ -1,4 +1,4 @@
-﻿name: Deploy Blazor App
+﻿name: Deploy Planner.BlazorApp
 
 on:
   push:
@@ -11,48 +11,24 @@ jobs:
   build-and-deploy:
     runs-on: windows-latest
 
-    env:
-      AZURE_RG: PlannerRG
-      APP_SERVICE_PLAN: planner-service-plan
-      APP_NAME: planner-blazorapp
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
 
-      - name: Ensure Web App exists
-        run: |
-          if (-not (az webapp show -n $env:APP_NAME -g $env:AZURE_RG --query "name" -o tsv)) {
-            echo "Creating WebApp $env:APP_NAME ..."
-            az webapp create `
-              -g $env:AZURE_RG `
-              -n $env:APP_NAME `
-              --plan $env:APP_SERVICE_PLAN `
-              --runtime "DOTNET|8.0"
-          } else {
-            echo "Web App $env:APP_NAME already exists."
-          }
+    - name: Publish
+      working-directory: ./src/Planner.BlazorApp
+      run: dotnet publish -c Release --no-self-contained -o publish
 
-      - name: Restore
-        working-directory: src/Planner.BlazorApp
-        run: dotnet restore
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build
-        working-directory: src/Planner.BlazorApp
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Publish
-        working-directory: src/Planner.BlazorApp
-        run: dotnet publish --configuration Release --no-build --output ../publish
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.APP_NAME }}
-          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE_BLAZOR }}
-          package: src/publish
+    - name: Deploy to planner-blazorapp
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: planner-blazorapp
+        package: ./src/Planner.BlazorApp/publish
