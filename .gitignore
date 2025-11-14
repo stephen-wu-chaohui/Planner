@@ -495,3 +495,7 @@ $RECYCLE.BIN/
 /src/Planner.BlazorApp/Properties
 /src/Planner.API/Properties
 /src/Planner.Optimization.Worker/Properties
+/src/Planner.BlazorApp/wwwroot/data
+/aip
+*.ps1
+*.txt
