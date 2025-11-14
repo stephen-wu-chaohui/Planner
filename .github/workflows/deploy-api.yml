@@ -1,10 +1,10 @@
-name: Deploy Planner.Optimization.Worker
+name: Deploy Planner.API
 on:
   push:
     branches: [ "main" ]
     paths:
-      - "src/Planner.Optimization.Worker/**"
-      - ".github/workflows/deploy-worker.yml"
+      - "src/Planner.API/**"
+      - ".github/workflows/deploy-api.yml"
 jobs:
   build-and-deploy:
     runs-on: windows-latest
@@ -13,11 +13,11 @@ jobs:
     - uses: actions/setup-dotnet@v4
       with: { dotnet-version: 8.0.x }
     - name: Publish
-      working-directory: ./src/Planner.Optimization.Worker
+      working-directory: ./src/Planner.API
       run: dotnet publish -c Release --no-self-contained -o publish
     - uses: azure/login@v2
       with: { creds: ${{ secrets.AZURE_CREDENTIALS }} }
     - uses: azure/webapps-deploy@v3
       with:
-        app-name: planner-worker
-        package: ./src/Planner.Optimization.Worker/publish
+        app-name: planner-api-sw
+        package: ./src/Planner.API/publish
