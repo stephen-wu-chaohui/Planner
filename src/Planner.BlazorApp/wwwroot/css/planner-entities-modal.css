@@ -1,0 +1,107 @@
+﻿/* MAIN modal container */
+.planner-modal-light {
+	height: 90vh;
+	display: flex;
+	flex-direction: column;
+}
+
+/* HEADER */
+.planner-modal-header-light {
+	background: #f8f9fa;
+	border-bottom: 1px solid #ddd;
+}
+
+
+/* Make body fixed height */
+.planner-modal-body-light {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	background: #fff;
+}
+
+/* This area contains tab content */
+.planner-modal-content-area {
+	flex: 1;
+	overflow: hidden;
+	margin-top: 0;
+	display: flex; /* <--- REQUIRED */
+	flex-direction: column;
+}
+
+
+/* TABS */
+.planner-tabs-light .nav-link {
+	color: #555 !important;
+	padding: 10px 16px;
+	font-weight: 500;
+	border: none;
+}
+
+	.planner-tabs-light .nav-link:hover {
+		color: #333 !important;
+	}
+
+	.planner-tabs-light .nav-link.active {
+		color: #0d6efd !important;
+		border-bottom: 3px solid #0d6efd !important;
+		background: #ffffff !important;
+		font-weight: 600;
+	}
+
+/* TAB CONTENT AREA */
+.planner-tab-content-light {
+	height: 60vh;
+	overflow-y: auto;
+	background: #ffffff;
+	border: 1px solid #eee;
+	border-radius: 8px;
+	padding: 16px;
+	box-shadow: 0 2px 6px rgba(0,0,0,.05);
+}
+
+/* WAITING MODAL */
+.modal-content {
+	border-radius: 2px !important;
+}
+
+/* Tab wrapper: full height container */
+.planner-tab-wrapper {
+	display: flex;
+	flex-direction: column;
+	height: 100%; /* same height for all tabs */
+}
+
+/* Scrollable content area */
+.planner-tab-scroll {
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: auto;
+	/* padding-right: 4px; /* avoid scrollbar overlay */
+}
+
+/* Fixed bottom action bar */
+.planner-tab-actions {
+	display: flex;
+	justify-content: space-between; /* left & right sides */
+	align-items: center; /* vertical center */
+	padding: 12px 16px;
+	border-top: 1px solid #ddd;
+	background: #fafafa;
+	min-height: 56px;
+}
+
+
+/* Left group: buttons */
+.actions-left {
+	display: flex;
+	gap: 10px; /* spacing between buttons */
+}
+
+/* Right group: small item */
+.actions-right {
+	display: flex;
+	align-items: center;
+	font-size: 0.875rem; /* small text */
+	color: #666;
+}

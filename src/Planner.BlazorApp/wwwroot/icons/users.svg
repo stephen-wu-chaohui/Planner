@@ -1,0 +1,18 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  
+  <!-- Center user -->
+  <circle cx="12" cy="7.2" r="3.2" fill="#4A8CFF"/>
+  <path d="M6.5 19c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"
+        stroke="#4A8CFF" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+  <!-- Left user -->
+  <circle cx="5.2" cy="9.4" r="2.4" fill="#4A8CFF" opacity="0.75"/>
+  <path d="M2 19.5c0-2.7 2.1-4.9 4.8-4.9"
+        stroke="#4A8CFF" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.75"/>
+
+  <!-- Right user -->
+  <circle cx="18.8" cy="9.4" r="2.4" fill="#4A8CFF" opacity="0.75"/>
+  <path d="M22 19.5c0-2.7-2.1-4.9-4.8-4.9"
+        stroke="#4A8CFF" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.75"/>
+
+</svg>

@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <Folder Include="Components\Shared\" />
+    <Folder Include="wwwroot\images\wizard\" />
   </ItemGroup>
 
   <PropertyGroup>

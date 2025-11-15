@@ -1,0 +1,18 @@
+﻿<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Magic wand -->
+  <rect x="9" y="12" width="2.4" height="8" rx="1.2"
+        transform="rotate(-35 9 12)"
+        fill="#4A8CFF"/>
+
+  <rect x="11.2" y="7.5" width="2.6" height="4.4" rx="1.0"
+        transform="rotate(-35 11.2 7.5)"
+        fill="#4A8CFF"/>
+
+  <!-- Sparkles -->
+  <path d="M17.5 5.0 L18.4 6.6 L20.1 7.0 L18.9 8.3 L19.1 10.1 L17.5 9.3 L15.9 10.1 L16.1 8.3 L14.9 7.0 L16.6 6.6 Z"
+        fill="#4A8CFF"/>
+
+  <circle cx="7" cy="6" r="1.1" fill="#4A8CFF"/>
+  <circle cx="6" cy="10" r="0.9" fill="#4A8CFF"/>
+  <circle cx="13.5" cy="4.5" r="0.8" fill="#4A8CFF"/>
+</svg>

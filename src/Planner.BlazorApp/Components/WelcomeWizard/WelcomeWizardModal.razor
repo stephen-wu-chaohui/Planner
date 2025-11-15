@@ -1,0 +1,140 @@
+﻿@inherits ComponentBase
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject IConfiguration Configuration
+
+<div class="wizard-backdrop" style="visibility: @(IsOpen? "visible" : "hidden")">
+    @if (CurrentPage != null) {
+        <div class="wizard-modal @AnimationClass">
+
+            <!-- TOP IMAGE -->
+            <div class="wizard-image">
+                <img src="@CurrentPage.ImageUrl" alt="">
+            </div>
+
+            <!-- TITLE WITH ICON -->
+            <div class="wizard-title-row">
+                <img src="@(CurrentPage.IconUrl)" class="wizard-icon" />
+                <h2 class="wizard-title">@(CurrentPage.Title ?? "Welcome")</h2>
+            </div>
+
+            <!-- DESCRIPTION -->
+            <p class="wizard-description">@(CurrentPage.Description ?? "")</p>
+
+            <!-- ON LAST PAGE: “Don’t show again” -->
+            @if (IsLast) {
+                <div class="wizard-dontshow">
+                    <input type="checkbox" id="dontShow" @bind="dontShowAgain" />
+                    <label for="dontShow">Don’t show this again</label>
+                </div>
+            }
+
+            <!-- PROGRESS DOTS -->
+            <div class="wizard-dots">
+                @for (int i = 0; i < Pages.Count; i++) {
+                    <span class="wizard-dot @(i == index ? "active" : "")"></span>
+                }
+            </div>
+
+            <!-- CONTROLS -->
+            <div class="wizard-controls">
+                <button class="btn-secondary" @onclick="Prev" disabled="@IsFirst">Previous</button>
+
+                @if (!IsLast) {
+                    <button class="btn-primary" @onclick="Next">Next</button>
+                } else {
+                    <button class="btn-primary" @onclick="Finish">Finish</button>
+                }
+
+            <button class="btn-close" @onclick="Close">×</button>
+        </div>
+
+    </div>
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private int index = 0;
+    private string AnimationClass = "";
+    private WizardPage? CurrentPage => (index >= 0 && index < Pages.Count) ? Pages[index] : null;
+    private List<WizardPage> Pages = new();
+    private bool dontShowAgain = false;
+
+    protected override async Task OnInitializedAsync() {
+        var url = Configuration["DataEndpoints:WizardPageList"] ?? "";
+        if (!string.IsNullOrEmpty(url)) {
+            Pages = await Http.GetFromJsonAsync<List<WizardPage>>(url) ?? [];
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            // ONLY now we can use JS interop safely
+            var hasSeen = await JS.InvokeAsync<bool>("wizardStorage.hasSeen");
+
+            if (hasSeen) {
+                await IsOpenChanged.InvokeAsync(false);
+            } else {
+                await IsOpenChanged.InvokeAsync(true);
+            }
+
+            StateHasChanged();  // force UI update
+        }
+    }
+
+    private bool IsFirst => index == 0;
+    private bool IsLast => index == Pages.Count - 1;
+
+    private void Animate(string direction) {
+        // direction: "next" or "prev"
+        AnimationClass = direction == "next" ? "slide-in-right" : "slide-in-left";
+
+        // force re-render with animation class
+        InvokeAsync(StateHasChanged);
+
+        // reset animation after animation duration (350ms)
+        _ = Task.Delay(350).ContinueWith(_ => {
+            AnimationClass = "";
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void Next() {
+        if (IsLast) return;
+        index++;
+        Animate("next");
+    }
+
+    private void Prev() {
+        if (IsFirst) return;
+        index--;
+        Animate("prev");
+    }
+
+    private async Task Finish() {
+        if (dontShowAgain)
+            await JS.InvokeVoidAsync("wizardStorage.setSeen");
+
+        await Close();
+    }
+
+    private async Task Close() {
+        index = 0;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    public sealed class WizardPage
+    {
+        public string ImageUrl { get; init; } = "";
+        public string IconUrl  { get; init; } = "";
+        public string Title     { get; init; } = "";
+        public string Description { get; init; } = "";
+    }
+
+    public sealed class WizardPageList {
+        public List<WizardPage> Pages { get; set; } = new();
+    }
+}

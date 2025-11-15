@@ -2,43 +2,41 @@
 @using Planner.Contracts.Messages.VehicleRoutingProblem
 @using Planner.Domain.Entities
 
-<div>
-    <div class="d-flex justify-content-between mb-2">
-        <h6><b>Customers</b></h6>
-        <p><i>If you want to add more customers, ctrl-click on the map!</i></p>
-    </div>
-
-    <table class="table table-sm table-bordered align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Address</th>
-                <th>Type</th>
-                <th style="width: 100px;"></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var c in Customers) {
+<div class="planner-tab-wrapper">
+    <div class="table-scroll">
+        <table class="polished-table">
+            <thead>
                 <tr>
-                    <td>@c.Id</td>
-                    <td>@c.Name</td>
-                    <td>@c.Address</td>
-                    <td>@c.DefaultJobType</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(c))">✏️</button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(c))">🗑️</button>
-                    </td>
+                    <th class="sticky-col">ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Address</th>
+                    <th style="width: 100px;"></th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var c in Customers) {
+                    <tr>
+                        <td>@c.Id</td>
+                        <td>@c.Name</td>
+                        <td>@c.DefaultJobType</td>
+                        <td>@c.Address</td>
+                        <td class="actions">
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(c))">✏️</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(c))">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="planner-tab-actions">
+    </div>
 </div>
 
 <!-- Edit Modal -->
 @if (Editing is not null) {
-    <div class="modal fade show d-block" tabindex="-1"
-         style="background-color:rgba(0,0,0,.4); z-index:1060;">
+    <div class="modal fade show d-block" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">

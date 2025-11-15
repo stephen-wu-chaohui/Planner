@@ -1,54 +1,57 @@
 ﻿@using Planner.Contracts.Messages.VehicleRoutingProblem
 @using Planner.Domain.Entities
+<div class="planner-tab-wrapper">
+    <div class="table-scroll">
+        <table class="polished-table">
+            <thead>
+                <tr>
+                    <th class="sticky-col">ID</th>
+                    <th>Customer</th>
+                    <th>Type</th>
+                    <th>Ready</th>
+                    <th>Due</th>
+                    <th>Service (min)</th>
+                    <th>Pallets</th>
+                    <th>Weight</th>
+                    <th>Refrig</th>
+                    <th>Vehicle Pref.</th>
+                    <th style="width:100px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var j in Jobs) {
+                    <tr>
+                        <td>@j.Id</td>
+                        <td>@CustomerName(j.CustomerId)</td>
+                        <td>@j.Type</td>
+                        <td>@j.ReadyTime</td>
+                        <td>@j.DueTime</td>
+                        <td>@j.ServiceMinutes</td>
+                        <td>@j.PalletDemand</td>
+                        <td>@j.WeightDemand</td>
+                        <td>@j.RefrigeratedRequirement</td>
+                        <td>@VehicleName(j.VehiclePreference)</td>
+                        <td class="actions">
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(j))">✏️</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(j))">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 
-<div>
-    <div class="d-flex justify-content-between mb-2">
-        <div>
+    <div class="planner-tab-actions">
+        <div class="actions-left">
             <button class="btn btn-sm btn-success me-1" @onclick="CreateJobsForAllCustomers">👥 Build</button>
             <button class="btn btn-sm btn-success me-1" @onclick="AddNew">➕ Add</button>
             <button class="btn btn-sm btn-outline-danger me-1" @onclick="ClearAll">🧹 Clear</button>
             <button class="btn btn-sm btn-outline-success" @onclick="OnSolve">🧮 Solve VRP</button>
         </div>
-        <small class="text-muted">Define today's pickup / delivery jobs</small>
+        <div class="actions-right">
+            <small class="text-muted">Define today's pickup / delivery jobs</small>
+        </div>
     </div>
-
-    <table class="table table-sm table-bordered align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>ID</th>
-                <th>Customer</th>
-                <th>Type</th>
-                <th>Ready</th>
-                <th>Due</th>
-                <th>Service (min)</th>
-                <th>Pallets</th>
-                <th>Weight</th>
-                <th>Refrig</th>
-                <th>Vehicle Pref.</th>
-                <th style="width:100px;"></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var j in Jobs) {
-                <tr>
-                    <td>@j.Id</td>
-                    <td>@CustomerName(j.CustomerId)</td>
-                    <td>@j.Type</td>
-                    <td>@j.ReadyTime</td>
-                    <td>@j.DueTime</td>
-                    <td>@j.ServiceMinutes</td>
-                    <td>@j.PalletDemand</td>
-                    <td>@j.WeightDemand</td>
-                    <td>@j.RefrigeratedRequirement</td>
-                    <td>@VehicleName(j.VehiclePreference)</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(j))">✏️</button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(j))">🗑️</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
 </div>
 
 <!-- Edit Job Modal -->
