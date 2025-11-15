@@ -16,7 +16,7 @@
     <!-- Top toolbar -->
     <div class="toolbar p-2 d-flex align-items-center bg-light border-bottom">
         <div class="d-flex gap-2">
-            <button class="btn btn-info" @onclick="() => showWizard = true">Show Welcome Guide</button>
+            <button class="btn btn-info" @onclick=@(() => showWizard = true)>Show Welcome Guide</button>
             <button class="btn  btn-primary" @onclick=@(() => OpenTab("Customers"))>Optimization Wizard</button>
         </div>
         <h5 class="ms-auto mb-0">Dispatch Centre</h5>
@@ -41,7 +41,7 @@
 </div>
 
 @code {
-    private bool showWizard = true;     // show on first load
+    private bool showWizard = false;     // show on first load
 
     PlannerEntitiesModal? entitiesModal;
     private void OpenTab(string tab) {
@@ -54,6 +54,10 @@
         if (firstRender) {
             DataCenter.CollectionChanged += async msg => await InvokeAsync(StateHasChanged);
             await DataCenter.InitializeAsync();
+
+            await Task.Delay(5000);
+            showWizard = true;
+            await InvokeAsync(StateHasChanged);
         }
     }
 

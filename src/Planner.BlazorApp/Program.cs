@@ -86,8 +86,10 @@ app.Use(async (context, next) => {
     await next();
 });
 
-
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// app.MapBlazorHub();
+// app.MapFallbackToPage("/_Host");
 
 app.Run();
