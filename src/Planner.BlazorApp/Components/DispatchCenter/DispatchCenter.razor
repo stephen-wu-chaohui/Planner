@@ -50,15 +50,17 @@
 
     private PlannerMap? mapRef;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (firstRender) {
-            DataCenter.CollectionChanged += async msg => await InvokeAsync(StateHasChanged);
-            await DataCenter.InitializeAsync();
+    private void OnCollectionChanged(object? msg) { InvokeAsync(StateHasChanged); }
+    private bool _subscribed;
+    protected override async Task OnInitializedAsync() {
+        if (_subscribed) return;
+        DataCenter.CollectionChanged += OnCollectionChanged;
+        await DataCenter.InitializeAsync();
+        _subscribed = true;
+    }
 
-            await Task.Delay(5000);
-            showWizard = true;
-            await InvokeAsync(StateHasChanged);
-        }
+    public void Dispose() {
+        DataCenter.CollectionChanged -= OnCollectionChanged;
     }
 
     private NewCustomerModal? newCustomerModal;

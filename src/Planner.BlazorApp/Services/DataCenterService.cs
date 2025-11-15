@@ -3,6 +3,7 @@ using Planner.BlazorApp.Components.DispatchCenter;
 using Planner.Contracts.Messages;
 using Planner.Contracts.Messages.VehicleRoutingProblem;
 using Planner.Domain.Entities;
+using System.Text.Json;
 using static Planner.BlazorApp.Components.DispatchCenter.PlannerMap;
 
 namespace Planner.BlazorApp.Services;

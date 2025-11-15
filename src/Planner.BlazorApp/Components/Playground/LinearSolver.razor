@@ -61,7 +61,7 @@
     private bool ShowPoster;
     private string ExceptionMessage = "";
 
-    private readonly List<LinearSolverResultRow> results = new();
+    private readonly List<SolverResultRow> results = new();
 
     protected override Task OnInitializedAsync()
     {
@@ -76,15 +76,16 @@
                         var FilePath = $"wwwroot/data/{busQueue}-{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}.json";
                         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
                         var json = JsonSerializer.Serialize(r, new JsonSerializerOptions { WriteIndented = true });
-                        File.WriteAllText(FilePath, json);
+                        // File.WriteAllText(FilePath, json);
                     } catch(Exception ex)
                     {
                         Console.WriteLine($"[{DateTime.Now.ToString()}] Exception: {ex.Message} .");
                     }
-                    results.Add(new LinearSolverResultRow(r));
+                    results.Add(new SolverResultRow(r));
                     StateHasChanged();
                 })
             );
+
         } catch(Exception ex)
         {
             ExceptionMessage = ex.Message;
@@ -92,11 +93,27 @@
         return Task.CompletedTask;
     }
 
-    private record LinearSolverResultRow(LinearSolverResultMessage Message) {
-        public string? RequestId => Message.RequestId;
-        public string? Status => Message.Response.Status;
-        public double ObjectiveValue => Message.Response.ObjectiveValue;
-        public DateTime CompletedAt => Message.CompletedAt;
+    private class SolverResultRow {
+        public string? RequestId { get; set; }
+        public string? Status { get; set; }
+        public double ObjectiveValue { get; set; }
+        public DateTime CompletedAt { get; set; }
+
+        public SolverResultRow(LinearSolverResultMessage message)
+        {
+            RequestId = message.RequestId;
+            Status = message.Response.Status;
+            ObjectiveValue = message.Response.ObjectiveValue;
+            CompletedAt = message.CompletedAt;
+        }
+
+        public SolverResultRow(VrpResultMessage message)
+        {
+            RequestId = message.RequestId.ToString();
+            Status = message.Result.Routes.Count.ToString();
+            ObjectiveValue = message.Result.TotalCost;
+            CompletedAt = message.CompletedAt;
+        }
     }
 
 }

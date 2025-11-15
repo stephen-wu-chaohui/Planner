@@ -254,53 +254,5 @@
     "Latitude": -31.94944468007517,
     "Longitude": 116.00541626824334,
     "DefaultJobType": "Delivery"
-  },
-  {
-    "Id": 37,
-    "Name": "Bushmead",
-    "Address": "14 Seaplane Rd, Bushmead WA 6055, Australia",
-    "Latitude": -31.92395111484162,
-    "Longitude": 116.02635895623162,
-    "DefaultJobType": "Delivery"
-  },
-  {
-    "Id": 38,
-    "Name": "Hazelmere",
-    "Address": "4 Mary St, Hazelmere WA 6055, Australia",
-    "Latitude": -31.903842632339796,
-    "Longitude": 115.99391495598748,
-    "DefaultJobType": "Delivery"
-  },
-  {
-    "Id": 39,
-    "Name": "South Guildford",
-    "Address": "142 Great Eastern Hwy, South Guildford WA 6055, Australia",
-    "Latitude": -31.910837385616915,
-    "Longitude": 115.96662079705193,
-    "DefaultJobType": "Delivery"
-  },
-  {
-    "Id": 40,
-    "Name": "Bassendean",
-    "Address": "3 Wilson St, Bassendean WA 6054, Australia",
-    "Latitude": -31.905008461474115,
-    "Longitude": 115.94945465935662,
-    "DefaultJobType": "Delivery"
-  },
-  {
-    "Id": 41,
-    "Name": "Ashfield",
-    "Address": "15 Margaret St, Ashfield WA 6054, Australia",
-    "Latitude": -31.91783160718584,
-    "Longitude": 115.93658005608513,
-    "DefaultJobType": "Delivery"
-  },
-  {
-    "Id": 42,
-    "Name": "Bayswater",
-    "Address": "25 Durham Rd, Bayswater WA 6053, Australia",
-    "Latitude": -31.91739448391637,
-    "Longitude": 115.91975724114373,
-    "DefaultJobType": "Delivery"
   }
 ]
