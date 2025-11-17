@@ -62,10 +62,11 @@
     private async Task SaveRequestToFileAsync() {
         try {
             var dir = Path.GetDirectoryName(RequestFilePath);
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            await File.WriteAllTextAsync(RequestFilePath, RequestBody);
+            if (!string.IsNullOrEmpty(dir)) {
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                await File.WriteAllTextAsync(RequestFilePath, RequestBody);
+            }
         } catch (Exception ex) {
             ResponseText = $"Error saving JSON file: {ex.Message}";
         }
@@ -76,9 +77,6 @@
             var content = new StringContent(RequestBody, System.Text.Encoding.UTF8, "application/json");
             var response = await Http.PostAsync(Url, content);
             ResponseText = await response.Content.ReadAsStringAsync();
-
-            // Save after successful invoke
-            await SaveRequestToFileAsync();
 
             await OnCloseClicked.InvokeAsync();
 

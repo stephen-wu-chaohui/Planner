@@ -1,15 +1,16 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System;
 using System.Text;
 using System.Text.Json;
 
 namespace Planner.Messaging.RabbitMQ;
 
-public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
+public class RabbitMqMessageBus(ILogger<RabbitMqMessageBus> logger, IRabbitMqConnection connection) : IMessageBus {
     public Task PublishAsync<T>(string queueName, T message) {
         using var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
-        channel.QueuePurge(queueName);
 
         var json = JsonSerializer.Serialize(message);
         var body = Encoding.UTF8.GetBytes(json);
@@ -18,37 +19,49 @@ public class RabbitMqMessageBus(IRabbitMqConnection connection) : IMessageBus {
                              routingKey: queueName,
                              basicProperties: null,
                              body: body);
-        Console.WriteLine($"[{DateTime.Now}] RabbitMqMessageBus.PublishAsync({queueName})");
-        bool logRabbitMq = Environment.GetEnvironmentVariable("LOG_RABBITMQ") == "true";
+        logger.LogInformation("RabbitMqMessageBus.PublishAsync({QueueName})", queueName);
+
+        var logRabbitMq = Environment.GetEnvironmentVariable("LOG_RABBITMQ") == "true";
         if (logRabbitMq)
-            Console.WriteLine($"{json}");
+            logger.LogInformation("RabbitMqMessageBus.PublishAsync payload: {Payload}", json);
         return Task.CompletedTask;
     }
 
-    public void Subscribe<T>(string queueName, Func<T, Task> onMessage) {
+    public IDisposable Subscribe<T>(string queueName, Func<T, Task> onMessage) {
         var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
-        Console.WriteLine($"[{DateTime.Now}] Subscribe.channel.QueueDeclare({queueName})");
-        channel.QueuePurge(queueName);
+        logger.LogInformation("Subscribe.channel.QueueDeclare({QueueName})", queueName);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.Received += async (_, ea) => {
+            var logRabbitMq = Environment.GetEnvironmentVariable("LOG_RABBITMQ") == "true";
             try {
                 var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-                Console.WriteLine($"[{DateTime.Now}] [RabbitMqMessageBus].Received({queueName})");
-                bool logRabbitMq = Environment.GetEnvironmentVariable("LOG_RABBITMQ") == "true";
                 if (logRabbitMq)
-                    Console.WriteLine($"{json}");
+                    logger.LogInformation("[RabbitMqMessageBus].Received({QueueName}) {Payload}", queueName, json);
+
                 var obj = JsonSerializer.Deserialize<T>(json);
-                if (obj != null) {
+                if (obj != null)
                     await onMessage(obj);
-                }
+
+                channel.BasicAck(ea.DeliveryTag, multiple: false);
             } catch (Exception ex) {
-                Console.WriteLine($"[{DateTime.Now}] [RabbitMqMessageBus] Error: {ex.Message}");
+                logger.LogError(ex, "[RabbitMqMessageBus] Error processing queue {QueueName}", queueName);
+                channel.BasicNack(ea.DeliveryTag, multiple: false, requeue: true);
             }
         };
 
-        channel.BasicConsume(queue: queueName, autoAck: true, consumer);
-        Console.WriteLine($"[{DateTime.Now}] [RabbitMqMessageBus].Subscribe({queueName})");
+        var consumerTag = channel.BasicConsume(queue: queueName, autoAck: false, consumer);
+        logger.LogInformation("[RabbitMqMessageBus].Subscribe({QueueName})", queueName);
+
+        return new Disposable(() =>
+        {
+            channel.BasicCancel(consumerTag);
+            channel.Dispose();
+        });
+    }
+
+    class Disposable(Action dispose) : IDisposable {
+        public void Dispose() => dispose();
     }
 }
