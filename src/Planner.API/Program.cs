@@ -49,7 +49,10 @@ builder.Logging.AddConsole();
 
 // Add services
 builder.Services.AddDbContext<PlannerDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("PlannerDb")
+        ?? throw new InvalidOperationException("Connection string 'PlannerDb' not found.")
+    )
 );
 
 builder.Services.AddEndpointsApiExplorer();
@@ -65,9 +68,6 @@ builder.Services.AddHostedService<CoordinatorService>();
 builder.Services.AddHostedService<LPResultListener>();
 builder.Services.AddHostedService<VRPResultListener>();
 
-builder.Services.AddDbContext<PlannerDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("PlannerDb")));
-
 builder.Services.AddHealthChecks();
 
 
@@ -82,10 +82,9 @@ if (!app.Environment.IsDevelopment()) {
     app.UseExceptionHandler("/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
-
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
