@@ -65,6 +65,11 @@ builder.Services.AddHostedService<CoordinatorService>();
 builder.Services.AddHostedService<LPResultListener>();
 builder.Services.AddHostedService<VRPResultListener>();
 
+builder.Services.AddDbContext<PlannerDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("PlannerDb")));
+
+builder.Services.AddHealthChecks();
+
 
 var app = builder.Build();
 
@@ -87,6 +92,16 @@ app.UseStaticFiles();
 app.UseAuthorization();
 app.MapRazorPages();
 app.MapTaskEndpoints();
+
+// Minimal API endpoints
+app.MapGet("/ping", () => "pong");
+
+app.MapGet("/db-check", async (PlannerDbContext db) => {
+    var ok = await db.Database.CanConnectAsync();
+    return Results.Ok(new { canConnect = ok });
+});
+
+app.MapHealthChecks("/health");
 
 app.Run();
 

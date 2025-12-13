@@ -22,6 +22,10 @@ public static class MessageHubStartup {
 
     public static WebApplication UseMessageHub(this WebApplication app) {
         var route = app.Configuration["SignalR:Route"]!;
+        if (string.IsNullOrWhiteSpace(route)) {
+            // Skip hub mapping during Swagger CLI / tooling
+            return app;
+        }
         app.UseCors("SignalRPolicy");
         app.MapHub<PlannerHub>(route).RequireCors("SignalRPolicy");
 

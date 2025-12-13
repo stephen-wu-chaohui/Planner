@@ -9,7 +9,4 @@ public class PlannerDbContext(DbContextOptions<PlannerDbContext> options) : DbCo
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
-        optionsBuilder.UseSqlServer(
-                "Server=.;Database=PlannerDB;Trusted_Connection=True;TrustServerCertificate=True;");
 }

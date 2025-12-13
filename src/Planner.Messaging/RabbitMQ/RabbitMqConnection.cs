@@ -9,122 +9,80 @@ public interface IRabbitMqConnection : IDisposable {
     IModel CreateChannel();
 }
 
-public class RabbitMqConnection : IRabbitMqConnection {
+public sealed class RabbitMqConnection : IRabbitMqConnection {
     private readonly ConnectionFactory _factory;
     private IConnection? _connection;
-    private readonly object _lock;
-    private readonly ILogger _logger;
+    private readonly object _lock = new();
+    private readonly ILogger<RabbitMqConnection> _logger;
 
-
-    public RabbitMqConnection(IConfiguration configuration, ILogger<RabbitMqConnection> logger) {
-
-        var host = configuration["RabbitMq:Host"] ?? "localhost";
-        var user = configuration["RabbitMq:User"] ?? "guest";
-        var pass = configuration["RabbitMq:Pass"] ?? "guest";
-        var portStr = configuration["RabbitMq:Port"] ?? "5672";
-
-        int port = int.TryParse(portStr, out var parsed) ? parsed : 5672;
-
+    public RabbitMqConnection(
+        IConfiguration configuration,
+        ILogger<RabbitMqConnection> logger) {
         _logger = logger;
-        _logger.LogCritical($"RabbitMQ Config: Host={host}, User={user}, Pass={pass}, Port={port}");
 
         _factory = new ConnectionFactory {
-            HostName = host,
-            UserName = user,
-            Password = pass,
-            Port = port,
+            HostName = configuration["RabbitMq:Host"] ?? "localhost",
+            UserName = configuration["RabbitMq:User"] ?? "guest",
+            Password = configuration["RabbitMq:Pass"] ?? "guest",
+            Port = int.TryParse(configuration["RabbitMq:Port"], out var p) ? p : 5672,
             DispatchConsumersAsync = true
         };
-        _lock = new object();
 
-        TryConnect();
+        _logger.LogInformation(
+            "RabbitMQ configured for host {Host}:{Port}",
+            _factory.HostName,
+            _factory.Port
+        );
+
+        // 🚫 NO connection attempt here
     }
 
-    public bool IsConnected => _connection != null && _connection.IsOpen;
+    public bool IsConnected => _connection?.IsOpen == true;
 
-    private void TryConnect() {
+    public IModel CreateChannel() {
+        EnsureConnected();
+
+        return _connection!.CreateModel();
+    }
+
+    private void EnsureConnected() {
+        if (IsConnected) return;
+
         lock (_lock) {
             if (IsConnected) return;
 
-            const int maxRetries = 10;
-            for (int i = 0; i < maxRetries; i++) {
-                try {
-                    _connection = _factory.CreateConnection();
-                    RegisterEventHandlers(_connection);
-                    _logger.LogInformation("✅ RabbitMQ connection established to {HostName}", _connection.Endpoint.HostName);
-                    return;
-                } catch (Exception ex) {
-                    _logger.LogWarning("Failed to connect to RabbitMQ. Retry {Attempt}/{Max}", i + 1, maxRetries);
-                    Thread.Sleep(TimeSpan.FromSeconds(Math.Min(5 * (i + 1), 30))); // backoff
-                }
-            }
-
-            _logger.LogError("❌ RabbitMQ connection could not be established after {MaxRetries} retries.", maxRetries);
-        }
-    }
-
-    private void RegisterEventHandlers(IConnection conn) {
-        conn.ConnectionShutdown += (_, ea) => {
-            _logger.LogWarning("RabbitMQ connection shutdown detected: {Reason}", ea.ReplyText);
-            TryReconnect();
-        };
-
-        conn.CallbackException += (_, ea) => {
-            _logger.LogError(ea.Exception, "RabbitMQ callback exception occurred");
-            TryReconnect();
-        };
-
-        conn.ConnectionBlocked += (_, ea) => {
-            _logger.LogWarning("RabbitMQ connection blocked: {Reason}", ea.Reason);
-            TryReconnect();
-        };
-    }
-
-    private void TryReconnect() {
-        if (IsConnected) return;
-
-        _logger.LogWarning("Attempting RabbitMQ reconnection...");
-        DisposeConnection();
-
-        // Retry loop
-        const int maxAttempts = 20;
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 _connection = _factory.CreateConnection();
                 RegisterEventHandlers(_connection);
-                _logger.LogInformation("✅ Reconnected to RabbitMQ after {Attempts} attempts", attempt);
-                return;
-            } catch {
-                Thread.Sleep(TimeSpan.FromSeconds(Math.Min(3 * attempt, 30)));
+
+                _logger.LogInformation(
+                    "RabbitMQ connection established to {Host}",
+                    _connection.Endpoint.HostName
+                );
+            } catch (Exception ex) {
+                _logger.LogError(ex, "RabbitMQ connection failed");
+                throw; // fail fast, caller decides retry
             }
         }
-
-        _logger.LogError("❌ RabbitMQ reconnection failed after {MaxAttempts} attempts", maxAttempts);
     }
 
-    public IModel CreateChannel() {
-        if (!IsConnected)
-            TryReconnect();
+    private void RegisterEventHandlers(IConnection connection) {
+        connection.ConnectionShutdown += (_, e) =>
+            _logger.LogWarning("RabbitMQ shutdown: {Reason}", e.ReplyText);
 
-        if (_connection == null)
-            throw new InvalidOperationException("RabbitMQ connection is not available.");
+        connection.CallbackException += (_, e) =>
+            _logger.LogError(e.Exception, "RabbitMQ callback exception");
 
-        return _connection.CreateModel();
+        connection.ConnectionBlocked += (_, e) =>
+            _logger.LogWarning("RabbitMQ blocked: {Reason}", e.Reason);
     }
 
     public void Dispose() {
-        DisposeConnection();
-        GC.SuppressFinalize(this);
-    }
-
-    private void DisposeConnection() {
         try {
             _connection?.Close();
             _connection?.Dispose();
         } catch (Exception ex) {
             _logger.LogError(ex, "Error disposing RabbitMQ connection");
         }
-
-        _connection = null;
     }
 }
