@@ -6,7 +6,7 @@ using Planner.BlazorApp.Components;
 using Planner.BlazorApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-// ✅ Try to load shared.appsettings.json only if it exists
+// Try to load shared.appsettings.json only if it exists
 var sharedConfigPath = Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json");
 var loggerFactory = LoggerFactory.Create(config => {
     config.AddConsole();
@@ -24,7 +24,7 @@ builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
 
-// 🔹 Connect to Azure App Configuration
+// Connect to Azure App Configuration
 string? appConfigEndpoint = builder.Configuration["AppConfig:Endpoint"];
 if (!string.IsNullOrEmpty(appConfigEndpoint)) {
     builder.Configuration.AddAzureAppConfiguration(options => {
@@ -37,15 +37,14 @@ if (!string.IsNullOrEmpty(appConfigEndpoint)) {
     });
 }
 
-// 🔹 Load environment variables last to allow overrides
+// Load environment variables last to allow overrides
 builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-
-// 👇 Add this
+// Add this
 var hubUrl = $"{builder.Configuration["SignalR:Server"]}{builder.Configuration["SignalR:Route"]}";
 Console.WriteLine("Connecting to SignalR Hub at: " + hubUrl);
 builder.Services.AddSingleton(sp => {
@@ -55,15 +54,18 @@ builder.Services.AddSingleton(sp => {
         .Build();
 });
 
-// 👇 Add this line to enable HttpClient for dependency injection
-builder.Services.AddHttpClient();
+// Add this line to enable HttpClient for dependency injection
+builder.Services.AddHttpClient("PlannerApi", client => {
+    client.BaseAddress = new Uri(
+        builder.Configuration["Api:BaseUrl"]
+        ?? throw new InvalidOperationException("Api:BaseUrl not configured")
+    );
+});
 builder.Services.AddSingleton<IMessageHubClient, OptimizationResultReceiver>();
 builder.Services.AddSingleton<DataCenterService>();
 
 
 var app = builder.Build();
-
-// app.UseMessageHub();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment()) {
@@ -88,8 +90,5 @@ app.Use(async (context, next) => {
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-// app.MapBlazorHub();
-// app.MapFallbackToPage("/_Host");
 
 app.Run();
