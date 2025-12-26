@@ -1,19 +1,26 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Planner.Contracts.Messages;
-using Planner.Contracts.Messages.LinearSolver;
+using Planner.Contracts.Optimization.Requests;
+using Planner.Contracts.Messaging;
 using Planner.Messaging;
 
 namespace Planner.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/vrp")]
 public class OptimizationController(IMessageBus bus) : ControllerBase {
-    [HttpPost("linearsolve")]
-    public async Task<IActionResult> LinearSolveAsync([FromBody] LinearSolverRequestMessage request) {
-        if (request == null)
-            return BadRequest("Missing or invalid request payload.");
+    /// <summary>
+    /// Accept a route optimization request and dispatch it to the optimization worker.
+    /// </summary>
+    [HttpPost("solve")]
+    public async Task<IActionResult> Solve([FromBody] OptimizeRouteRequest request) {
+        if (request == null || request.Jobs.Count == 0 || request.Vehicles.Count == 0)
+            return BadRequest("Invalid request.");
 
-        await bus.PublishAsync(MessageRoutes.LPSolverRequest, request);
-        return Accepted(new { status = "queued", projectId = request.RequestId });
+        await bus.PublishAsync(MessageRoutes.OptimizeRoute, request);
+
+        return Accepted(new {
+            message = "Optimization request queued for processing.",
+            request.OptimizationRunId
+        });
     }
 }

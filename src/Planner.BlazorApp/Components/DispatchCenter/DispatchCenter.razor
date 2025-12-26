@@ -1,79 +1,93 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 
-@using Planner.Application.Messaging
 @using Planner.BlazorApp.Components.WelcomeWizard
 @using Planner.BlazorApp.Services
-@using Planner.Contracts.Messages
-@using Planner.Contracts.Messages.VehicleRoutingProblem
-@using Planner.Domain.Entities
+@using Planner.Contracts.Optimization.Inputs
 
-@inject DataCenterService DataCenter
-@inject IConfiguration configuration
+@inject DataCenterState DataCenter
+@inject IConfiguration Configuration
 
-
-<div class="planner-view d-flex flex-column h-100">
+<div class="planner-view d-flex flex-column flex-fill">
     <!-- Top toolbar -->
     <div class="toolbar p-2 d-flex align-items-center bg-light border-bottom">
         <div class="d-flex gap-2">
             <button class="btn btn-info" @onclick=@(() => showWizard = true)>Show Welcome Guide</button>
-            <button class="btn  btn-primary" @onclick=@(() => OpenTab("Customers"))>Optimization Wizard</button>
+            <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Optimization Wizard</button>
         </div>
         <h5 class="ms-auto mb-0">Dispatch Centre</h5>
     </div>
 
     <!-- Map area -->
-    <div class="flex-fill position-relative">
-        <!-- Full-screen Google Map -->
-        <PlannerMap @ref="mapRef"
-                    DepotLat="@DataCenter.Depot.Latitude" DepotLon="@DataCenter.Depot.Longitude"
-                    JobPositionPicked="JobPositionPicked"
-                    Routes="@DataCenter.MapRoutes" Customers="@DataCenter.MapCustomers" />
+    <div class="planner-map-area flex-fill position-relative">
+        @if (DataCenter.Depots?.Count > 0)
+        {
+            <PlannerMap @ref="mapRef"
+                        DepotLat="@DataCenter.Depots[0].Location.Latitude"
+                        DepotLon="@DataCenter.Depots[0].Location.Longitude"
+                        JobPositionPicked="JobPositionPicked"
+                        Routes="@DataCenter.MapRoutes"
+                        Customers="@DataCenter.MapCustomers" />
+        }
+        else
+        {
+            <!-- Loading state or default depot coordinates -->
+            <PlannerMap @ref="mapRef"
+                        DepotLat="-31.953823"
+                        DepotLon="115.876140"
+                        JobPositionPicked="JobPositionPicked"
+                        Routes="@DataCenter.MapRoutes"
+                        Customers="@DataCenter.MapCustomers" />
+        }
     </div>
 
-    <!-- Welcome Wizard Modal -->
     <WelcomeWizardModal IsOpen="@showWizard" IsOpenChanged="@(val => showWizard = val)" />
-
-    <!-- Tabbed Modal -->
     <PlannerEntitiesModal @ref="entitiesModal" />
-
     <NewCustomerModal @ref="newCustomerModal" OnCustomerCreated="HandleNewCustomer" />
 </div>
 
 @code {
-    private bool showWizard = false;     // show on first load
-
-    PlannerEntitiesModal? entitiesModal;
-    private void OpenTab(string tab) {
-        entitiesModal?.OpenTab(tab);
-    }
-
-    private PlannerMap? mapRef;
-
-    private void OnCollectionChanged(object? msg) { InvokeAsync(StateHasChanged); }
+    private bool showWizard;
     private bool _subscribed;
+
+    private PlannerEntitiesModal? entitiesModal;
+    private PlannerMap? mapRef;
+    private NewCustomerModal? newCustomerModal;
+
+    private static readonly Guid TenantId =
+        Guid.Parse("11111111-1111-1111-1111-111111111111"); // TEMP until auth
+
     protected override async Task OnInitializedAsync() {
         if (_subscribed) return;
+
         DataCenter.CollectionChanged += OnCollectionChanged;
-        await DataCenter.InitializeAsync();
+        await DataCenter.InitializeAsync(TenantId);
+
         _subscribed = true;
     }
 
-    public void Dispose() {
-        DataCenter.CollectionChanged -= OnCollectionChanged;
+    private async void OnCollectionChanged(string _) {
+        await InvokeAsync(StateHasChanged);
     }
 
-    private NewCustomerModal? newCustomerModal;
+    private void OpenTab(string tab) {
+        entitiesModal?.OpenTab(tab);
+    }
 
     private Task JobPositionPicked(MapPosition args) {
         newCustomerModal?.Open(args);
         return Task.CompletedTask;
     }
 
-    private void HandleNewCustomer(Customer customer) {
-        Console.WriteLine($"New customer added: {customer.Name} ({customer.Latitude}, {customer.Longitude})");
+    private async Task HandleNewCustomer(CustomerInput customer) {
+        // UI no longer mutates state directly.
+        // Customer creation must go through API.
+        // For now: reload reference data.
 
-        // optionally refresh lists:
-        DataCenter.AddNewCustomer(customer);
+        // await DataCenter.LoadCustomersAsync();
+    }
+
+    public void Dispose() {
+        DataCenter.CollectionChanged -= OnCollectionChanged;
     }
 }

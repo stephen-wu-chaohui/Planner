@@ -1,4 +1,7 @@
 ﻿
+@using Planner.BlazorApp.Forms
+@using Planner.BlazorApp.Mappers
+@using Planner.Contracts.Optimization.Inputs
 @using Planner.Domain.Entities
 @inherits LayoutComponentBase
 
@@ -51,18 +54,17 @@
 
 @code {
     private bool isVisible;
-    private Customer newCustomer = new();
+    private CustomerFormModel newCustomer = new();
 
-    [Parameter] public EventCallback<Customer> OnCustomerCreated { get; set; }
+    [Parameter] public EventCallback<CustomerInput> OnCustomerCreated { get; set; }
 
     public void Open(MapPosition args) {
-        newCustomer = new Customer {
-            Latitude = args.Lat,
-            Longitude = args.Lng,
-            Name = args.Region,
-            Address = args.Address,
-            DefaultJobType = "Delivery"
-        };
+        newCustomer = new CustomerFormModel();
+        newCustomer.Latitude = args.Lat;
+        newCustomer.Longitude = args.Lng;
+        newCustomer.Name = args.Label;
+        newCustomer.Address = args.Address;
+        newCustomer.DefaultJobType = 1; // Delivery
         isVisible = true;
         StateHasChanged();
     }
@@ -70,7 +72,10 @@
     private async Task Save() {
         // persist to service or emit event
         if (OnCustomerCreated.HasDelegate)
-            await OnCustomerCreated.InvokeAsync(newCustomer);
+        {
+            var c = newCustomer.ToContract();
+            await OnCustomerCreated.InvokeAsync(c);
+        }
 
         isVisible = false;
     }

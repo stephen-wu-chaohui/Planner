@@ -1,23 +1,37 @@
 ﻿@using Planner.Domain.Entities
 @inject IJSRuntime JS
 @inject IConfiguration Config
+@inject ILogger<PlannerMap> Logger
+@implements IDisposable
 
-<div id="map" class="map-container position-relative w-100 h-100"></div>
+<div class="map-wrapper position-relative" style="width:@Width; height:@Height;">
+    <div id="map" class="map-canvas w-100 h-100"></div>
+
+    @if (_showError)
+    {
+        <div class="map-error p-3 bg-warning text-dark position-absolute top-0 start-0 m-3 rounded">
+            <strong>Map error:</strong> @_errorMessage
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public string Width { get; set; } = "100%";
     [Parameter] public string Height { get; set; } = "100%";
     [Parameter] public double DepotLat { get; set; }
     [Parameter] public double DepotLon { get; set; }
-    [Parameter] public List<MapMarker>? Customers { get; set; }
-    [Parameter] public List<MapRoute>? Routes { get; set; }
+    [Parameter] public IReadOnlyList<JobMarker>? Customers { get; set; }
+    [Parameter] public IReadOnlyList<MapRoute>? Routes { get; set; }
     [Parameter] public EventCallback<MapPosition> JobPositionPicked { get; set; }
 
     private DotNetObjectReference<PlannerMap>? dotNetRef;
 
     private bool _initialized;
-    public List<MapMarker>? existingCustomers = null;
-    public List<MapRoute>? existingRoutes = null;
+    public IReadOnlyList<JobMarker>? existingCustomers = null;
+    public IReadOnlyList<MapRoute>? existingRoutes = null;
+
+    private bool _showError;
+    private string? _errorMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -27,13 +41,40 @@
 
             var apiKey = Config["GoogleMaps:ApiKey"];
             var apiMapId = Config["GoogleMaps:MapId"];
-            await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
-            await JS.InvokeVoidAsync("plannerMap.initMap", DepotLat, DepotLon, apiMapId);
-            await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
 
-            _initialized = true;
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                _showError = true;
+                _errorMessage = "Google Maps API key is not configured. Set 'GoogleMaps:ApiKey' in configuration or launch settings.";
+                Logger.LogWarning("Google Maps API key missing");
+                StateHasChanged();
+                return;
+            }
 
-            await OnParametersSetAsync();
+            try
+            {
+                await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
+                await JS.InvokeVoidAsync("plannerMap.initMap", DepotLat, DepotLon, apiMapId);
+                await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
+
+                _initialized = true;
+
+                await OnParametersSetAsync();
+            }
+            catch (JSException jsex)
+            {
+                _showError = true;
+                _errorMessage = "Failed to load Google Maps script: " + jsex.Message;
+                Logger.LogError(jsex, "Failed to initialize Google Maps");
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                _showError = true;
+                _errorMessage = "Unexpected error initializing map: " + ex.Message;
+                Logger.LogError(ex, "Unexpected error initializing map");
+                StateHasChanged();
+            }
         }
     }
 
@@ -42,16 +83,16 @@
         if (!_initialized) {
             return;
         }
-        if (Routes != existingRoutes)
-        {
-            await JS.InvokeVoidAsync("plannerMap.updateRoutes", Routes);
-            existingRoutes = Routes;
-        }
-        if (Customers != existingCustomers)
-        {
-            await JS.InvokeVoidAsync("plannerMap.updateCustomers", Customers);
-            existingCustomers = Customers;
-        }
+        // if (Routes != existingRoutes && Routes != null)
+        // {
+        //     await JS.InvokeVoidAsync("plannerMap.updateRoutes", Routes);
+        //     existingRoutes = Routes;
+        // }
+        // if (Customers != existingCustomers && Customers != null)
+        // {
+        //     await JS.InvokeVoidAsync("plannerMap.updateCustomers", Customers);
+        //     existingCustomers = Customers;
+        // }
     }
 
     [JSInvokable]
@@ -59,14 +100,6 @@
         if (JobPositionPicked.HasDelegate) 
             JobPositionPicked.InvokeAsync(position);
         return Task.CompletedTask;
-    }
-
-
-    public class MapRoute {
-        public string RouteName { get; set; } = "";
-        public string Color { get; set; } = "blue";
-        public string Label { get; set; } = "";
-        public List<MapMarker> Points { get; set; } = new();
     }
 
     public async Task ClearRoutes()
@@ -79,10 +112,10 @@
         await JS.InvokeVoidAsync("plannerMap.clearRoutes");
     }
 
-    public async Task AddMarkerAsync(MapMarker marker) =>
+    public async Task AddMarkerAsync(JobMarker marker) =>
         await JS.InvokeVoidAsync("plannerMap.addMarker", marker);
 
-    public async Task DrawRouteAsync(string routeName, string color, List<MapMarker> markers) =>
+    public async Task DrawRouteAsync(string routeName, string color, List<JobMarker> markers) =>
         await JS.InvokeVoidAsync("plannerMap.drawRoute", routeName, color, markers);
 
     public async Task HighlightRouteAsync(string routeName) =>
@@ -127,4 +160,8 @@
         public double Longitude { get; set; }
     }
 
+    public void Dispose()
+    {
+        dotNetRef?.Dispose();
+    }
 }

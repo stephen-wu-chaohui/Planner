@@ -7,9 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.OrTools" Version="9.14.6206" />
+    <PackageReference Include="Google.OrTools" Version="9.14.6206" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
   </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\Planner.Contracts\Planner.Contracts.csproj" />
   </ItemGroup>

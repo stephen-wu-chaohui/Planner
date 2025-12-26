@@ -7,6 +7,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="8.4.0" />
     <PackageReference Include="MudBlazor" Version="6.19.0" />
     <PackageReference Include="System.Formats.Asn1" Version="9.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.10" />
     <PackageReference Include="System.Text.Json" Version="9.0.10" />
   </ItemGroup>
   
@@ -24,9 +25,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Planner.Application\Planner.Application.csproj" />
     <ProjectReference Include="..\Planner.Contracts\Planner.Contracts.csproj" />
-    <ProjectReference Include="..\Planner.Domain\Planner.Domain.csproj" />
-    <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
-    <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
   </ItemGroup>
 
   <ItemGroup>

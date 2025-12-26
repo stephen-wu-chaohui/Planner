@@ -1,36 +1,13 @@
-﻿using Azure.Identity;
-using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-using Planner.Messaging;
-using Planner.Optimization.Worker;
+﻿using Planner.Messaging.DependencyInjection;
+using Planner.Optimization.DependencyInjection;
+using Planner.Optimization.Worker.BackgroundServices;
+using Planner.Optimization.Worker.Handlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorPages();
-builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-
-var sharedConfigPath = Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json");
-if (File.Exists(sharedConfigPath)) {
-    builder.Configuration.AddJsonFile(sharedConfigPath, optional: true, reloadOnChange: true);
-    Console.WriteLine($"Loaded shared.appsettings.json from {sharedConfigPath}");
-} else {
-    Console.WriteLine("shared.appsettings.json not found — continuing with environment & Azure config.");
-}
-
-var appConfigEndpoint = builder.Configuration["AppConfig:Endpoint"];
-
-if (!string.IsNullOrEmpty(appConfigEndpoint)) {
-    builder.Configuration.AddAzureAppConfiguration(options => {
-        options.Connect(new Uri(appConfigEndpoint), new DefaultAzureCredential())
-               .Select(KeyFilter.Any, LabelFilter.Null)
-               .Select(KeyFilter.Any, builder.Environment.EnvironmentName)
-               .ConfigureKeyVault(kv => {
-                   kv.SetCredential(new DefaultAzureCredential());
-               });
-    });
-}
-
-builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 // =========================================================
 // SERVICES
@@ -42,9 +19,12 @@ builder.Logging.AddConsole();
 // Shared infrastructure
 builder.Services.AddMessagingBus();
 
+// --- Optimization ---
+builder.Services.AddOptimization();
+
 // Your worker services
-builder.Services.AddHostedService<SolverWorker>();
-builder.Services.AddHostedService<VRPSolverWorker>();
+builder.Services.AddHostedService<OptimizationWorker>();
+builder.Services.AddTransient<IOptimizationRequestHandler, OptimizationRequestHandler>();
 
 // =========================================================
 // BUILD APP (bind Kestrel) — required on Windows App Service
@@ -58,14 +38,5 @@ if (!app.Environment.IsDevelopment()) {
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthorization();
-
-app.MapRazorPages();
 
 app.Run();

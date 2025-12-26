@@ -106,7 +106,7 @@ window.plannerMap = {
         routes.forEach(r => {
             this.drawRoute(r.routeName, r.color, r.points);
         });
-	},
+    },
 
     // --- Cleanup ---
     clearRoutes: function () {

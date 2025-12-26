@@ -1,4 +1,4 @@
-﻿@using Planner.Contracts.Messages.VehicleRoutingProblem
+﻿@using Planner.Contracts.Optimization.Outputs
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -17,9 +17,9 @@
                         <tr class="vehicle-row @(!r.Used ? "text-muted" : "")">
                             <td><strong>@r.VehicleName</strong></td>
                             <td>@r.Stops.Count</td>
-                            <td>@($"{r.DistanceKm:F1}")</td>
+                            <td>@($"{r.TotalDistanceKm:F1}")</td>
                             <td>@($"{r.TotalMinutes:F0}")</td>
-                            <td>@($"{r.Cost:F2}")</td>
+                            <td>@($"{r.TotalCost:F2}")</td>
                         </tr>
                         @if (r.Stops.Any()) {
                             <tr>
@@ -42,7 +42,7 @@
                                                 var s = r.Stops[i];
                                                 <tr>
                                                     <td>@(i + 1)</td>
-                                                    <td>@s.JobName</td>
+                                                    <td>@s.Name</td>
                                                     <td>@s.JobType</td>
                                                     <td>@Readble(s.ArrivalTime)</td>
                                                     <td>@Readble(s.DepartureTime)</td>
@@ -72,7 +72,7 @@
 </div>
 
 @code {
-    [Parameter] public List<VehicleRoute> Routes { get; set; } = new();
+    [Parameter] public List<RouteResult> Routes { get; set; } = new();
 
     private string Readble(double minutesFromStart)
     {

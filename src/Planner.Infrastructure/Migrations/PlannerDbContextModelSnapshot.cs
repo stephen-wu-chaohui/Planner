@@ -22,7 +22,7 @@ namespace Planner.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Planner.Domain.Entities.Job", b =>
+            modelBuilder.Entity("Job", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -30,15 +30,80 @@ namespace Planner.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<int>("CustomerID")
+                        .HasColumnType("int");
+
+                    b.Property<long>("DueTime")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("JobType")
+                        .HasColumnType("int");
+
+                    b.Property<long>("LocationId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("PalletDemand")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ReadyTime")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("RequiresRefrigeration")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("ServiceTimeMinutes")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("WeightDemand")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("LocationId");
+
                     b.ToTable("Jobs");
+                });
+
+            modelBuilder.Entity("Planner.Domain.Customer", b =>
+                {
+                    b.Property<int>("CustomerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+
+                    b.Property<long>("DefaultServiceMinutes")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("LocationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("RequiresRefrigeration")
+                        .HasColumnType("bit");
+
+                    b.HasKey("CustomerId");
+
+                    b.HasIndex("LocationId");
+
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("Planner.Domain.Entities.SystemEvent", b =>
@@ -112,9 +177,106 @@ namespace Planner.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Planner.Domain.Location", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Location");
+                });
+
+            modelBuilder.Entity("Vehicle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("BaseFee")
+                        .HasColumnType("float");
+
+                    b.Property<long>("DepotEndId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DepotStartId")
+                        .HasColumnType("bigint");
+
+                    b.Property<double>("DriverRatePerHour")
+                        .HasColumnType("float");
+
+                    b.Property<double>("FuelRatePerKm")
+                        .HasColumnType("float");
+
+                    b.Property<double>("MaintenanceRatePerHour")
+                        .HasColumnType("float");
+
+                    b.Property<long>("MaxPallets")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("MaxWeight")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("RefrigeratedCapacity")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ShiftLimitMinutes")
+                        .HasColumnType("bigint");
+
+                    b.Property<double>("SpeedFactor")
+                        .HasColumnType("float");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Vehicles");
+                });
+
+            modelBuilder.Entity("Job", b =>
+                {
+                    b.HasOne("Planner.Domain.Location", "Location")
+                        .WithMany()
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Location");
+                });
+
+            modelBuilder.Entity("Planner.Domain.Customer", b =>
+                {
+                    b.HasOne("Planner.Domain.Location", "Location")
+                        .WithMany()
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Location");
                 });
 #pragma warning restore 612, 618
         }

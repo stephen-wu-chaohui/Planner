@@ -1,5 +1,6 @@
-﻿@using Planner.Contracts.Messages.VehicleRoutingProblem
-@using Planner.Domain.Entities
+﻿@using Planner.Contracts.Optimization.Requests
+@using Planner.BlazorApp.Forms
+
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
         <table class="polished-table">
@@ -14,23 +15,21 @@
                     <th>Pallets</th>
                     <th>Weight</th>
                     <th>Refrig</th>
-                    <th>Vehicle Pref.</th>
                     <th style="width:100px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var j in Jobs) {
                     <tr>
-                        <td>@j.Id</td>
-                        <td>@CustomerName(j.CustomerId)</td>
-                        <td>@j.Type</td>
+                        <td>@j.JobId</td>
+                        <td>@j.Name</td>
+                        <td>@(j.JobType == 1 ? "Delivery" : "Pickup")</td>
                         <td>@j.ReadyTime</td>
                         <td>@j.DueTime</td>
-                        <td>@j.ServiceMinutes</td>
+                        <td>@j.ServiceTimeMinutes</td>
                         <td>@j.PalletDemand</td>
                         <td>@j.WeightDemand</td>
-                        <td>@j.RefrigeratedRequirement</td>
-                        <td>@VehicleName(j.VehiclePreference)</td>
+                        <td>@j.RequiresRefrigeration</td>
                         <td class="actions">
                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(j))">✏️</button>
                             <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(j))">🗑️</button>
@@ -54,7 +53,6 @@
     </div>
 </div>
 
-<!-- Edit Job Modal -->
 @if (Editing is not null) {
     <div class="modal fade show d-block" tabindex="-1"
          style="background-color:rgba(0,0,0,.4); z-index:1060;">
@@ -67,55 +65,49 @@
                 <div class="modal-body">
                     <div class="mb-2">
                         <label class="form-label">Customer</label>
-                        <select class="form-select" @bind="Editing.CustomerId">
+                        <select class="form-select" @bind="editingLocationId">
                             @foreach (var c in Customers) {
-                                <option value="@c.Id">@c.Name</option>
+                                <option value="@c.LocationId">@c.Name</option>
                             }
                         </select>
                     </div>
+
                     <div class="mb-2">
                         <label class="form-label">Job Type</label>
-                        <select class="form-select" @bind="Editing.Type">
-                            <option value="@JobType.Delivery">Delivery</option>
-                            <option value="@JobType.Pickup">Pickup</option>
+                        <select class="form-select" @bind="editingJobType">
+                            <option value="1">Delivery</option>
+                            <option value="2">Pickup</option>
                         </select>
                     </div>
+
                     <div class="row mb-2">
                         <div class="col">
-                            <label class="form-label">Ready Time (min)</label>
-                            <input class="form-control" type="number" @bind="Editing.ReadyTime" />
+                            <label class="form-label">Ready Time</label>
+                            <input class="form-control" type="number" @bind="editingReady" />
                         </div>
                         <div class="col">
-                            <label class="form-label">Due Time (min)</label>
-                            <input class="form-control" type="number" @bind="Editing.DueTime" />
+                            <label class="form-label">Due Time</label>
+                            <input class="form-control" type="number" @bind="editingDue" />
                         </div>
                         <div class="col">
-                            <label class="form-label">Service (min)</label>
-                            <input class="form-control" type="number" @bind="Editing.ServiceMinutes" />
+                            <label class="form-label">Service</label>
+                            <input class="form-control" type="number" @bind="editingService" />
                         </div>
                     </div>
+
                     <div class="row mb-2">
                         <div class="col">
                             <label class="form-label">Pallets</label>
-                            <input class="form-control" type="number" @bind="Editing.PalletDemand" />
+                            <input class="form-control" type="number" @bind="editingPallets" />
                         </div>
                         <div class="col">
                             <label class="form-label">Weight</label>
-                            <input class="form-control" type="number" @bind="Editing.WeightDemand" />
+                            <input class="form-control" type="number" @bind="editingWeight" />
                         </div>
                         <div class="col">
-                            <label class="form-label">Refrig</label>
-                            <input class="form-control" type="number" @bind="Editing.RefrigeratedRequirement" />
+                            <label class="form-label">Refrigerated</label>
+                            <input class="form-control" type="checkbox" @bind="editingRefrig" />
                         </div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Preferred Vehicle (optional)</label>
-                        <select class="form-select" @bind="Editing.VehiclePreference">
-                            <option value="">(Any)</option>
-                            @foreach (var v in Vehicles) {
-                                <option value="@v.Id">@v.Name</option>
-                            }
-                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -127,121 +119,152 @@
     </div>
 }
 
-
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
-
-    [Parameter] public List<Job> Jobs { get; set; } = new();
-    [Parameter] public List<Customer> Customers { get; set; } = new();
+    [Parameter] public List<JobFormModel> Jobs { get; set; } = new();
+    [Parameter] public List<CustomerFormModel> Customers { get; set; } = new();
     [Parameter] public List<Vehicle> Vehicles { get; set; } = new();
-
-    // fired when "Solve VRP" clicked
     [Parameter] public EventCallback OnSolve { get; set; }
 
-    private Job? Editing;
+    private JobFormModel? Editing;
     private bool IsNew;
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (Customers?.Count > 0 && Jobs.Count == 0)
-        {
-            await CreateJobsForAllCustomers();
-        }
+    private long editingLocationId;
+    private int editingJobType;
+    private long editingReady;
+    private long editingDue;
+    private long editingService;
+    private long editingPallets;
+    private long editingWeight;
+    private bool editingRefrig;
+
+    protected override Task OnInitializedAsync() {
+        if (Customers.Count > 0 && Jobs.Count == 0)
+            return CreateJobsForAllCustomers();
+
+        return Task.CompletedTask;
     }
 
+    private JobFormModel CreateJobFromCustomer(CustomerFormModel c) =>
+        new JobFormModel {
+            JobId = NextId(),
+            JobType = 1,
+            LocationId = c.LocationId,
+            Name = c.Name,
+            Latitude = c.Latitude,
+            Longitude = c.Longitude,
+            ServiceTimeMinutes = c.DefaultServiceMinutes,
+            RequiresRefrigeration = c.RequiresRefrigeration,
+            ReadyTime = 0,
+            DueTime = 480
+        };
 
-    private async Task CreateJobsForAllCustomers() {
-        if (Customers == null || Customers.Count == 0) {
-            Console.WriteLine("No customers available to create jobs.");
-            return;
-        }
-
+    private Task CreateJobsForAllCustomers() {
         Jobs.Clear();
 
         foreach (var c in Customers) {
-            // Example: auto-generate one job per customer
-            var job = new Job {
-                Id = NextId(),
+            Jobs.Add(new JobFormModel {
+                JobId = NextId(),
+                JobType = 1,
                 Name = c.Name,
-                CustomerId = c.Id,
-                Type = JobType.Delivery,
+                Latitude = c.Latitude,
+                Longitude = c.Longitude,
+                LocationId = c.LocationId,
+                ServiceTimeMinutes = c.DefaultServiceMinutes,
                 ReadyTime = 0,
                 DueTime = 480,
-                ServiceMinutes = 10,
                 PalletDemand = 2,
                 WeightDemand = 100,
-                RefrigeratedRequirement = 0
-            };
-            Jobs.Add(job);
+                RequiresRefrigeration = c.RequiresRefrigeration
+            });
         }
-        Console.WriteLine($"{Customers.Count} jobs created automatically.");
+
+        return Task.CompletedTask;
     }
 
     private void AddNew() {
-        Editing = new Job {
-            Id = NextId(),
-            Type = JobType.Delivery,
+        Editing = new JobFormModel {
+            JobId = NextId(),
+            JobType = 1,
+            Name = "",
+            Latitude = 0,
+            Longitude = 0,
+            LocationId = Customers.First().LocationId,
+            ServiceTimeMinutes = 30,
             ReadyTime = 0,
             DueTime = 480,
-            ServiceMinutes = 30,
-            PalletDemand = 2,
-            WeightDemand = 100,
-            RefrigeratedRequirement = 0
+            PalletDemand = 1,
+            WeightDemand = 50,
+            RequiresRefrigeration = false
         };
+
+        LoadEditingFields(Editing);
         IsNew = true;
     }
 
-    private void Edit(Job j) {
-        Editing = new Job {
-            Id = j.Id,
-            CustomerId = j.CustomerId,
-            Type = j.Type,
+    private void Edit(JobFormModel j) {
+        Editing = new JobFormModel {
+            JobId = j.JobId,
+            JobType = j.JobType,
+            Name = j.Name,
+            Latitude = j.Latitude,
+            Longitude = j.Longitude,
+            LocationId = j.LocationId,
             ReadyTime = j.ReadyTime,
             DueTime = j.DueTime,
-            ServiceMinutes = j.ServiceMinutes,
+            ServiceTimeMinutes = j.ServiceTimeMinutes,
             PalletDemand = j.PalletDemand,
             WeightDemand = j.WeightDemand,
-            RefrigeratedRequirement = j.RefrigeratedRequirement,
-            VehiclePreference = j.VehiclePreference
+            RequiresRefrigeration = j.RequiresRefrigeration
         };
+
+        LoadEditingFields(Editing);
         IsNew = false;
     }
 
-    private void CloseEditModal() => Editing = null;
+    private void LoadEditingFields(JobFormModel j) {
+        editingLocationId = j.LocationId;
+        editingJobType = j.JobType;
+        editingReady = j.ReadyTime;
+        editingDue = j.DueTime;
+        editingService = j.ServiceTimeMinutes;
+        editingPallets = j.PalletDemand;
+        editingWeight = j.WeightDemand;
+        editingRefrig = j.RequiresRefrigeration;
+    }
 
     private void SaveEdit() {
-        if (Editing is null) return;
+        var customer = Customers.FirstOrDefault(c => c.LocationId == editingLocationId);
 
-        if (IsNew)
+        Editing = new JobFormModel {
+            JobId = Editing!.JobId,
+            Name = customer?.Name ?? "Unknown",
+            Latitude = customer?.Latitude ?? 0,
+            Longitude = customer?.Longitude ?? 0,
+            LocationId = editingLocationId,
+            JobType = editingJobType,
+            ReadyTime = editingReady,
+            DueTime = editingDue,
+            ServiceTimeMinutes = editingService,
+            PalletDemand = editingPallets,
+            WeightDemand = editingWeight,
+            RequiresRefrigeration = editingRefrig
+        };
+
+        if (IsNew) {
             Jobs.Add(Editing);
-        else {
-            var existing = Jobs.FirstOrDefault(x => x.Id == Editing.Id);
-            if (existing is not null) {
-                existing.CustomerId = Editing.CustomerId;
-                existing.Type = Editing.Type;
-                existing.ReadyTime = Editing.ReadyTime;
-                existing.DueTime = Editing.DueTime;
-                existing.ServiceMinutes = Editing.ServiceMinutes;
-                existing.PalletDemand = Editing.PalletDemand;
-                existing.WeightDemand = Editing.WeightDemand;
-                existing.RefrigeratedRequirement = Editing.RefrigeratedRequirement;
-                existing.VehiclePreference = Editing.VehiclePreference;
-            }
+        } else {
+            var index = Jobs.FindIndex(j => j.JobId == Editing.JobId);
+            if (index >= 0)
+                Jobs[index] = Editing;
         }
+
         Editing = null;
     }
 
-    private void Delete(Job j) => Jobs.Remove(j);
+    private void CloseEditModal() => Editing = null;
+    private void Delete(JobFormModel j) => Jobs.Remove(j);
     private void ClearAll() => Jobs.Clear();
 
-    private string CustomerName(int id) =>
-        Customers.FirstOrDefault(c => c.Id == id)?.Name ?? "(none)";
-
-    private string VehicleName(int? id) =>
-        id is null ? "(any)" : Vehicles.FirstOrDefault(v => v.Id == id)?.Name ?? "(?)";
-
-    private int NextId() => Jobs.Count == 0 ? 0 : Jobs.Max(j => j.Id) + 1;
+    private int NextId() =>
+        Jobs.Count == 0 ? 0 : Jobs.Max(j => j.JobId) + 1;
 }
-
-

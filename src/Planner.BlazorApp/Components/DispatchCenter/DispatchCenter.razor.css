@@ -116,3 +116,11 @@
 	background: #e2e2e2;
 	margin: 12px 0;
 }
+
+.planner-view {
+	min-height: 0;
+}
+
+.planner-map-area {
+	min-height: 0;
+}

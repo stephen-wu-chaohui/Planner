@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Planner.API;
 using Planner.API.BackgroundServices;
+using Planner.API.SignalR;
+using Planner.Application;
 using Planner.Infrastructure.Coordinator;
 using Planner.Infrastructure.Persistence;
-using Planner.Messaging;
+using Planner.Messaging.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 // ✅ Try to load shared.appsettings.json only if it exists
@@ -47,34 +49,40 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
+// Get and log connection string for debugging
+var connectionString = builder.Configuration.GetConnectionString("PlannerDb");
+logger.LogInformation("Using connection string: {ConnectionString}", 
+    connectionString != null ? connectionString.Substring(0, Math.Min(50, connectionString.Length)) + "..." : "null");
+
 // Add services
 builder.Services.AddDbContext<PlannerDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("PlannerDb")
-        ?? throw new InvalidOperationException("Connection string 'PlannerDb' not found.")
+        connectionString ?? throw new InvalidOperationException("Connection string 'PlannerDb' not found.")
     )
 );
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddControllers();
 builder.Services.AddRazorPages();
 
-builder.Services.AddMessageHub(builder.Configuration);
+builder.Services.AddRealtime(builder.Configuration);
 builder.Services.AddMessagingBus();
 
 // Register your background service
 builder.Services.AddHostedService<CoordinatorService>();
-builder.Services.AddHostedService<LPResultListener>();
-builder.Services.AddHostedService<VRPResultListener>();
+builder.Services.AddHostedService<OptimizeRouteResultConsumer>();
+
 
 builder.Services.AddHealthChecks();
 
+builder.Services.AddScoped<ITenantContext, StaticTenantContext>();
 
 var app = builder.Build();
 
 app.UseRouting();
-app.UseMessageHub();
+app.UseRealtime();
 app.MapControllers();
 
 // Configure the HTTP request pipeline.
@@ -101,6 +109,19 @@ app.MapGet("/db-check", async (PlannerDbContext db) => {
 });
 
 app.MapHealthChecks("/health");
+
+app.MapGet("/vehicles", async (
+    PlannerDbContext db,
+    ITenantContext tenant
+) => {
+    var vehicles = await db.Vehicles
+        .Where(v => v.TenantId == tenant.TenantId)
+        .ToListAsync();
+
+    return Results.Ok(vehicles);
+});
+
+
 
 app.Run();
 

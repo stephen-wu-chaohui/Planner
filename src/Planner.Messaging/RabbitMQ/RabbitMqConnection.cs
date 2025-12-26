@@ -9,7 +9,7 @@ public interface IRabbitMqConnection : IDisposable {
     IModel CreateChannel();
 }
 
-public sealed class RabbitMqConnection : IRabbitMqConnection {
+internal sealed class RabbitMqConnection : IRabbitMqConnection {
     private readonly ConnectionFactory _factory;
     private IConnection? _connection;
     private readonly object _lock = new();

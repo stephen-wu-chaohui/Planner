@@ -1,12 +1,12 @@
 ﻿@page "/LinearSolver"
 @rendermode InteractiveServer
 
-@using Planner.Application.Messaging
-@using Planner.Contracts.Messages
-@using Planner.Contracts.Messages.LinearSolver
 @using System.Text.Json
+@using Planner.BlazorApp.Services
+@using Planner.Contracts.Messaging.Events
+@using Planner.Contracts.Optimization.Responses
 
-@inject IMessageHubClient hub
+@inject IOptimizationHubClient hub
 
 <PageTitle>Linear Solver</PageTitle>
 
@@ -67,24 +67,11 @@
     {
         try
         {
-            hub.SubscribeAsync<LinearSolverResultMessage>(MessageRoutes.LPSolverResult,
-                r => InvokeAsync(() => {
-                    Console.WriteLine($"MessageHub received data {MessageRoutes.LPSolverResult}.");
-                    try
-                    {
-                        var busQueue = (r.RequestId ?? "unknown") + "_" + MessageRoutes.LPSolverResult;
-                        var FilePath = $"wwwroot/data/{busQueue}-{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}.json";
-                        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-                        var json = JsonSerializer.Serialize(r, new JsonSerializerOptions { WriteIndented = true });
-                        // File.WriteAllText(FilePath, json);
-                    } catch(Exception ex)
-                    {
-                        Console.WriteLine($"[{DateTime.Now.ToString()}] Exception: {ex.Message} .");
-                    }
-                    results.Add(new SolverResultRow(r));
-                    StateHasChanged();
-                })
-            );
+            hub.OptimizationCompleted += r => InvokeAsync(() => {
+                Console.WriteLine($"MessageHub received data {r.OptimizationRunId}.");
+                results.Add(new SolverResultRow(r.Result));
+                StateHasChanged();
+            });
 
         } catch(Exception ex)
         {
@@ -99,19 +86,10 @@
         public double ObjectiveValue { get; set; }
         public DateTime CompletedAt { get; set; }
 
-        public SolverResultRow(LinearSolverResultMessage message)
-        {
-            RequestId = message.RequestId;
-            Status = message.Response.Status;
-            ObjectiveValue = message.Response.ObjectiveValue;
-            CompletedAt = message.CompletedAt;
-        }
-
-        public SolverResultRow(VrpResultMessage message)
-        {
-            RequestId = message.RequestId.ToString();
-            Status = message.Result.Routes.Count.ToString();
-            ObjectiveValue = message.Result.TotalCost;
+        public SolverResultRow(OptimizeRouteResponse message) {
+            RequestId = message.OptimizationRunId.ToString();
+            Status = message.Routes.Count.ToString();
+            ObjectiveValue = message.TotalCost;
             CompletedAt = message.CompletedAt;
         }
     }

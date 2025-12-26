@@ -1,6 +1,5 @@
 ﻿@using System.Text.Json
-@using Planner.Contracts.Messages.VehicleRoutingProblem
-@using Planner.Domain.Entities
+@using Planner.BlazorApp.Forms
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -9,32 +8,35 @@
                 <tr>
                     <th class="sticky-col">ID</th>
                     <th>Name</th>
-                    <th>Type</th>
+                    <th>Default Job Type</th>
                     <th>Address</th>
-                    <th style="width: 100px;"></th>
+                    <th style="width:100px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var c in Customers) {
                     <tr>
-                        <td>@c.Id</td>
+                        <td>@c.CustomerId</td>
                         <td>@c.Name</td>
                         <td>@c.DefaultJobType</td>
                         <td>@c.Address</td>
                         <td class="actions">
-                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(c))">✏️</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(c))">🗑️</button>
+                            <button class="btn btn-sm btn-outline-secondary me-1"
+                                    @onclick="@(() => Edit(c))">
+                                ✏️
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="@(() => Delete(c))">
+                                🗑️
+                            </button>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
-    <div class="planner-tab-actions">
-    </div>
 </div>
 
-<!-- Edit Modal -->
 @if (Editing is not null) {
     <div class="modal fade show d-block" tabindex="-1">
         <div class="modal-dialog">
@@ -43,34 +45,40 @@
                     <h5 class="modal-title">@((IsNew ? "Add" : "Edit") + " Customer")</h5>
                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
+
                 <div class="modal-body">
                     <div class="mb-2">
                         <label class="form-label">Name</label>
                         <input class="form-control" @bind="Editing.Name" />
                     </div>
+
                     <div class="mb-2">
                         <label class="form-label">Address</label>
                         <input class="form-control" @bind="Editing.Address" />
                     </div>
+
                     <div class="row mb-2">
                         <div class="col">
                             <label class="form-label">Latitude</label>
-                            <input class="form-control" type="number" step="0.00001" @bind="Editing.Latitude" />
+                            <input class="form-control" type="number" step="0.00001"
+                                   @bind="Editing.Latitude" />
                         </div>
                         <div class="col">
                             <label class="form-label">Longitude</label>
-                            <input class="form-control" type="number" step="0.00001" @bind="Editing.Longitude" />
+                            <input class="form-control" type="number" step="0.00001"
+                                   @bind="Editing.Longitude" />
                         </div>
                     </div>
+
                     <div class="mb-2">
                         <label class="form-label">Default Job Type</label>
                         <select class="form-select" @bind="Editing.DefaultJobType">
-                            <option>Depot</option>
-                            <option>Pickup</option>
-                            <option>Delivery</option>
+                            <option value="1">Delivery</option>
+                            <option value="2">Pickup</option>
                         </select>
                     </div>
                 </div>
+
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
                     <button class="btn btn-primary" @onclick="SaveEdit">Save</button>
@@ -80,47 +88,31 @@
     </div>
 }
 
-
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public List<Customer> Customers { get; set; } = new();
+    [Parameter] public List<CustomerFormModel> Customers { get; set; } = new();
 
     private const string FilePath = "wwwroot/data/customers.json";
-    private Customer? Editing;
+
+    private CustomerFormModel? Editing;
     private bool IsNew;
 
-    private void AddNew() {
-        Editing = new Customer {
-            Id = NextId(),
-            DefaultJobType = "Delivery"
-        };
-        IsNew = true;
-    }
-
-    public void OpenForNewCustomer(MapPosition pos)
-    {
-        Editing = new Customer {
-            Id = NextId(),
-            Name = pos.Region,
+    public void OpenForNewCustomer(MapPosition pos) {
+        Editing = new CustomerFormModel {
+            CustomerId = NextId(),
+            LocationId = NextLocationId(),
+            Name = pos.Label,
             Address = pos.Address,
-            DefaultJobType = "Delivery",
             Latitude = pos.Lat,
-            Longitude = pos.Lng
+            Longitude = pos.Lng,
+            DefaultServiceMinutes = 10,
+            RequiresRefrigeration = false,
+            DefaultJobType = 1
         };
         IsNew = true;
-
     }
 
-    private void Edit(Customer c) {
-        Editing = new Customer {
-            Id = c.Id,
-            Name = c.Name,
-            Address = c.Address,
-            Latitude = c.Latitude,
-            Longitude = c.Longitude,
-            DefaultJobType = c.DefaultJobType
-        };
+    private void Edit(CustomerFormModel c) {
+        Editing = c with { };
         IsNew = false;
     }
 
@@ -130,14 +122,9 @@
         if (IsNew) {
             Customers.Add(Editing);
         } else {
-            var existing = Customers.FirstOrDefault(x => x.Id == Editing.Id);
-            if (existing is not null) {
-                existing.Name = Editing.Name;
-                existing.Address = Editing.Address;
-                existing.Latitude = Editing.Latitude;
-                existing.Longitude = Editing.Longitude;
-                existing.DefaultJobType = Editing.DefaultJobType;
-            }
+            var index = Customers.FindIndex(x => x.CustomerId == Editing.CustomerId);
+            if (index >= 0)
+                Customers[index] = Editing;
         }
 
         Editing = null;
@@ -146,38 +133,20 @@
 
     private void CloseEditModal() => Editing = null;
 
-    private async Task Delete(Customer c) {
+    private async Task Delete(CustomerFormModel c) {
         Customers.Remove(c);
         await SaveToFile();
     }
 
-    private async Task LoadFromFile() {
-        try {
-            if (!File.Exists(FilePath)) {
-                Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-                await File.WriteAllTextAsync(FilePath, "[]");
-            }
-
-            var json = await File.ReadAllTextAsync(FilePath);
-            var data = JsonSerializer.Deserialize<List<Customer>>(json) ?? new();
-            Customers.Clear();
-            Customers.AddRange(data);
-        } catch (Exception ex) {
-            Console.WriteLine($"LoadFromFile error: {ex.Message}");
-        }
-    }
-
     private async Task SaveToFile() {
-        try {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            var json = JsonSerializer.Serialize(Customers, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(FilePath, json);
-        } catch (Exception ex) {
-            Console.WriteLine($"SaveToFile error: {ex.Message}");
-        }
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        var json = JsonSerializer.Serialize(Customers, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(FilePath, json);
     }
 
-    private int NextId() {
-        return Customers.Count == 0 ? 0 : Customers.Max(c => c.Id) + 1;
-    }
+    private int NextId() =>
+        Customers.Count == 0 ? 1 : Customers.Max(c => c.CustomerId) + 1;
+
+    private long NextLocationId() =>
+        Customers.Count == 0 ? 1 : Customers.Max(c => c.LocationId) + 1;
 }

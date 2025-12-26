@@ -1,11 +1,10 @@
 ﻿using Azure.Identity;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-using Planner.Application.Messaging;
 using Planner.BlazorApp.Components;
 using Planner.BlazorApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
 // Try to load shared.appsettings.json only if it exists
 var sharedConfigPath = Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json");
 var loggerFactory = LoggerFactory.Create(config => {
@@ -42,17 +41,12 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options => options.DetailedErrors = true);
 
-// Add this
-var hubUrl = $"{builder.Configuration["SignalR:Server"]}{builder.Configuration["SignalR:Route"]}";
-Console.WriteLine("Connecting to SignalR Hub at: " + hubUrl);
-builder.Services.AddSingleton(sp => {
-    return new HubConnectionBuilder()
-        .WithUrl(hubUrl!)  // must match API endpoint
-        .WithAutomaticReconnect()
-        .Build();
-});
+builder.Services.AddServerSideBlazor().AddCircuitOptions(o => o.DetailedErrors = true);
+
+// Add SignalR client
+builder.Services.AddScoped<IOptimizationHubClient, OptimizationHubClient>();
 
 // Add this line to enable HttpClient for dependency injection
 builder.Services.AddHttpClient("PlannerApi", client => {
@@ -61,9 +55,13 @@ builder.Services.AddHttpClient("PlannerApi", client => {
         ?? throw new InvalidOperationException("Api:BaseUrl not configured")
     );
 });
-builder.Services.AddSingleton<IMessageHubClient, OptimizationResultReceiver>();
-builder.Services.AddSingleton<DataCenterService>();
 
+// Provide a default HttpClient instance backed by the named client.
+//builder.Services.AddScoped(sp =>
+//    sp.GetRequiredService<IHttpClientFactory>().CreateClient("PlannerApi"));
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7085") });
+
+builder.Services.AddScoped<DataCenterState>();
 
 var app = builder.Build();
 
@@ -75,18 +73,10 @@ if (!app.Environment.IsDevelopment()) {
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
+// 2. Routing second
+app.UseRouting();
 app.UseAntiforgery();
-
-app.Use(async (context, next) => {
-    context.Response.OnStarting(() => {
-        // Remove the built-in header if present
-        context.Response.Headers.Remove("Content-Security-Policy");
-        return Task.CompletedTask;
-    });
-    await next();
-});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

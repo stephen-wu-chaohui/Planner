@@ -1,11 +1,9 @@
 ﻿@inherits LayoutComponentBase
 @using Planner.Application.Messaging
 @using Planner.BlazorApp.Services
-@using Planner.Contracts.Messages
-@using Planner.Contracts.Messages.VehicleRoutingProblem
 @using Planner.Domain.Entities
 
-@inject DataCenterService DataCenter
+@inject DataCenterState DataCenter
 @inject IConfiguration configuration
 
 <div>
@@ -145,7 +143,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (firstRender) {
-            DataCenter.VrpResultReceived += async msg => {
+            DataCenter.CollectionChanged += async msg => {
                 EndOptimizationWait();
                 ActiveTab = "Routes";
                 IsVisible = true;

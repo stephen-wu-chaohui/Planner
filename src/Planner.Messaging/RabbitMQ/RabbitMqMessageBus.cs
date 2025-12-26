@@ -1,13 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System;
 using System.Text;
 using System.Text.Json;
 
 namespace Planner.Messaging.RabbitMQ;
 
-public class RabbitMqMessageBus(ILogger<RabbitMqMessageBus> logger, IRabbitMqConnection connection) : IMessageBus {
+internal class RabbitMqMessageBus(ILogger<RabbitMqMessageBus> logger, IRabbitMqConnection connection) : IMessageBus {
     public Task PublishAsync<T>(string queueName, T message) {
         using var channel = connection.CreateChannel();
         channel.QueueDeclare(queueName, durable: true, exclusive: false, autoDelete: false);
