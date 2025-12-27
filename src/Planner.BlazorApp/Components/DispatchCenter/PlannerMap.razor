@@ -1,8 +1,9 @@
 ﻿@using Planner.Domain.Entities
+@using Planner.BlazorApp.Models
 @inject IJSRuntime JS
 @inject IConfiguration Config
 @inject ILogger<PlannerMap> Logger
-@implements IDisposable
+@implements IAsyncDisposable
 
 <div class="map-wrapper position-relative" style="width:@Width; height:@Height;">
     <div id="map" class="map-canvas w-100 h-100"></div>
@@ -25,6 +26,11 @@
     [Parameter] public EventCallback<MapPosition> JobPositionPicked { get; set; }
 
     private DotNetObjectReference<PlannerMap>? dotNetRef;
+
+    public async ValueTask DisposeAsync() {
+        dotNetRef?.Dispose();
+        dotNetRef = null;
+    }
 
     private bool _initialized;
     public IReadOnlyList<JobMarker>? existingCustomers = null;
@@ -83,16 +89,16 @@
         if (!_initialized) {
             return;
         }
-        // if (Routes != existingRoutes && Routes != null)
-        // {
-        //     await JS.InvokeVoidAsync("plannerMap.updateRoutes", Routes);
-        //     existingRoutes = Routes;
-        // }
-        // if (Customers != existingCustomers && Customers != null)
-        // {
-        //     await JS.InvokeVoidAsync("plannerMap.updateCustomers", Customers);
-        //     existingCustomers = Customers;
-        // }
+        if (Routes != existingRoutes && Routes != null)
+        {
+            await JS.InvokeVoidAsync("plannerMap.updateRoutes", Routes);
+            existingRoutes = Routes;
+        }
+        if (Customers != existingCustomers && Customers != null)
+        {
+            await JS.InvokeVoidAsync("plannerMap.updateCustomers", Customers);
+            existingCustomers = Customers;
+        }
     }
 
     [JSInvokable]
@@ -100,11 +106,6 @@
         if (JobPositionPicked.HasDelegate) 
             JobPositionPicked.InvokeAsync(position);
         return Task.CompletedTask;
-    }
-
-    public async Task ClearRoutes()
-    {
-        await JS.InvokeVoidAsync("plannerMap.clearRoutes");
     }
 
     public async Task ClearRoutesAsync()
@@ -126,42 +127,4 @@
 
     public async Task FitToBoundsAsync() =>
         await JS.InvokeVoidAsync("plannerMap.fitToBounds");
-
-    /////////////////////////////////////////////////////////////////////////
-
-
-
-    /// <summary>
-    /// ///////////////////// Compute Distance Matrix /////////////////////
-    /// </summary>
-    /// <returns></returns>
-    public async Task<double[][]> ComputeMatrix()
-    {
-        // Future: call mapInterop.getDistanceMatrix() or send Jobs to API
-        return await JS.InvokeAsync<double[][]>("PlannerMap.getDistanceMatrix");
-    }
-
-    public class RouteDto
-    {
-        public string VehicleId { get; set; } = "";
-        public List<RoutePoint> Points { get; set; } = new();
-    }
-
-    public class RoutePoint
-    {
-        public double Lat { get; set; }
-        public double Lon { get; set; }
-    }
-
-    public class JobPoint
-    {
-        public string Id { get; set; } = "";
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-    }
-
-    public void Dispose()
-    {
-        dotNetRef?.Dispose();
-    }
 }

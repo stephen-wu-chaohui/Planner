@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 using Planner.Application.Messaging;
-using Planner.Contracts.Messaging.Events;
+using Planner.Contracts.Optimization.Responses;
+using Planner.Messaging;
 
 namespace Planner.API.SignalR;
 
@@ -22,16 +22,16 @@ public class OptimizationResultNotifier : IMessageHubPublisher {
         }
     }
 
-    public async Task NotifyAsync(RouteOptimizedEvent evt) {
+    public async Task NotifyAsync(OptimizeRouteResponse evt) {
         try {
             await _hubContext.Clients
                 .Group(PlannerHub.TenantGroup(evt.TenantId))
-                .SendAsync("OptimizationCompleted", evt);
+                .SendAsync(MessageRoutes.Response, evt);
 
             await _hubContext.Clients
                 .Group(PlannerHub.OptimizationRunGroup(
                     evt.TenantId, evt.OptimizationRunId))
-                .SendAsync("OptimizationCompleted", evt);
+                .SendAsync(MessageRoutes.Response, evt);
         } catch (Exception ex) {
             _logger.LogError(ex, "Error notifying SignalR groups for tenant {Tenant} run {Run}", evt.TenantId, evt.OptimizationRunId);
         }

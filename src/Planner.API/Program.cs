@@ -7,6 +7,7 @@ using Planner.API.SignalR;
 using Planner.Application;
 using Planner.Infrastructure.Coordinator;
 using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure.Seed;
 using Planner.Messaging.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,7 +52,7 @@ builder.Logging.AddConsole();
 
 // Get and log connection string for debugging
 var connectionString = builder.Configuration.GetConnectionString("PlannerDb");
-logger.LogInformation("Using connection string: {ConnectionString}", 
+logger.LogInformation("Using connection string: {ConnectionString}",
     connectionString != null ? connectionString.Substring(0, Math.Min(50, connectionString.Length)) + "..." : "null");
 
 // Add services
@@ -115,13 +116,34 @@ app.MapGet("/vehicles", async (
     ITenantContext tenant
 ) => {
     var vehicles = await db.Vehicles
-        .Where(v => v.TenantId == tenant.TenantId)
+        // .Where(v => v.TenantId == tenant.TenantId)
         .ToListAsync();
 
     return Results.Ok(vehicles);
 });
 
+app.MapGet("/customers", async (
+    PlannerDbContext db,
+    ITenantContext tenant
+) => {
+    var customers = await db.Customers
+        .Include(c => c.Location)
+        .ToListAsync();
 
+    return Results.Ok(customers);
+});
+
+//using (var scope = app.Services.CreateScope()) {
+//    var services = scope.ServiceProvider;
+//    try {
+//        var context = services.GetRequiredService<PlannerDbContext>();
+//        context.Database.Migrate();
+//        DataSeeder.Seed(context);
+//    } catch (Exception ex) {
+//        var seederLogger = services.GetRequiredService<ILogger<Program>>();
+//        seederLogger.LogError(ex, "An error occurred while seeding the database.");
+//    }
+//}
 
 app.Run();
 

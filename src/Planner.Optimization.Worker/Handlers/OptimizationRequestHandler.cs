@@ -1,8 +1,6 @@
-﻿using Planner.Contracts.Messaging;
-using Planner.Contracts.Messaging.Events;
+﻿using Microsoft.Extensions.Logging;
 using Planner.Contracts.Optimization.Abstractions;
 using Planner.Contracts.Optimization.Requests;
-using Planner.Contracts.Realtime;
 using Planner.Messaging;
 
 namespace Planner.Optimization.Worker.Handlers;
@@ -22,18 +20,11 @@ public sealed class OptimizationRequestHandler(
 
         Validate(request);
 
-        var result = optimizer.Optimize(request);
-
-        var evt = new RouteOptimizedEvent {
-            TenantId = request.TenantId,
-            OptimizationRunId = request.OptimizationRunId,
-            CompletedAt = result.CompletedAt,
-            Result = result
-        };
+        var response = optimizer.Optimize(request);
 
         await bus.PublishAsync(
-            SignalRMethods.OptimizationCompleted,
-            evt);
+            MessageRoutes.Response,
+            response);
     }
 
     private static void Validate(OptimizeRouteRequest request) {

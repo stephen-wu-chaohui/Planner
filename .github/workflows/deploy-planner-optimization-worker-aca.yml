@@ -1,0 +1,100 @@
+﻿name: Deploy planner.optimization.worker to Azure Container Apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/Planner.Optimization.Worker/**'
+      - 'src/Planner.Messaging/**'
+      - '.github/workflows/deploy-planner-optimization-worker-aca.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'global.json'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY }} # e.g. myregistry.azurecr.io
+  AZURE_CONTAINER_APP_NAME: ${{ secrets.AZURE_CONTAINER_APP_NAME }} # e.g. planner-optimization-worker
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AZURE_CONTAINERAPPS_ENVIRONMENT: ${{ secrets.AZURE_CONTAINERAPPS_ENVIRONMENT }} # name of the Container Apps Environment
+  IMAGE_NAME: planner-optimization-worker
+
+  # RabbitMQ (connection settings injected as environment variables)
+  RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+  RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+  RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+  RABBITMQ_PASS: ${{ secrets.RABBITMQ_PASS }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/Planner.Optimization.Worker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Install Azure Container Apps extension
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az extension add --name containerapp --upgrade
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            IMAGE_TAG="${AZURE_CONTAINER_REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}"
+
+            # Create (or update) the Container App.
+            # We use environment variables to configure the worker's RabbitMQ settings.
+            az containerapp up \
+              --name "${AZURE_CONTAINER_APP_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --environment "${AZURE_CONTAINERAPPS_ENVIRONMENT}" \
+              --image "${IMAGE_TAG}" \
+              --ingress disabled \
+              --target-port 80 \
+              --env-vars \
+                "RabbitMq__Host=${RABBITMQ_HOST}" \
+                "RabbitMq__Port=${RABBITMQ_PORT}" \
+                "RabbitMq__User=${RABBITMQ_USER}" \
+                "RabbitMq__Pass=${RABBITMQ_PASS}"
+
+            # Ensure secrets are stored in Container Apps (optional but recommended):
+            # If you prefer secrets in ACA, replace the env-vars above with:
+            #   --secrets rabbitmq-pass="${RABBITMQ_PASS}" \
+            #   --env-vars RabbitMq__Pass=secretref:rabbitmq-pass ...

@@ -1,6 +1,7 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 
+@using Planner.BlazorApp.Models
 @using Planner.BlazorApp.Components.WelcomeWizard
 @using Planner.BlazorApp.Services
 @using Planner.Contracts.Optimization.Inputs
@@ -8,6 +9,7 @@
 @inject DataCenterState DataCenter
 @inject IConfiguration Configuration
 
+<CascadingValue Value="DataCenter">
 <div class="planner-view d-flex flex-column flex-fill">
     <!-- Top toolbar -->
     <div class="toolbar p-2 d-flex align-items-center bg-light border-bottom">
@@ -44,7 +46,9 @@
     <WelcomeWizardModal IsOpen="@showWizard" IsOpenChanged="@(val => showWizard = val)" />
     <PlannerEntitiesModal @ref="entitiesModal" />
     <NewCustomerModal @ref="newCustomerModal" OnCustomerCreated="HandleNewCustomer" />
+
 </div>
+</CascadingValue>
 
 @code {
     private bool showWizard;
@@ -55,7 +59,7 @@
     private NewCustomerModal? newCustomerModal;
 
     private static readonly Guid TenantId =
-        Guid.Parse("11111111-1111-1111-1111-111111111111"); // TEMP until auth
+        Guid.Parse("07B6C438-8B21-4B11-A0F3-9CFD1A2711FC"); // TEMP until auth
 
     protected override async Task OnInitializedAsync() {
         if (_subscribed) return;

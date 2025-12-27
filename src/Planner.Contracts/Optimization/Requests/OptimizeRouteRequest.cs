@@ -16,6 +16,11 @@ public sealed class OptimizeRouteRequest {
     public Guid OptimizationRunId { get; init; }
 
     /// <summary>
+    /// Timestamp when the command was created (UTC).
+    /// </summary>
+    public DateTime RequestedAt { get; init; }
+
+    /// <summary>
     /// Vehicles participating in this optimization run.
     /// </summary>
     public IReadOnlyList<VehicleInput> Vehicles { get; init; } = Array.Empty<VehicleInput>();

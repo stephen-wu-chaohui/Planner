@@ -12,7 +12,7 @@ using Planner.Infrastructure.Persistence;
 namespace Planner.Infrastructure.Migrations
 {
     [DbContext(typeof(PlannerDbContext))]
-    [Migration("20251223084935_InitialCreate")]
+    [Migration("20251227081553_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -102,11 +102,39 @@ namespace Planner.Infrastructure.Migrations
                     b.Property<bool>("RequiresRefrigeration")
                         .HasColumnType("bit");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("CustomerId");
 
                     b.HasIndex("LocationId");
 
                     b.ToTable("Customers");
+                });
+
+            modelBuilder.Entity("Planner.Domain.Entities.Depot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("LocationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocationId");
+
+                    b.ToTable("Depots");
                 });
 
             modelBuilder.Entity("Planner.Domain.Entities.SystemEvent", b =>
@@ -127,6 +155,9 @@ namespace Planner.Infrastructure.Migrations
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
@@ -152,6 +183,9 @@ namespace Planner.Infrastructure.Migrations
 
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Title")
                         .HasColumnType("nvarchar(max)");
@@ -196,6 +230,10 @@ namespace Planner.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<double>("Latitude")
                         .HasColumnType("float");
 
@@ -204,7 +242,25 @@ namespace Planner.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Location");
+                    b.ToTable("Locations");
+                });
+
+            modelBuilder.Entity("Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tenants");
                 });
 
             modelBuilder.Entity("Vehicle", b =>
@@ -272,6 +328,17 @@ namespace Planner.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Planner.Domain.Customer", b =>
+                {
+                    b.HasOne("Planner.Domain.Location", "Location")
+                        .WithMany()
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Location");
+                });
+
+            modelBuilder.Entity("Planner.Domain.Entities.Depot", b =>
                 {
                     b.HasOne("Planner.Domain.Location", "Location")
                         .WithMany()

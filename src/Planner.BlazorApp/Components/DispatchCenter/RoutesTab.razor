@@ -1,4 +1,5 @@
-﻿@using Planner.Contracts.Optimization.Outputs
+﻿@using Planner.BlazorApp.Services
+@using Planner.Contracts.Optimization.Outputs
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -62,10 +63,11 @@
     </div>
 
     <!-- FIXED ACTION BAR -->
-    <div class="planner-tab-actions">
+    <div class="planner-tab-actions d-flex justify-content-between align-items-center">
+        <button class="btn btn-outline-success" @onclick="SolveVrp">🧮 Solve VRP</button>
         @if (Routes.Count == 0) {
             <div class="alert alert-info mb-0">
-                No routes available. Run <strong>“Solve VRP”</strong> in Jobs first.
+                No routes available. Run <strong>“Solve VRP”</strong> to generate routes.
             </div>
         }
     </div>
@@ -73,6 +75,16 @@
 
 @code {
     [Parameter] public List<RouteResult> Routes { get; set; } = new();
+
+    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
+
+    private async Task SolveVrp()
+    {
+        if (DataCenter != null)
+        {
+            await DataCenter.SolveVrp();
+        }
+    }
 
     private string Readble(double minutesFromStart)
     {

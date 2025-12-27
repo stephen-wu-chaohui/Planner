@@ -57,9 +57,8 @@ builder.Services.AddHttpClient("PlannerApi", client => {
 });
 
 // Provide a default HttpClient instance backed by the named client.
-//builder.Services.AddScoped(sp =>
-//    sp.GetRequiredService<IHttpClientFactory>().CreateClient("PlannerApi"));
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7085") });
+builder.Services.AddScoped(sp =>
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("PlannerApi"));
 
 builder.Services.AddScoped<DataCenterState>();
 

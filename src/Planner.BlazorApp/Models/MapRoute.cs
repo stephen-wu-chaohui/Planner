@@ -1,6 +1,4 @@
-using Planner.BlazorApp.Components.DispatchCenter;
-
-namespace Planner.BlazorApp.Components.DispatchCenter;
+﻿namespace Planner.BlazorApp.Models;
 
 public class MapRoute {
     public string RouteName { get; set; } = "";

@@ -1,6 +1,5 @@
-using Planner.Application.Messaging;
-using Planner.Contracts.Messaging.Events;
-using Planner.Contracts.Realtime;
+﻿using Planner.Application.Messaging;
+using Planner.Contracts.Optimization.Responses;
 using Planner.Messaging;
 
 namespace Planner.API.BackgroundServices;
@@ -12,17 +11,17 @@ public sealed class OptimizeRouteResultConsumer(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         logger.LogInformation("[OptimizeRouteResultConsumer] Starting.");
 
-        using var subscription = bus.Subscribe<RouteOptimizedEvent>(
-            SignalRMethods.OptimizationCompleted,
-            async evt => {
+        using var subscription = bus.Subscribe<OptimizeRouteResponse>(
+            MessageRoutes.Response,
+            async resp => {
                 try {
                     await hub.PublishAsync(
-                        SignalRMethods.OptimizationCompleted,
-                        evt);
+                        MessageRoutes.Response,
+                        resp);
                 } catch (Exception ex) {
                     logger.LogError(ex,
                         "[OptimizeRouteResultConsumer] Error forwarding optimization result (RunId={RunId})",
-                        evt.OptimizationRunId);
+                        resp.OptimizationRunId);
                 }
             });
 

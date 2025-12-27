@@ -5,12 +5,13 @@ public enum JobType { Depot, Pickup, Delivery }
 
 public class Job {
     public int Id { get; set; }            // persistence ID
-    public required string Name { get; set; }
     public Guid TenantId { get; init; }    // boundary ID
+
+    public required string Name { get; set; }
 
     public int OrderId { get; set; }        // FK to Order.Id
     public int CustomerID { get; set; }
-    public int JobType { get; set; }
+    public JobType JobType { get; set; }
 
     // business identity
     public string Reference { get; set; } = string.Empty;

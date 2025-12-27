@@ -1,4 +1,4 @@
-﻿namespace Planner.BlazorApp.Components.DispatchCenter;
+﻿namespace Planner.BlazorApp.Models;
 
 public class JobMarker : MapPosition {
     public string JobType { get; set; } = string.Empty;

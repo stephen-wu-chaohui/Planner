@@ -3,7 +3,6 @@
 
 @using System.Text.Json
 @using Planner.BlazorApp.Services
-@using Planner.Contracts.Messaging.Events
 @using Planner.Contracts.Optimization.Responses
 
 @inject IOptimizationHubClient hub
@@ -69,7 +68,7 @@
         {
             hub.OptimizationCompleted += r => InvokeAsync(() => {
                 Console.WriteLine($"MessageHub received data {r.OptimizationRunId}.");
-                results.Add(new SolverResultRow(r.Result));
+                results.Add(new SolverResultRow(r));
                 StateHasChanged();
             });
 

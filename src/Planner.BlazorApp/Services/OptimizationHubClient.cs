@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
-using Planner.Contracts.Messaging.Events;
+using Planner.Contracts.Optimization.Responses;
+using Planner.Messaging;
 
 namespace Planner.BlazorApp.Services;
 
@@ -8,7 +9,7 @@ public sealed class OptimizationHubClient : IOptimizationHubClient {
     private readonly ILogger<OptimizationHubClient> _logger;
     private HubConnection? _connection;
 
-    public event Action<RouteOptimizedEvent>? OptimizationCompleted;
+    public event Action<OptimizeRouteResponse>? OptimizationCompleted;
 
     public OptimizationHubClient(IConfiguration configuration, ILogger<OptimizationHubClient> logger) {
         _configuration = configuration;
@@ -64,8 +65,8 @@ public sealed class OptimizationHubClient : IOptimizationHubClient {
                 .Build();
 
             // Register event handlers
-            _connection.On<RouteOptimizedEvent>(
-                "OptimizationCompleted",
+            _connection.On<OptimizeRouteResponse>(
+                MessageRoutes.Response,
                 evt => 
                 {
                     _logger.LogInformation("Received OptimizationCompleted event for tenant {TenantId}", evt.TenantId);

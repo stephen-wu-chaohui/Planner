@@ -1,11 +1,8 @@
-﻿using Planner.BlazorApp.Components.DispatchCenter;
-using Planner.BlazorApp.Forms;
-using Planner.Application.Optimization.Mappers;
-using Planner.Contracts.Messaging.Events;
+﻿using Planner.BlazorApp.Forms;
+using Planner.BlazorApp.Models;
 using Planner.Contracts.Optimization.Inputs;
 using Planner.Contracts.Optimization.Outputs;
-using Planner.Contracts.Optimization.Requests;
-using static Planner.BlazorApp.Components.DispatchCenter.PlannerMap;
+using Planner.Contracts.Optimization.Responses;
 
 namespace Planner.BlazorApp.Services;
 
@@ -48,14 +45,14 @@ public sealed class DataCenterState(
 
         TenantId = tenantId;
 
-        //await LoadCustomersAsync();
-        //await LoadVehiclesAsync();
+        await LoadCustomersAsync();
+        await LoadVehiclesAsync();
         BuildDefaultDepot();
 
-        //await hub.ConnectAsync(tenantId);
-        //hub.OptimizationCompleted += OnOptimizationCompleted;
+        await hub.ConnectAsync(tenantId);
+        hub.OptimizationCompleted += OnOptimizationCompleted;
 
-        // CollectionChanged?.Invoke("Initialized");
+        CollectionChanged?.Invoke("Initialized");
         _initialized = true;
     }
 
@@ -64,9 +61,22 @@ public sealed class DataCenterState(
     // -----------------------------
 
     private async Task LoadCustomersAsync() {
-        var url = configuration["DataEndpoints:Customers"];
-        if (!string.IsNullOrWhiteSpace(url))
-            Customers = await http.GetFromJsonAsync<List<CustomerFormModel>>(url) ?? [];
+        var baseUrl = configuration["Api:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl)) return;
+
+        var customers = await http.GetFromJsonAsync<List<Planner.Domain.Customer>>($"{baseUrl}customers") ?? [];
+
+        Customers = customers.Select(c => new CustomerFormModel {
+            CustomerId = c.CustomerId,
+            Name = c.Name,
+            LocationId = c.Location.Id,
+            Latitude = c.Location.Latitude,
+            Longitude = c.Location.Longitude,
+            Address = c.Location.Address,
+            DefaultServiceMinutes = c.DefaultServiceMinutes,
+            RequiresRefrigeration = c.RequiresRefrigeration,
+            DefaultJobType = 1 // Assuming delivery
+        }).ToList();
 
         MapCustomers = Customers.Select(c => new JobMarker {
             Lat = c.Latitude,
@@ -76,23 +86,42 @@ public sealed class DataCenterState(
     }
 
     private async Task LoadVehiclesAsync() {
-        var url = configuration["DataEndpoints:Vehicles"];
-        if (!string.IsNullOrWhiteSpace(url))
-            Vehicles = await http.GetFromJsonAsync<List<Vehicle>>(url) ?? [];
+        var baseUrl = configuration["Api:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl)) return;
+
+        Vehicles = await http.GetFromJsonAsync<List<Vehicle>>($"{baseUrl}vehicles") ?? [];
     }
 
     private void BuildDefaultDepot() {
         // For now: one depot per tenant
         // Later: load from API
-        Depots =
-        [
-            new DepotInput(new LocationInput(
-                0, // LocationId (matches demo vehicles.json)
-                "Main Depot", // Address/label
-                -31.953823, // Latitude
-                115.876140 // Longitude
-            ))
-        ];
+        if (Vehicles.Any()) {
+            var depotVehicle = Vehicles.First();
+            var depotCustomer = Customers.FirstOrDefault(c => c.Name.Contains("Depot"));
+
+            if (depotCustomer != null) {
+                Depots =
+                [
+                    new DepotInput(new LocationInput(
+                        depotVehicle.DepotStartId,
+                        depotCustomer.Address,
+                        depotCustomer.Latitude,
+                        depotCustomer.Longitude
+                    ))
+                ];
+            } else {
+                // Fallback if no depot customer is found
+                Depots =
+                [
+                    new DepotInput(new LocationInput(
+                        0,
+                        "Main Depot",
+                        -31.953823,
+                        115.876140
+                    ))
+                ];
+            }
+        }
     }
 
     // -----------------------------
@@ -102,20 +131,11 @@ public sealed class DataCenterState(
     public Task SolveVrp() => SolveVrpAsync(TenantId);
 
     public async Task SolveVrpAsync(Guid tenantId) {
-        var jobInputs = JobInputMapper.ToJobInputs(Jobs);
-        var vehicleInputs = Vehicles.Select(ToVehicleInput).ToList();
+        var endpoint = "api/vrp/solve";
+        if (string.IsNullOrWhiteSpace(endpoint))
+            return;
 
-        var request = new OptimizeRouteRequest {
-            TenantId = tenantId,
-            OptimizationRunId = Guid.NewGuid(),
-            Jobs = jobInputs,
-            Vehicles = vehicleInputs,
-            Depots = Depots
-        };
-
-        var response = await http.PostAsJsonAsync(
-            configuration["Planner.Api:VRP.Solver.Endpoint"],
-            request);
+        var response = await http.GetAsync(endpoint);
 
         if (response.IsSuccessStatusCode) {
             int waitMinutes = Math.Max(1, Jobs.Count / 2);
@@ -123,31 +143,12 @@ public sealed class DataCenterState(
         }
     }
 
-    private static VehicleInput ToVehicleInput(Vehicle v) {
-        var costPerMinute = (v.DriverRatePerHour + v.MaintenanceRatePerHour) / 60.0;
-
-        return new VehicleInput(
-            VehicleId: v.Id,
-            Name: v.Name,
-            ShiftLimitMinutes: v.ShiftLimitMinutes,
-            DepotStartId: v.DepotStartId,
-            DepotEndId: v.DepotEndId,
-            SpeedFactor: v.SpeedFactor,
-            CostPerMinute: costPerMinute,
-            CostPerKm: v.FuelRatePerKm,
-            BaseFee: v.BaseFee,
-            MaxPallets: v.MaxPallets,
-            MaxWeight: v.MaxWeight,
-            RefrigeratedCapacity: v.RefrigeratedCapacity
-        );
-    }
-
     // -----------------------------
     // SignalR callback
     // -----------------------------
 
-    private void OnOptimizationCompleted(RouteOptimizedEvent evt) {
-        Routes = evt.Result.Routes.ToList();
+    private void OnOptimizationCompleted(OptimizeRouteResponse evt) {
+        Routes = evt.Routes.ToList();
         BuildMapRoutes();
         CollectionChanged?.Invoke("Routes");
     }
@@ -189,3 +190,4 @@ public sealed class DataCenterState(
         CollectionChanged?.Invoke("Jobs");
     }
 }
+
