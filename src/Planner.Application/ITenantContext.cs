@@ -5,5 +5,5 @@ public interface ITenantContext {
 }
 
 public sealed class StaticTenantContext : ITenantContext {
-    public Guid TenantId => Guid.Parse("07B6C438-8B21-4B11-A0F3-9CFD1A2711FC");
+    public Guid TenantId => Guid.Parse("40E7143C-EAC0-46BE-B72A-3A8C787D0A32");
 }

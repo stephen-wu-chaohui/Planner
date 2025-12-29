@@ -2,6 +2,7 @@
 using Planner.BlazorApp.Models;
 using Planner.Contracts.Optimization.Inputs;
 using Planner.Contracts.Optimization.Outputs;
+using Planner.Contracts.Optimization.Requests;
 using Planner.Contracts.Optimization.Responses;
 
 namespace Planner.BlazorApp.Services;
@@ -135,10 +136,10 @@ public sealed class DataCenterState(
         if (string.IsNullOrWhiteSpace(endpoint))
             return;
 
-        var response = await http.GetAsync(endpoint);
+        var settings = await http.GetFromJsonAsync<OptimizationSettings>(endpoint);
 
-        if (response.IsSuccessStatusCode) {
-            int waitMinutes = Math.Max(1, Jobs.Count / 2);
+        if (settings?.SearchTimeLimitSeconds > 0) {
+            int waitMinutes = (settings!.SearchTimeLimitSeconds + 59)/60;
             StartWait?.Invoke(waitMinutes);
         }
     }
@@ -156,7 +157,7 @@ public sealed class DataCenterState(
     private void BuildMapRoutes() {
         MapRoutes = Routes.Select(route => new MapRoute {
             RouteName = route.VehicleName,
-            Color = ColourHelper.ColourFromString(route.VehicleName, 0.85, 0.55) ?? "#FF0000",
+            Color = ColourHelper.ColourFromString(route.VehicleName, 0.95, 0.25) ?? "#FF0000",
             Points = route.Stops
                 .Join(Jobs,
                     stop => stop.JobId,

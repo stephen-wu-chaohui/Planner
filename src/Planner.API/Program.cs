@@ -133,17 +133,25 @@ app.MapGet("/customers", async (
     return Results.Ok(customers);
 });
 
-//using (var scope = app.Services.CreateScope()) {
-//    var services = scope.ServiceProvider;
-//    try {
-//        var context = services.GetRequiredService<PlannerDbContext>();
-//        context.Database.Migrate();
-//        DataSeeder.Seed(context);
-//    } catch (Exception ex) {
-//        var seederLogger = services.GetRequiredService<ILogger<Program>>();
-//        seederLogger.LogError(ex, "An error occurred while seeding the database.");
-//    }
-//}
+
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+try {
+    var context = services.GetRequiredService<PlannerDbContext>();
+    context.Database.Migrate();
+    await DataSeeder.SeedAsync(context);
+} catch (Exception ex) {
+    var seederLogger = services.GetRequiredService<ILogger<Program>>();
+    seederLogger.LogError(ex, "An error occurred while seeding the database.");
+}
+
+if (app.Environment.IsDevelopment()) {
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    if (config.GetValue<bool>("Database:ResetAndSeed")) {
+        var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
+        await DataSeeder.ResetAndSeedAsync(db);
+    }
+}
 
 app.Run();
 

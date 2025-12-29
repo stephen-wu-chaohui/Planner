@@ -1,17 +1,23 @@
-﻿using Planner.Domain;
+﻿using Microsoft.EntityFrameworkCore;
+using Planner.Domain;
 using Planner.Domain.Entities;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.Infrastructure.Seed;
 
 public static class DataSeeder {
-    public static void Seed(PlannerDbContext context) {
-        // 0. Reset database
-        context.Database.EnsureDeleted();
-        context.Database.EnsureCreated();
+    public static async Task ResetAndSeedAsync(PlannerDbContext db) {
+        await db.Database.EnsureDeletedAsync();
+        await db.Database.MigrateAsync();
+
+        await SeedAsync(db);
+    }
+
+    public static async Task SeedAsync(PlannerDbContext context) {
 
         var cities = new[]
         {
+            new { Name = "Taipei", Lat = 25.0330,  Lon = 121.5654 },
             new { Name = "Perth", Lat = -31.9523, Lon = 115.8613 },
             new { Name = "Sydney", Lat = -33.8688, Lon = 151.2093 },
             new { Name = "Melbourne", Lat = -37.8136, Lon = 144.9631 },

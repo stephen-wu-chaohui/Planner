@@ -27,7 +27,7 @@ public class OptimizationController(
 
         await bus.PublishAsync(MessageRoutes.Request, request);
 
-        return Ok();
+        return Ok(request.Settings);
     }
 
     private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync() {
@@ -47,7 +47,10 @@ public class OptimizationController(
             RequestedAt: DateTime.UtcNow,
             Jobs: jobs.Select(ToJobInput).ToList(),
             Vehicles: vehicles.Select(ToVehicleInput).ToList(),
-            Depots: depots.Select(d => new DepotInput(ToLocationInput(d.Location))).ToList()
+            Depots: depots.Select(d => new DepotInput(ToLocationInput(d.Location))).ToList(),
+            Settings: new OptimizationSettings(
+                SearchTimeLimitSeconds: 6 * jobs.Count // 6 seconds per job
+            )
         );
     }
 
