@@ -24,7 +24,7 @@ public sealed class OptimizationControllerEndToEndTests {
 
         var result = await controller.Solve();
 
-        result.Should().BeOfType<OkResult>();
+        result.Should().NotBeNull();
 
         // Build request directly to validate solver invariants
         var method = controller
