@@ -2,42 +2,24 @@
 
 namespace Planner.Contracts.Optimization.Requests;
 
-public sealed class OptimizeRouteRequest {
-    /// <summary>
-    /// Multi-tenant security boundary.
-    /// Used only for orchestration, not solver logic.
-    /// </summary>
-    public Guid TenantId { get; init; }
-
-    /// <summary>
-    /// Correlation ID for a single optimization execution.
-    /// Used for retries, idempotency, and result matching.
-    /// </summary>
-    public Guid OptimizationRunId { get; init; }
-
-    /// <summary>
-    /// Timestamp when the command was created (UTC).
-    /// </summary>
-    public DateTime RequestedAt { get; init; }
-
-    /// <summary>
-    /// Vehicles participating in this optimization run.
-    /// </summary>
-    public IReadOnlyList<VehicleInput> Vehicles { get; init; } = Array.Empty<VehicleInput>();
-
-    /// <summary>
-    /// Jobs to be optimized.
-    /// Jobs are solver-facing and contain their own location and constraints.
-    /// </summary>
-    public IReadOnlyList<JobInput> Jobs { get; init; } = Array.Empty<JobInput>();
-
-    /// <summary>
-    /// Depots.
-    /// </summary>
-    public IReadOnlyList<DepotInput> Depots { get; init; } = Array.Empty<DepotInput>();
-
-    /// <summary>
-    /// Multiplier applied to cost calculation for overtime minutes.
-    /// </summary>
-    public double OvertimeMultiplier { get; init; } = 2.0;
-}
+/// <summary>
+/// Represents a request to optimize vehicle routes.
+/// </summary>
+/// <param name="TenantId">Multi-tenant security boundary used for orchestration.</param>
+/// <param name="OptimizationRunId">Correlation ID for a single optimization execution.</param>
+/// <param name="RequestedAt">Timestamp when the command was created (UTC).</param>
+/// <param name="Vehicles">Vehicles participating in this optimization run.</param>
+/// <param name="Jobs">Jobs to be optimized, containing location and constraints.</param>
+/// <param name="Depots">Depots available for the vehicles.</param>
+/// <param name="OvertimeMultiplier">Multiplier applied to cost calculation for overtime minutes.</param>
+/// <param name="Settings">Specific optimization solver settings and magic numbers.</param>
+public sealed record OptimizeRouteRequest(
+    Guid TenantId,
+    Guid OptimizationRunId,
+    DateTime RequestedAt,
+    IReadOnlyList<VehicleInput> Vehicles,
+    IReadOnlyList<JobInput> Jobs,
+    IReadOnlyList<DepotInput> Depots,
+    double OvertimeMultiplier = 2.0,
+    OptimizationSettings? Settings = null
+);

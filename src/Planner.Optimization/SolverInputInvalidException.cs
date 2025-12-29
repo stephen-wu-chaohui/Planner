@@ -1,6 +1,5 @@
 ﻿namespace Planner.Optimization;
 
-internal sealed class SolverInputInvalidException : Exception {
-    public SolverInputInvalidException(string message) : base(message) { }
+public sealed class SolverInputInvalidException(string message) : Exception(message) {
 }
 

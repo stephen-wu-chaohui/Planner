@@ -1,8 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Planner.Application.Messaging;
-using Planner.API.SignalR;
+﻿using Planner.Application.Messaging;
 
 namespace Planner.API.SignalR;
 

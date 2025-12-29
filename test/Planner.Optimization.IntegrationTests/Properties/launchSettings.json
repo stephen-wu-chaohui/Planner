@@ -1,0 +1,10 @@
+﻿{
+	"profiles": {
+		"IntegrationTests": {
+			"commandName": "Project",
+			"environmentVariables": {
+				"PLANNER_TEST_ORTOOLS": "1"
+			}
+		}
+	}
+}

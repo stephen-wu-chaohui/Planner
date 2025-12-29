@@ -2,29 +2,18 @@
 
 namespace Planner.Contracts.Optimization.Responses;
 
-public sealed class OptimizeRouteResponse {
-    /// <summary>
-    /// Multi-tenant security boundary.
-    /// </summary>
-    public Guid TenantId { get; init; }
-
-    /// <summary>
-    /// Correlation ID for the optimization run.
-    /// </summary>
-    public Guid OptimizationRunId { get; init; }
-
-    /// <summary>
-    /// UTC timestamp when optimization completed.
-    /// </summary>
-    public DateTime CompletedAt { get; init; }
-
-    /// <summary>
-    /// Generated routes
-    /// </summary>
-    public IReadOnlyList<RouteResult> Routes { get; init; } = Array.Empty<RouteResult>();
-
-    /// <summary>
-    /// Gets the total cost associated with the current instance.
-    /// </summary>
-    public double TotalCost { get; init; }
-}
+/// <summary>
+/// Represents the response from a route optimization request.
+/// </summary>
+/// <param name="TenantId">Multi-tenant security boundary.</param>
+/// <param name="OptimizationRunId">Correlation ID for the optimization run.</param>
+/// <param name="CompletedAt">UTC timestamp when optimization completed.</param>
+/// <param name="Routes">Generated routes.</param>
+/// <param name="TotalCost">Total cost associated with the optimization.</param>
+public sealed record OptimizeRouteResponse(
+    Guid TenantId,
+    Guid OptimizationRunId,
+    DateTime CompletedAt,
+    IReadOnlyList<RouteResult> Routes,
+    double TotalCost
+);

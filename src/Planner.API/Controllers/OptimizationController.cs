@@ -41,14 +41,14 @@ public class OptimizationController(
             .Include(d => d.Location)
             .ToListAsync();
 
-        return new OptimizeRouteRequest {
-            TenantId = tenant.TenantId,
-            OptimizationRunId = Guid.NewGuid(),
-            RequestedAt = DateTime.UtcNow,
-            Jobs = jobs.Select(ToJobInput).ToList(),
-            Vehicles = vehicles.Select(ToVehicleInput).ToList(),
-            Depots = depots.Select(d => new DepotInput(ToLocationInput(d.Location))).ToList()
-        };
+        return new OptimizeRouteRequest(
+            tenant.TenantId,
+            OptimizationRunId: Guid.NewGuid(),
+            RequestedAt: DateTime.UtcNow,
+            Jobs: jobs.Select(ToJobInput).ToList(),
+            Vehicles: vehicles.Select(ToVehicleInput).ToList(),
+            Depots: depots.Select(d => new DepotInput(ToLocationInput(d.Location))).ToList()
+        );
     }
 
     private static JobInput ToJobInput(Job job) {

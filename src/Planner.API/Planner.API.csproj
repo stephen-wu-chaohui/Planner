@@ -5,7 +5,6 @@
     <ProjectReference Include="..\Planner.Contracts\Planner.Contracts.csproj" />
     <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
     <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
-    <ProjectReference Include="..\Planner.Optimization.Contracts\Planner.Optimization.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
