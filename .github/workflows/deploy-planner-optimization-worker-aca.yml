@@ -86,24 +86,20 @@ jobs:
         uses: azure/CLI@v2
         with:
           inlineScript: |
-            set -euo pipefail
+            set -eo pipefail
 
             IMAGE_TAG="${AZURE_CONTAINER_REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}"
 
-            # Create (or update) the Container App.
-            # We use environment variables to configure the worker's RabbitMQ settings.
-            az containerapp up \
-              --name "${AZURE_CONTAINER_APP_NAME}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --environment "${AZURE_CONTAINERAPPS_ENVIRONMENT}" \
-              --image "${IMAGE_TAG}" \
-              --ingress internal \
-              --registry-server "${AZURE_CONTAINER_REGISTRY}" \
-              --env-vars \
-                "RabbitMq__Host=${RABBITMQ_HOST}" \
-                "RabbitMq__Port=${RABBITMQ_PORT}" \
-                "RabbitMq__User=${RABBITMQ_USER}" \
-                "RabbitMq__Pass=${RABBITMQ_PASS}"
+            az containerapp update \
+            --name "${AZURE_CONTAINER_APP_NAME}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --image "${IMAGE_TAG}" \
+            --set-env-vars \
+                RabbitMq__Host="${RABBITMQ_HOST}" \
+                RabbitMq__Port="${RABBITMQ_PORT}" \
+                RabbitMq__User="${RABBITMQ_USER}" \
+                RabbitMq__Pass="${RABBITMQ_PASS}"
+
 
             # Ensure secrets are stored in Container Apps (optional but recommended):
             # If you prefer secrets in ACA, replace the env-vars above with:
