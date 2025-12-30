@@ -7,6 +7,8 @@ on:
       - main
     paths:
       - 'src/Planner.Optimization.Worker/**'
+      - 'src/Planner.Optimization/**'
+      - 'src/Planner.Contracts/**'
       - 'src/Planner.Messaging/**'
       - '.github/workflows/deploy-planner-optimization-worker-aca.yml'
       - 'Directory.Build.props'
@@ -38,6 +40,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ---------------------------
+      # Azure login (OIDC)
+      # ---------------------------
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -48,13 +53,16 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to ACR
-        uses: azure/docker-login@v2
-        with:
-          login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+      # ---------------------------
+      # Login to ACR using OIDC (CHANGED)
+      # ---------------------------
+      - name: Login to ACR (OIDC)
+        run: |
+          az acr login --name $(echo "${AZURE_CONTAINER_REGISTRY}" | cut -d'.' -f1)
 
+      # ---------------------------
+      # Build and push image
+      # ---------------------------
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
@@ -71,6 +79,9 @@ jobs:
           inlineScript: |
             az extension add --name containerapp --upgrade
 
+      # ---------------------------
+      # Deploy to Azure Container Apps
+      # ---------------------------
       - name: Deploy to Azure Container Apps
         uses: azure/CLI@v2
         with:
@@ -87,7 +98,6 @@ jobs:
               --environment "${AZURE_CONTAINERAPPS_ENVIRONMENT}" \
               --image "${IMAGE_TAG}" \
               --ingress disabled \
-              --target-port 80 \
               --env-vars \
                 "RabbitMq__Host=${RABBITMQ_HOST}" \
                 "RabbitMq__Port=${RABBITMQ_PORT}" \

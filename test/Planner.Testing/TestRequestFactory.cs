@@ -75,6 +75,6 @@ public static class TestRequestFactory {
 
     public static OptimizationSettings FastSettings() =>
         new() {
-            SearchTimeLimitSeconds = 1
+            SearchTimeLimitSeconds = 5
         };
 }

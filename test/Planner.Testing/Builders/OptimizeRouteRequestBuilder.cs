@@ -1,4 +1,6 @@
-﻿namespace Planner.Testing.Builders;
+﻿using Planner.Contracts.Optimization.Requests;
+
+namespace Planner.Testing.Builders;
 
 public sealed class OptimizeRouteRequestBuilder {
     private Guid _tenantId = TestIds.TenantId;
@@ -7,12 +9,29 @@ public sealed class OptimizeRouteRequestBuilder {
 
     private double _overtimeMultiplier = 2.0;
 
+    private OptimizationSettings _optimizationSettings = new OptimizationSettings {
+        SearchTimeLimitSeconds = 5
+    };
+
     private readonly List<DepotInput> _depots = new();
     private readonly List<JobInput> _jobs = new();
     private readonly List<VehicleInput> _vehicles = new();
 
     public static OptimizeRouteRequestBuilder Create() => new();
 
+    public OptimizeRouteRequestBuilder WithOptimizationSettings(
+        OptimizationSettings settings) {
+
+        _optimizationSettings = settings ?? throw new ArgumentNullException(nameof(settings));
+        return this;
+    }
+
+    public OptimizeRouteRequestBuilder WithSearchTimeLimitSeconds(int seconds) {
+        _optimizationSettings = _optimizationSettings with {
+            SearchTimeLimitSeconds = seconds
+        };
+        return this;
+    }
     public OptimizeRouteRequestBuilder WithTenant(Guid tenantId) { _tenantId = tenantId; return this; }
     public OptimizeRouteRequestBuilder WithRunId(Guid runId) { _runId = runId; return this; }
     public OptimizeRouteRequestBuilder WithRequestedAt(DateTime utc) { _requestedAt = utc; return this; }
@@ -34,6 +53,7 @@ public sealed class OptimizeRouteRequestBuilder {
         _vehicles.ToList(),
         _jobs.ToList(),
         _depots.ToList(),
-        _overtimeMultiplier
+        _overtimeMultiplier,
+        _optimizationSettings
     );
 }
