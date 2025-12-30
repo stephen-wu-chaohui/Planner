@@ -11,10 +11,10 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.1" />
     <PackageReference Include="System.Text.Json" Version="9.0.10" />
   </ItemGroup>
-  
-  <ItemGroup>
-    <Content Include="..\Shared\shared.appsettings.json" Link="shared.appsettings.json" Condition="Exists('..\Shared\shared.appsettings.json')">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+
+  <ItemGroup Condition="Exists('..\Shared\shared.appsettings.json')">
+    <Content Include="..\Shared\shared.appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 

@@ -24,10 +24,9 @@
     <ProjectReference Include="..\Planner.Optimization\Planner.Optimization.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\Shared\shared.appsettings.json" Link="shared.appsettings.json">
+  <ItemGroup Condition="Exists('..\Shared\shared.appsettings.json')">
+    <Content Include="..\Shared\shared.appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 
