@@ -65,7 +65,7 @@ public sealed class DataCenterState(
         var baseUrl = configuration["Api:BaseUrl"];
         if (string.IsNullOrWhiteSpace(baseUrl)) return;
 
-        var customers = await http.GetFromJsonAsync<List<Planner.Domain.Customer>>($"{baseUrl}customers") ?? [];
+        var customers = await http.GetFromJsonAsync<List<Planner.Domain.Customer>>($"customers") ?? [];
 
         Customers = customers.Select(c => new CustomerFormModel {
             CustomerId = c.CustomerId,
@@ -90,7 +90,7 @@ public sealed class DataCenterState(
         var baseUrl = configuration["Api:BaseUrl"];
         if (string.IsNullOrWhiteSpace(baseUrl)) return;
 
-        Vehicles = await http.GetFromJsonAsync<List<Vehicle>>($"{baseUrl}vehicles") ?? [];
+        Vehicles = await http.GetFromJsonAsync<List<Vehicle>>($"vehicles") ?? [];
     }
 
     private void BuildDefaultDepot() {

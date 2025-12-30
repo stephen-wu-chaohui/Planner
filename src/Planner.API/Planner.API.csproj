@@ -24,12 +24,6 @@
     <PackageReference Include="System.Text.Json" Version="9.0.10" />
   </ItemGroup>
 
-  <ItemGroup Condition="Exists('..\Shared\shared.appsettings.json')">
-    <Content Include="..\Shared\shared.appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>

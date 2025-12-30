@@ -33,8 +33,6 @@ internal sealed class RabbitMqConnection : IRabbitMqConnection {
             _factory.HostName,
             _factory.Port
         );
-
-        // 🚫 NO connection attempt here
     }
 
     public bool IsConnected => _connection?.IsOpen == true;

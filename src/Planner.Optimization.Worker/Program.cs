@@ -8,24 +8,15 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration
+    .AddEnvironmentVariables();
 
 // Try to load shared.appsettings.json only if it exists
-var sharedConfigPath = Path.Combine(AppContext.BaseDirectory, "shared.appsettings.json");
 var loggerFactory = LoggerFactory.Create(config => {
     config.AddConsole();
 });
 var logger = loggerFactory.CreateLogger("Startup");
 
-if (File.Exists(sharedConfigPath)) {
-    builder.Configuration.AddJsonFile(sharedConfigPath, optional: true, reloadOnChange: true);
-    logger.LogInformation("Loaded shared.appsettings.json from {Path}", sharedConfigPath);
-} else {
-    logger.LogWarning("shared.appsettings.json not found — continuing with appsettings.json & environment variables.");
-}
-
-builder.Configuration
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables();
 
 // =========================================================
 // SERVICES
