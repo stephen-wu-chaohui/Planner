@@ -97,7 +97,7 @@ jobs:
               --resource-group "${AZURE_RESOURCE_GROUP}" \
               --environment "${AZURE_CONTAINERAPPS_ENVIRONMENT}" \
               --image "${IMAGE_TAG}" \
-              --ingress disabled \
+              --ingress internal \
               --env-vars \
                 "RabbitMq__Host=${RABBITMQ_HOST}" \
                 "RabbitMq__Port=${RABBITMQ_PORT}" \
