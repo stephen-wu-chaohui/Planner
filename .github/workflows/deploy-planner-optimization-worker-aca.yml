@@ -98,6 +98,7 @@ jobs:
               --environment "${AZURE_CONTAINERAPPS_ENVIRONMENT}" \
               --image "${IMAGE_TAG}" \
               --ingress internal \
+              --registry-server "${AZURE_CONTAINER_REGISTRY}" \
               --env-vars \
                 "RabbitMq__Host=${RABBITMQ_HOST}" \
                 "RabbitMq__Port=${RABBITMQ_PORT}" \
