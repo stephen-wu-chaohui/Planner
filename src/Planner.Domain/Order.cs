@@ -1,7 +1,7 @@
-namespace Planner.Domain.Entities;
+﻿namespace Planner.Domain;
 
 public class Order {
-    public int Id { get; set; }              // persistence ID
+    public long Id { get; set; }              // persistence ID
     public Guid TenantId { get; init; }      // boundary ID
 
     public Guid OrderPublicId { get; init; } // boundary / external-safe

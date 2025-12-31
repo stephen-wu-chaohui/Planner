@@ -5,7 +5,7 @@
 /// Transport-safe and solver-friendly.
 /// </summary>
 public sealed record VehicleInput(
-    int VehicleId,
+    long VehicleId,
     string Name,
 
     // Availability

@@ -145,7 +145,7 @@
         await File.WriteAllTextAsync(FilePath, json);
     }
 
-    private int NextId() =>
+    private long NextId() =>
         Customers.Count == 0 ? 1 : Customers.Max(c => c.CustomerId) + 1;
 
     private long NextLocationId() =>

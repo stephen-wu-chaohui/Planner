@@ -1,5 +1,5 @@
 ﻿@using System.Text.Json
-@using Planner.Domain.Entities
+@using Planner.Domain
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -195,5 +195,5 @@
     //     }
     // }
 
-    private int NextId() => Vehicles.Count == 0 ? 0 : Vehicles.Max(v => v.Id) + 1;
+    private long NextId() => Vehicles.Count == 0 ? 0 : Vehicles.Max(v => v.Id) + 1;
 }

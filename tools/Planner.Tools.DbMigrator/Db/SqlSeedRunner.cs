@@ -2,10 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Planner.Infrastructure.Persistence;
 
-internal sealed class SqlSeedRunner(
-    PlannerDbContext db,
-    SqlScriptLoader loader,
-    SeedHistoryRepository history) {
+internal sealed class SqlSeedRunner(PlannerDbContext db) {
 
     public async Task RunAsync() {
         var conn = (SqlConnection)db.Database.GetDbConnection();

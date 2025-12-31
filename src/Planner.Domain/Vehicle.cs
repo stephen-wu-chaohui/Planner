@@ -1,8 +1,7 @@
-﻿
-using System;
+﻿namespace Planner.Domain;
 
 public class Vehicle {
-    public int Id { get; set; }
+    public long Id { get; set; }
     public Guid TenantId { get; init; }
 
     public string Name { get; set; } = string.Empty;

@@ -1,16 +1,15 @@
-﻿
-using Planner.Domain;
+﻿namespace Planner.Domain;
 
 public enum JobType { Depot, Pickup, Delivery }
 
 public class Job {
-    public int Id { get; set; }            // persistence ID
+    public long Id { get; set; }            // persistence ID
     public Guid TenantId { get; init; }    // boundary ID
 
     public required string Name { get; set; }
 
-    public int OrderId { get; set; }        // FK to Order.Id
-    public int CustomerID { get; set; }
+    public long OrderId { get; set; }        // FK to Order.Id
+    public long CustomerId { get; set; }
     public JobType JobType { get; set; }
 
     // business identity

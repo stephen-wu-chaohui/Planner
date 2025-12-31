@@ -4,6 +4,7 @@ using Planner.Contracts.Optimization.Inputs;
 using Planner.Contracts.Optimization.Outputs;
 using Planner.Contracts.Optimization.Requests;
 using Planner.Contracts.Optimization.Responses;
+using Planner.Domain;
 
 namespace Planner.BlazorApp.Services;
 
@@ -65,7 +66,7 @@ public sealed class DataCenterState(
         var baseUrl = configuration["Api:BaseUrl"];
         if (string.IsNullOrWhiteSpace(baseUrl)) return;
 
-        var customers = await http.GetFromJsonAsync<List<Planner.Domain.Customer>>($"customers") ?? [];
+        var customers = await http.GetFromJsonAsync<List<Customer>>($"customers") ?? [];
 
         Customers = customers.Select(c => new CustomerFormModel {
             CustomerId = c.CustomerId,

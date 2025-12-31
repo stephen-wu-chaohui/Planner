@@ -5,7 +5,7 @@
 /// If empty, the vehicle was not assigned any jobs.
 /// </summary>
 public sealed record RouteResult(
-    int VehicleId,
+    long VehicleId,
     string VehicleName,
     bool Used,
     IReadOnlyList<TaskAssignment> Stops,

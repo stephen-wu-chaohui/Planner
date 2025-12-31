@@ -1,5 +1,4 @@
 ﻿using Planner.Domain;
-using Planner.Domain.Entities;
 using Planner.Infrastructure.Persistence;
 using System;
 

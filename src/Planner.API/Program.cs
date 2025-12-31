@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Planner.API.BackgroundServices;
+using Planner.API.SignalR;
 using Planner.Application;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Coordinator;
 using Planner.Messaging.DependencyInjection;
+using Planner.API;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddEnvironmentVariables();
+
+//
+// ────────────────────────────────────────────────
+// Configuration validation (fail fast)
+// ────────────────────────────────────────────────
+//
+ValidateRequiredConfiguration(builder.Configuration);
 
 //
 // ────────────────────────────────────────────────
@@ -36,8 +45,9 @@ builder.Services.AddControllers();
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Messaging
+// Messaging & SignalR
 builder.Services.AddMessagingBus();
+builder.Services.AddRealtime(builder.Configuration);
 
 // Background consumers / coordinators
 builder.Services.AddHostedService<CoordinatorService>();
@@ -48,13 +58,6 @@ builder.Services.AddHealthChecks();
 
 // Tenant context (placeholder, intentionally simple)
 builder.Services.AddScoped<ITenantContext, StaticTenantContext>();
-
-//
-// ────────────────────────────────────────────────
-// Configuration validation (fail fast)
-// ────────────────────────────────────────────────
-//
-ValidateRequiredConfiguration(builder.Configuration);
 
 //
 // ────────────────────────────────────────────────
@@ -78,6 +81,9 @@ else
     app.UseHsts();
 }
 
+// Messaging & SignalR
+app.UseRealtime();
+
 app.UseHttpsRedirection();
 
 app.UseRouting();
@@ -90,6 +96,8 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = _ => true
 });
+
+app.MapApiEndpoints();
 
 app.Run();
 
@@ -107,7 +115,9 @@ static void ValidateRequiredConfiguration(IConfiguration config)
         "RabbitMq:Host",
         "RabbitMq:Port",
         "RabbitMq:User",
-        "RabbitMq:Pass"
+        "RabbitMq:Pass",
+        "SignalR:Client",
+        "SignalR:Route"
     };
 
     var missing = requiredKeys

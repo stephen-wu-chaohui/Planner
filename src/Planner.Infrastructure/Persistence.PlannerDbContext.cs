@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Planner.Application;
 using Planner.Domain;
-using Planner.Domain.Entities;
 
 namespace Planner.Infrastructure.Persistence;
 

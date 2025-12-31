@@ -5,7 +5,7 @@
 /// Immutable, serializable, and safe to share across API, Worker, and UI.
 /// </summary>
 public sealed record JobInput(
-    int JobId,                 // Internal reference (stable within request)
+    long JobId,                 // Internal reference (stable within request)
     int JobType,               // 0: Depot, 1: Delivery, 2: Pickup
     string Name,
 

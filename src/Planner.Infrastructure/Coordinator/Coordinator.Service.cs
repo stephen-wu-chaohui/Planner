@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Planner.Domain.Entities;
+using Planner.Domain;
 using Planner.Infrastructure.Persistence;
 using System.Xml.Serialization;
 

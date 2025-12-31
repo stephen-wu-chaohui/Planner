@@ -8,7 +8,7 @@ public sealed record CustomerFormModel {
     /// <summary>
     /// Tenant-scoped customer identifier.
     /// </summary>
-    public int CustomerId { get; init; }
+    public long CustomerId { get; init; }
 
     public string Name { get; set; } = string.Empty;
 

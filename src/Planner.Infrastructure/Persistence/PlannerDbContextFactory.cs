@@ -18,8 +18,8 @@ public class PlannerDbContextFactory : IDesignTimeDbContextFactory<PlannerDbCont
         // Build configuration to get the connection string
         var configBuilder = new ConfigurationBuilder()
             .SetBasePath(currentDir)
-            .AddEnvironmentVariables()
-            .AddJsonFile("appsettings.json", optional: true);
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddEnvironmentVariables();
 
         var configuration = configBuilder.Build();
 
