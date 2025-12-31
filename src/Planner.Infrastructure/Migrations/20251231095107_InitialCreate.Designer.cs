@@ -12,8 +12,8 @@ using Planner.Infrastructure.Persistence;
 namespace Planner.Infrastructure.Migrations
 {
     [DbContext(typeof(PlannerDbContext))]
-    [Migration("20251231083318_ChangeTaskIdToLong")]
-    partial class ChangeTaskIdToLong
+    [Migration("20251231095107_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
