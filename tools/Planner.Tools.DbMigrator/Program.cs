@@ -6,6 +6,7 @@ using Planner.Application;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Persistence;
 using Planner.Tools.DbMigrator;
+using Planner.Tools.DbMigrator.Db;
 
 var builder = Host.CreateApplicationBuilder(args);
 
