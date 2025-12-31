@@ -2,31 +2,69 @@
 using System.Security.Cryptography;
 using System.Text;
 
-internal sealed class SqlScriptLoader {
-    public static IReadOnlyList<SqlScript> LoadScripts() {
-        var asm = Assembly.GetExecutingAssembly();
+namespace Planner.Tools.DbMigrator.Db;
 
-        return asm.GetManifestResourceNames()
-            .Where(name =>
-                name.Contains(".SeedScripts.") &&
-                name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(name => name)
-            .Select(name => LoadScript(asm, name))
-            .ToList();
+internal static class SqlScriptLoader {
+    // Change this if you move the Sql folder
+    private const string ResourceFolder = "SeedScripts";
+
+    public static IReadOnlyList<SqlScript> Load() {
+        var assembly = Assembly.GetExecutingAssembly();
+
+        var resourceNames = assembly
+            .GetManifestResourceNames()
+            .Where(n => IsSqlSeedResource(n))
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (resourceNames.Length == 0) {
+            throw new InvalidOperationException(
+                $"No embedded SQL seed resources found under '{ResourceFolder}'. " +
+                "Ensure .sql files are marked as EmbeddedResource.");
+        }
+
+        var scripts = new List<SqlScript>(resourceNames.Length);
+
+        foreach (var resourceName in resourceNames) {
+            using var stream = assembly.GetManifestResourceStream(resourceName)
+                ?? throw new InvalidOperationException(
+                    $"Unable to open embedded resource '{resourceName}'.");
+
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            var sql = reader.ReadToEnd();
+
+            if (string.IsNullOrWhiteSpace(sql)) {
+                throw new InvalidOperationException(
+                    $"Embedded SQL seed '{resourceName}' is empty.");
+            }
+
+            scripts.Add(new SqlScript(
+                Name: ExtractScriptName(resourceName),
+                Sql: sql,
+                Checksum: ComputeChecksum(sql)
+            ));
+        }
+
+        return scripts;
     }
 
-    private static SqlScript LoadScript(Assembly asm, string resourceName) {
-        using var stream = asm.GetManifestResourceStream(resourceName)!;
-        using var reader = new StreamReader(stream);
+    private static bool IsSqlSeedResource(string resourceName) {
+        // Example:
+        // Planner.Tools.DbMigrator.Sql.001_reference_data.sql
+        return resourceName.EndsWith(".sql", StringComparison.OrdinalIgnoreCase)
+            && resourceName.Contains($".{ResourceFolder}.");
+    }
 
-        var sql = reader.ReadToEnd();
-        var checksum = SHA256.HashData(
-            Encoding.UTF8.GetBytes(sql));
+    private static string ExtractScriptName(string resourceName) {
+        // Keep only the filename portion for readability and stability
+        var lastDot = resourceName.LastIndexOf('.');
+        var secondLastDot = resourceName.LastIndexOf('.', lastDot - 1);
 
-        return new SqlScript(
-            Name: Path.GetFileName(resourceName),
-            Sql: sql,
-            Checksum: checksum
-        );
+        return resourceName[(secondLastDot + 1)..];
+    }
+
+    private static byte[] ComputeChecksum(string sql) {
+        using var sha256 = SHA256.Create();
+        return sha256.ComputeHash(Encoding.UTF8.GetBytes(sql));
     }
 }

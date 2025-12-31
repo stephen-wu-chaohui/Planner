@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Planner.Tools.DbMigrator": {
-      "commandName": "Project",
-      "commandLineArgs": "migrate"
-    }
-  }
-}

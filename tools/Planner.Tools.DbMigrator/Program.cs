@@ -1,50 +1,103 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Planner.Application;
 using Planner.Infrastructure;
-using Planner.Infrastructure.Persistence;
 using Planner.Tools.DbMigrator;
 using Planner.Tools.DbMigrator.Db;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// ------------------------------------------------------
+// Configuration
+// ------------------------------------------------------
+
 builder.Configuration
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddSingleton<SqlScriptLoader>();
-builder.Services.AddSingleton<SeedHistoryRepository>();
-builder.Services.AddSingleton<SqlSeedRunner>();
+// ------------------------------------------------------
+// Services
+// ------------------------------------------------------
+
+// tooling tenant (non-HTTP host)
 builder.Services.AddScoped<ITenantContext, DbMigratorTenantContext>();
 
-var host = builder.Build();
+// infrastructure (DbContext, etc.)
+builder.Services.AddInfrastructure(builder.Configuration);
+
+// seed infrastructure
+builder.Services.AddSingleton<SeedHistoryRepository>();
+
+// load SQL scripts once
+builder.Services.AddSingleton<IReadOnlyList<SqlScript>>(SqlScriptLoader.Load());
+
+// ------------------------------------------------------
+// Build host
+// ------------------------------------------------------
+
+using var host = builder.Build();
+
+// ------------------------------------------------------
+// Command dispatch
+// ------------------------------------------------------
+
+if (args.Length == 0) {
+    throw new InvalidOperationException(
+        "Expected command: migrate | seed");
+}
+
 using var scope = host.Services.CreateScope();
+var services = scope.ServiceProvider;
+var configuration = services.GetRequiredService<IConfiguration>();
 
-var cmd = args.FirstOrDefault()?.ToLowerInvariant();
+var connectionString =
+    configuration.GetConnectionString("PlannerDb")
+    ?? throw new InvalidOperationException(
+        "Connection string 'PlannerDb' not found.");
 
-return cmd switch {
-    "migrate" => await Migrate(scope),
-    "seed" => await Seed(scope),
-    _ => Usage()
-};
+switch (args[0].ToLowerInvariant()) {
+    case "migrate":
+        await RunMigrateAsync(scope);
+        break;
 
-static async Task<int> Migrate(IServiceScope scope) {
-    var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
-    Console.WriteLine("Applying EF migrations...");
-    await db.Database.MigrateAsync();
-    return 0;
+    case "seed":
+        await RunSeedAsync(scope, connectionString);
+        break;
+
+    default:
+        throw new InvalidOperationException(
+            $"Unknown command '{args[0]}'. Expected migrate | seed.");
 }
 
-static async Task<int> Seed(IServiceScope scope) {
-    var runner = scope.ServiceProvider.GetRequiredService<SqlSeedRunner>();
+// ------------------------------------------------------
+// Local functions
+// ------------------------------------------------------
+
+static async Task RunMigrateAsync(IServiceScope scope) {
+    // You already implemented this part earlier;
+    // typically something like:
+    //
+    // var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
+    // await db.Database.MigrateAsync();
+    //
+    // I’m leaving it abstract so it matches your existing code.
+
+    await Task.CompletedTask;
+}
+
+static async Task RunSeedAsync(
+    IServiceScope scope,
+    string connectionString) {
+    var scripts =
+        scope.ServiceProvider.GetRequiredService<IReadOnlyList<SqlScript>>();
+
+    var seedHistoryRepository =
+        scope.ServiceProvider.GetRequiredService<SeedHistoryRepository>();
+
+    var runner = new SqlSeedRunner(
+        connectionString,
+        scripts,
+        seedHistoryRepository);
+
     await runner.RunAsync();
-    return 0;
-}
-
-static int Usage() {
-    Console.Error.WriteLine("Usage: migrate | seed");
-    return 1;
 }

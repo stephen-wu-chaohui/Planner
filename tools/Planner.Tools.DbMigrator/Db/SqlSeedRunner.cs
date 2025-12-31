@@ -20,6 +20,7 @@ internal sealed class SqlSeedRunner {
         using var conn = new SqlConnection(_connectionString);
         await conn.OpenAsync();
 
+        // Ensure seed bookkeeping exists (idempotent)
         await _seedHistoryRepository.EnsureCreatedAsync(conn);
 
         foreach (var script in _scripts) {
@@ -44,6 +45,8 @@ internal sealed class SqlSeedRunner {
         using var cmd = conn.CreateCommand();
         cmd.Transaction = tx;
         cmd.CommandText = script.Sql;
+        cmd.CommandType = System.Data.CommandType.Text;
+
         await cmd.ExecuteNonQueryAsync();
     }
 }
