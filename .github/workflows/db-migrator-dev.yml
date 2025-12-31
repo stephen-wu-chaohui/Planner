@@ -16,10 +16,6 @@ on:
       - 'Directory.Build.targets'
       - 'global.json'
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   migrate-and-seed:
     runs-on: ubuntu-latest
@@ -34,13 +30,6 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - name: Restore DbMigrator
         run: |
           dotnet restore tools/Planner.Tools.DbMigrator/Planner.Tools.DbMigrator.csproj
@@ -50,6 +39,14 @@ jobs:
           dotnet build tools/Planner.Tools.DbMigrator/Planner.Tools.DbMigrator.csproj \
             --configuration Release \
             --no-restore
+
+      - name: Safety check – dev database only
+        env:
+          ConnectionStrings__PlannerDb: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+        run: |
+          echo "Checking database target..."
+          echo "$ConnectionStrings__PlannerDb" | grep -qi "dev" || \
+            (echo "Refusing to run against non-dev database" && exit 1)
 
       - name: Run EF Core migrations (dev)
         env:
