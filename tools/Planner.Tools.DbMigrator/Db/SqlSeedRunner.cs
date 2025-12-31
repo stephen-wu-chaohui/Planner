@@ -13,6 +13,8 @@ internal sealed class SqlSeedRunner(PlannerDbContext db) {
             throw new InvalidOperationException(
                 "No SQL seed scripts found. Check embedded resources.");
 
+        await SeedHistoryRepository.EnsureCreatedAsync(conn);
+
         foreach (var script in scripts) {
             if (await SeedHistoryRepository.IsAppliedAsync(conn, script))
                 continue;

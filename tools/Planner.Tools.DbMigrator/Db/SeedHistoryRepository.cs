@@ -34,4 +34,25 @@ internal sealed class SeedHistoryRepository {
 
         await cmd.ExecuteNonQueryAsync();
     }
+
+    public static async Task EnsureCreatedAsync(SqlConnection conn) {
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+        IF NOT EXISTS (
+            SELECT 1
+            FROM sys.objects
+            WHERE object_id = OBJECT_ID(N'[dbo].[__SeedHistory]')
+              AND type = 'U'
+        )
+        BEGIN
+            CREATE TABLE [dbo].[__SeedHistory] (
+                [Id] INT IDENTITY(1,1) PRIMARY KEY,
+                [ScriptName] NVARCHAR(255) NOT NULL,
+                [AppliedAtUtc] DATETIME2 NOT NULL
+            );
+        END
+        """;
+
+        await cmd.ExecuteNonQueryAsync();
+    }
 }
