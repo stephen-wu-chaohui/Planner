@@ -8,7 +8,7 @@ using Planner.Infrastructure.Persistence;
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Configuration
-    .AddJsonFile("appsettings.json", false)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
 builder.Services.AddInfrastructure(builder.Configuration);
