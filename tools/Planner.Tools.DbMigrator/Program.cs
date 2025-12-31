@@ -2,8 +2,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Planner.Application;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Persistence;
+using Planner.Tools.DbMigrator;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -15,6 +17,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<SqlScriptLoader>();
 builder.Services.AddSingleton<SeedHistoryRepository>();
 builder.Services.AddSingleton<SqlSeedRunner>();
+builder.Services.AddScoped<ITenantContext, DbMigratorTenantContext>();
 
 var host = builder.Build();
 using var scope = host.Services.CreateScope();
