@@ -1,8 +1,0 @@
-<Project>
-  <ItemGroup>
-    <!-- Include the shared appsettings file for all projects -->
-    <Content Include="$(SolutionDir)src\Shared\appsettings.shared.json" Link="appsettings.shared.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-</Project>

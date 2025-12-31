@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Planner.Application;
@@ -15,38 +15,13 @@ public class PlannerDbContextFactory : IDesignTimeDbContextFactory<PlannerDbCont
     {
         var currentDir = Directory.GetCurrentDirectory();
 
-        // Check for shared.appsettings.json in multiple locations
-        var sharedConfigPaths = new[]
-        {
-            Path.Combine(currentDir, "shared.appsettings.json"),
-            Path.Combine(currentDir, "src", "Shared", "shared.appsettings.json"),
-            Path.Combine(Directory.GetParent(currentDir)?.FullName ?? "", "Shared", "shared.appsettings.json")
-        };
-
-        string? foundSharedConfig = null;
-        foreach (var path in sharedConfigPaths)
-        {
-            if (File.Exists(path))
-            {
-                foundSharedConfig = path;
-                break;
-            }
-        }
-
         // Build configuration to get the connection string
         var configBuilder = new ConfigurationBuilder()
             .SetBasePath(currentDir)
-            .AddJsonFile("appsettings.json", optional: true)
-            .AddJsonFile("appsettings.Development.json", optional: true);
-
-        if (foundSharedConfig != null)
-        {
-            configBuilder.AddJsonFile(foundSharedConfig, optional: true);
-        }
-
-        var configuration = configBuilder
             .AddEnvironmentVariables()
-            .Build();
+            .AddJsonFile("appsettings.json", optional: true);
+
+        var configuration = configBuilder.Build();
 
         // Get connection string
         var connectionString = configuration.GetConnectionString("PlannerDb");

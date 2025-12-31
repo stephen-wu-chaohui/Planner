@@ -1,4 +1,4 @@
-﻿name: Deploy Planner.API (dev)
+﻿name: Deploy Planner.API (dev, app-only)
 
 on:
   workflow_dispatch:

@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Planner.Infrastructure\Planner.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Planner.Application\Planner.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="SeedScripts\" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="SeedScripts\*.sql" />
+  </ItemGroup>
+  
+</Project>

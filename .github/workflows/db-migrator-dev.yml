@@ -1,0 +1,70 @@
+﻿name: Database Migrate & Seed (dev)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/Planner.DbMigrator/**'
+      - 'src/Planner.Infrastructure/**'
+      - 'src/Planner.Domain/**'
+      - 'src/Planner.Application/**'
+      - 'src/Planner.Contracts/**'
+      - 'src/Planner.Messaging/**'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'global.json'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  migrate-and-seed:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restore DbMigrator
+        run: |
+          dotnet restore tools/Planner.DbMigrator/Planner.DbMigrator.csproj
+
+      - name: Build DbMigrator
+        run: |
+          dotnet build tools/Planner.DbMigrator/Planner.DbMigrator.csproj \
+            --configuration Release \
+            --no-restore
+
+      - name: Run EF Core migrations (dev)
+        env:
+          ConnectionStrings__PlannerDb: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+        run: |
+          dotnet run \
+            --project tools/Planner.DbMigrator/Planner.DbMigrator.csproj \
+            --configuration Release \
+            -- migrate
+
+      - name: Run SQL seed scripts (dev)
+        env:
+          ConnectionStrings__PlannerDb: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+        run: |
+          dotnet run \
+            --project tools/Planner.DbMigrator/Planner.DbMigrator.csproj \
+            --configuration Release \
+            -- seed

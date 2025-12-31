@@ -1,136 +1,123 @@
-﻿using Azure.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration.AzureAppConfiguration;
-using Planner.API;
+﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Planner.API.BackgroundServices;
-using Planner.API.SignalR;
 using Planner.Application;
+using Planner.Infrastructure;
 using Planner.Infrastructure.Coordinator;
-using Planner.Infrastructure.Persistence;
-using Planner.Infrastructure.Seed;
 using Planner.Messaging.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//
+// ────────────────────────────────────────────────
+// Configuration
+// ────────────────────────────────────────────────
+//
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
-// ✅ Try to load shared.appsettings.json only if it exists
-var loggerFactory = LoggerFactory.Create(config => {
-    config.AddConsole();
-});
-var logger = loggerFactory.CreateLogger("Startup");
-
-// ---------------------------------------------
-// 3️⃣ Add logging & services as usual
-// ---------------------------------------------
+//
+// ────────────────────────────────────────────────
+// Logging
+// ────────────────────────────────────────────────
+//
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// Get and log connection string for debugging
-var connectionString = builder.Configuration.GetConnectionString("PlannerDb");
-logger.LogInformation("Using connection string: {ConnectionString}",
-    connectionString != null ? connectionString.Substring(0, Math.Min(50, connectionString.Length)) + "..." : "null");
+//
+// ────────────────────────────────────────────────
+// Service registration
+// ────────────────────────────────────────────────
+//
 
-// Add services
-builder.Services.AddDbContext<PlannerDbContext>(options =>
-    options.UseSqlServer(
-        connectionString ?? throw new InvalidOperationException("Connection string 'PlannerDb' not found.")
-    )
-);
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
+// Controllers (API only)
 builder.Services.AddControllers();
-builder.Services.AddRazorPages();
 
-builder.Services.AddRealtime(builder.Configuration);
+// Application / Infrastructure
+builder.Services.AddInfrastructure(builder.Configuration);
+
+// Messaging
 builder.Services.AddMessagingBus();
 
-// Register your background service
+// Background consumers / coordinators
 builder.Services.AddHostedService<CoordinatorService>();
 builder.Services.AddHostedService<OptimizeRouteResultConsumer>();
 
-
+// Health checks
 builder.Services.AddHealthChecks();
 
+// Tenant context (placeholder, intentionally simple)
 builder.Services.AddScoped<ITenantContext, StaticTenantContext>();
 
+//
+// ────────────────────────────────────────────────
+// Configuration validation (fail fast)
+// ────────────────────────────────────────────────
+//
+ValidateRequiredConfiguration(builder.Configuration);
+
+//
+// ────────────────────────────────────────────────
+// Build app
+// ────────────────────────────────────────────────
+//
 var app = builder.Build();
 
-app.UseRouting();
-app.UseRealtime();
-app.MapControllers();
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment()) {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+//
+// ────────────────────────────────────────────────
+// Middleware pipeline
+// ────────────────────────────────────────────────
+//
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/error");
     app.UseHsts();
 }
-app.UseSwagger();
-app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+app.UseRouting();
+
 app.UseAuthorization();
-app.MapRazorPages();
-app.MapTaskEndpoints();
 
-// Minimal API endpoints
-app.MapGet("/ping", () => "pong");
+app.MapControllers();
 
-app.MapGet("/db-check", async (PlannerDbContext db) => {
-    var ok = await db.Database.CanConnectAsync();
-    return Results.Ok(new { canConnect = ok });
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => true
 });
-
-app.MapHealthChecks("/health");
-
-app.MapGet("/vehicles", async (
-    PlannerDbContext db,
-    ITenantContext tenant
-) => {
-    var vehicles = await db.Vehicles
-        // .Where(v => v.TenantId == tenant.TenantId)
-        .ToListAsync();
-
-    return Results.Ok(vehicles);
-});
-
-app.MapGet("/customers", async (
-    PlannerDbContext db,
-    ITenantContext tenant
-) => {
-    var customers = await db.Customers
-        .Include(c => c.Location)
-        .ToListAsync();
-
-    return Results.Ok(customers);
-});
-
-
-using var scope = app.Services.CreateScope();
-var services = scope.ServiceProvider;
-try {
-    var context = services.GetRequiredService<PlannerDbContext>();
-    context.Database.Migrate();
-    await DataSeeder.SeedAsync(context);
-} catch (Exception ex) {
-    var seederLogger = services.GetRequiredService<ILogger<Program>>();
-    seederLogger.LogError(ex, "An error occurred while seeding the database.");
-}
-
-if (app.Environment.IsDevelopment()) {
-    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    if (config.GetValue<bool>("Database:ResetAndSeed")) {
-        var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
-        await DataSeeder.ResetAndSeedAsync(db);
-    }
-}
 
 app.Run();
 
+
+//
+// ────────────────────────────────────────────────
+// Local helpers
+// ────────────────────────────────────────────────
+//
+static void ValidateRequiredConfiguration(IConfiguration config)
+{
+    var requiredKeys = new[]
+    {
+        "ConnectionStrings:PlannerDb",
+        "RabbitMq:Host",
+        "RabbitMq:Port",
+        "RabbitMq:User",
+        "RabbitMq:Pass"
+    };
+
+    var missing = requiredKeys
+        .Where(k => string.IsNullOrWhiteSpace(config[k]))
+        .ToList();
+
+    if (missing.Any())
+    {
+        throw new InvalidOperationException(
+            $"Missing required configuration values: {string.Join(", ", missing)}"
+        );
+    }
+}
