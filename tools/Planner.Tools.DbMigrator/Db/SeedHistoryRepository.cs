@@ -38,19 +38,15 @@ internal sealed class SeedHistoryRepository {
     public static async Task EnsureCreatedAsync(SqlConnection conn) {
         var cmd = conn.CreateCommand();
         cmd.CommandText = """
-        IF NOT EXISTS (
-            SELECT 1
-            FROM sys.objects
-            WHERE object_id = OBJECT_ID(N'[dbo].[__SeedHistory]')
-              AND type = 'U'
-        )
-        BEGIN
-            CREATE TABLE [dbo].[__SeedHistory] (
-                [Id] INT IDENTITY(1,1) PRIMARY KEY,
-                [ScriptName] NVARCHAR(255) NOT NULL,
-                [AppliedAtUtc] DATETIME2 NOT NULL
-            );
-        END
+            IF OBJECT_ID(N'dbo.__SeedHistory', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.__SeedHistory (
+                    [Id] INT IDENTITY(1,1) PRIMARY KEY,
+                    [ScriptName] NVARCHAR(255) NOT NULL,
+                    [Checksum] NVARCHAR(255) NOT NULL,
+                    [ExecutedAt] DATETIME2 NOT NULL
+                );
+            END
         """;
 
         await cmd.ExecuteNonQueryAsync();
