@@ -100,25 +100,35 @@ jobs:
               --resource-group "${AZURE_RESOURCE_GROUP}" \
               >/dev/null 2>&1 || \
             az containerapp create \
-              --name "${AZURE_CONTAINER_APP_NAME}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --environment "${AZURE_CONTAINERAPPS_ENVIRONMENT}" \
-              --image "${IMAGE_TAG}" \
+              --name planner-api \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --environment "$AZURE_CONTAINERAPPS_ENVIRONMENT" \
+              --image "$IMAGE_TAG" \
               --ingress external \
               --target-port 8080 \
-              --transport auto
+              --transport auto \
+              --registry-server "$AZURE_CONTAINER_REGISTRY" \
+              --env-vars \
+                ASPNETCORE_URLS=http://+:8080 \
+                ConnectionStrings__PlannerDb="$PLANNERDB_CONNECTION" \
+                RabbitMq__Host="$RABBITMQ_HOST" \
+                RabbitMq__Port="$RABBITMQ_PORT" \
+                RabbitMq__User="$RABBITMQ_USER" \
+                RabbitMq__Pass="$RABBITMQ_PASS" \
+                SignalR__Client="$SIGNALR_CLIENT" \
+                SignalR__Route="$SIGNALR_ROUTE"
 
-            # Update image + env vars
-            az containerapp update \
-              --name "${AZURE_CONTAINER_APP_NAME}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --image "${IMAGE_TAG}" \
-              --set-env-vars \
-                ASPNETCORE_URLS="http://+:8080" \
-                ConnectionStrings__PlannerDb="${PLANNERDB_CONNECTION}" \
-                RabbitMq__Host="${RABBITMQ_HOST}" \
-                RabbitMq__Port="${RABBITMQ_PORT}" \
-                RabbitMq__User="${RABBITMQ_USER}" \
-                RabbitMq__Pass="${RABBITMQ_PASS}" \
-                SignalR__Client="${SIGNALR_CLIENT}" \
-                SignalR__Route="${SIGNALR_ROUTE}"
+            # # Update image + env vars
+            # az containerapp update \
+            #   --name "${AZURE_CONTAINER_APP_NAME}" \
+            #   --resource-group "${AZURE_RESOURCE_GROUP}" \
+            #   --image "${IMAGE_TAG}" \
+            #   --set-env-vars \
+            #     ASPNETCORE_URLS="http://+:8080" \
+            #     ConnectionStrings__PlannerDb="${PLANNERDB_CONNECTION}" \
+            #     RabbitMq__Host="${RABBITMQ_HOST}" \
+            #     RabbitMq__Port="${RABBITMQ_PORT}" \
+            #     RabbitMq__User="${RABBITMQ_USER}" \
+            #     RabbitMq__Pass="${RABBITMQ_PASS}" \
+            #     SignalR__Client="${SIGNALR_CLIENT}" \
+            #     SignalR__Route="${SIGNALR_ROUTE}"
