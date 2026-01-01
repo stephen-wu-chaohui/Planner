@@ -98,14 +98,14 @@ else
     app.UseHsts();
 }
 
-// Messaging & SignalR
-app.UseRealtime();
-
 app.UseHttpsRedirection();
 
 app.UseRouting();
 
 app.UseAuthorization();
+
+// Messaging & SignalR
+app.UseRealtime();
 
 app.MapControllers();
 
