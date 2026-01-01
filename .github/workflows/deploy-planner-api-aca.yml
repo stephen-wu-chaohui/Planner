@@ -1,0 +1,124 @@
+﻿name: Deploy Planner.API to Azure Container Apps (dev)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/Planner.API/**'
+      - 'src/Planner.Application/**'
+      - 'src/Planner.Domain/**'
+      - 'src/Planner.Infrastructure/**'
+      - 'src/Planner.Contracts/**'
+      - 'src/Planner.Messaging/**'
+      - '.github/workflows/deploy-planner-api-aca.yml'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'global.json'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY }}   # e.g. myregistry.azurecr.io
+  AZURE_CONTAINER_APP_NAME: ${{ secrets.AZURE_API_CONTAINER_APP_NAME }} # e.g. planner-api
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AZURE_CONTAINERAPPS_ENVIRONMENT: ${{ secrets.AZURE_CONTAINERAPPS_ENVIRONMENT }}
+  IMAGE_NAME: planner-api
+
+  # Required configuration (match Program.cs)
+  PLANNERDB_CONNECTION: ${{ secrets.PLANNERDB_CONNECTION }}
+  RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}     # should be 'rabbitmq' (the container app name)
+  RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}     # usually 5672
+  RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}     # NOT guest in Azure
+  RABBITMQ_PASS: ${{ secrets.RABBITMQ_PASS }}
+
+  SIGNALR_CLIENT: ${{ secrets.SIGNALR_CLIENT }}   # whatever your app expects
+  SIGNALR_ROUTE: ${{ secrets.SIGNALR_ROUTE }}     # e.g. /hubs/optimization
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------------------------
+      # Azure login (OIDC)
+      # ---------------------------
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ---------------------------
+      # Login to ACR using OIDC (CHANGED)
+      # ---------------------------
+      - name: Login to ACR (OIDC)
+        run: |
+          az acr login --name $(echo "${AZURE_CONTAINER_REGISTRY}" | cut -d'.' -f1)
+
+      # ---------------------------
+      # Build and push image
+      # ---------------------------
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/Planner.API/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Install Azure Container Apps extension
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az extension add --name containerapp --upgrade
+
+      # ---------------------------
+      # Deploy to Azure Container Apps
+      # ---------------------------
+      - name: Deploy to Azure Container Apps
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            set -eo pipefail
+
+            IMAGE_TAG="${AZURE_CONTAINER_REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}"
+
+            # Create if missing (optional convenience)
+            az containerapp show \
+              --name "${AZURE_CONTAINER_APP_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              >/dev/null 2>&1 || \
+            az containerapp create \
+              --name "${AZURE_CONTAINER_APP_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --environment "${AZURE_CONTAINERAPPS_ENVIRONMENT}" \
+              --image "${IMAGE_TAG}" \
+              --ingress external \
+              --target-port 8080 \
+              --transport auto
+
+            # Update image + env vars
+            az containerapp update \
+              --name "${AZURE_CONTAINER_APP_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --image "${IMAGE_TAG}" \
+              --set-env-vars \
+                ASPNETCORE_URLS="http://+:8080" \
+                ConnectionStrings__PlannerDb="${PLANNERDB_CONNECTION}" \
+                RabbitMq__Host="${RABBITMQ_HOST}" \
+                RabbitMq__Port="${RABBITMQ_PORT}" \
+                RabbitMq__User="${RABBITMQ_USER}" \
+                RabbitMq__Pass="${RABBITMQ_PASS}" \
+                SignalR__Client="${SIGNALR_CLIENT}" \
+                SignalR__Route="${SIGNALR_ROUTE}"

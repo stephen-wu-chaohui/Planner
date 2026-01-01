@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
+using Planner.API;
 using Planner.API.BackgroundServices;
 using Planner.API.SignalR;
 using Planner.Application;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Coordinator;
 using Planner.Messaging.DependencyInjection;
-using Planner.API;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +67,21 @@ builder.Services.AddScoped<ITenantContext, StaticTenantContext>();
 // ────────────────────────────────────────────────
 //
 var app = builder.Build();
+
+// ────────────────────────────────────────────────
+// Forwarded headers (for working behind reverse proxies)
+// ────────────────────────────────────────────────
+
+var forwardedHeadersOptions = new ForwardedHeadersOptions {
+    ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 
 //
 // ────────────────────────────────────────────────
