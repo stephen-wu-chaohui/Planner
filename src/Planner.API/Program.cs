@@ -2,12 +2,13 @@
 using Microsoft.AspNetCore.HttpOverrides;
 using Planner.API;
 using Planner.API.BackgroundServices;
+using Planner.API.Middleware;
 using Planner.API.SignalR;
 using Planner.Application;
 using Planner.Infrastructure;
+using Planner.Infrastructure.Auth;
 using Planner.Infrastructure.Coordinator;
 using Planner.Messaging.DependencyInjection;
-using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,10 @@ builder.Services.AddControllers();
 
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
+// Auth
+builder.Services.AddScoped<ITenantContext, TenantContext>();
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // Messaging & SignalR
 builder.Services.AddMessagingBus();
@@ -57,9 +62,6 @@ builder.Services.AddHostedService<OptimizeRouteResultConsumer>();
 
 // Health checks
 builder.Services.AddHealthChecks();
-
-// Tenant context (placeholder, intentionally simple)
-builder.Services.AddScoped<ITenantContext, StaticTenantContext>();
 
 //
 // ────────────────────────────────────────────────
@@ -102,7 +104,10 @@ app.UseHttpsRedirection();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<TenantContextMiddleware>();
 
 // Messaging & SignalR
 app.UseRealtime();
@@ -134,7 +139,10 @@ static void ValidateRequiredConfiguration(IConfiguration config)
         "RabbitMq:User",
         "RabbitMq:Pass",
         "SignalR:Client",
-        "SignalR:Route"
+        "SignalR:Route",
+        "Jwt:Issuer",
+        "Jwt:Audience",
+        "Jwt:SigningKey"
     };
 
     var missing = requiredKeys

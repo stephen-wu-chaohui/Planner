@@ -41,4 +41,14 @@ public sealed class TestApiFactory : IDisposable {
         if (Services is IDisposable d)
             d.Dispose();
     }
+
+    public class StaticTenantContext : ITenantContext {
+        public Guid TenantId { get; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+        public bool IsSet => throw new NotImplementedException();
+
+        public void SetTenant(Guid tenantId) {
+            throw new NotImplementedException();
+        }
+    }
 }
