@@ -14,18 +14,15 @@ public static class RandomVrpRequestFactory {
         int vehicleCount) {
         var rand = new Random(seed);
 
-        // --- Depots ---
-        var depots = Enumerable.Range(1, depotCount)
+        // --- Depots (derived from vehicles) ---
+        var depotLocations = Enumerable.Range(1, depotCount)
             .Select(i => {
                 var locId = 1000 + i;
-                return DepotInputBuilder.Create()
-                    .WithLocation(
-                        LocationInputBuilder.Create()
-                            .WithId(locId)
-                            .WithLatLng(
-                                -31.95 + rand.NextDouble() * 0.05,
-                                115.86 + rand.NextDouble() * 0.05)
-                            .Build())
+                return LocationInputBuilder.Create()
+                    .WithId(locId)
+                    .WithLatLng(
+                        -31.95 + rand.NextDouble() * 0.05,
+                        115.86 + rand.NextDouble() * 0.05)
                     .Build();
             })
             .ToList();
@@ -57,11 +54,11 @@ public static class RandomVrpRequestFactory {
         // --- Vehicles ---
         var vehicles = Enumerable.Range(1, vehicleCount)
             .Select(i => {
-                var depot = depots[rand.Next(depots.Count)].Location.LocationId;
+                var depot = depotLocations[rand.Next(depotLocations.Count)];
 
                 return VehicleInputBuilder.Create()
                     .WithVehicleId(i)
-                    .WithDepot(depot, depot)
+                    .WithDepot(depot.LocationId, depot.LocationId)
                     .WithCapacity(
                         pallets: 10,
                         weight: 500)
@@ -75,7 +72,6 @@ public static class RandomVrpRequestFactory {
         return OptimizeRouteRequestBuilder.Create()
             .WithTenant(TestIds.TenantId)
             .WithRunId(Guid.NewGuid())
-            .WithDepots(depots)
             .WithJobs(jobs)
             .WithVehicles(vehicles)
             .Build();

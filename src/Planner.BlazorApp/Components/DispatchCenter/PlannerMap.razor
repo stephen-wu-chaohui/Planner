@@ -35,6 +35,7 @@
     private bool _initialized;
     public IReadOnlyList<JobMarker>? existingCustomers = null;
     public IReadOnlyList<MapRoute>? existingRoutes = null;
+    private (double Lat, double Lon)? _existingCenter;
 
     private bool _showError;
     private string? _errorMessage;
@@ -88,6 +89,12 @@
     {
         if (!_initialized) {
             return;
+        }
+
+        if (_existingCenter is null || _existingCenter.Value.Lat != DepotLat || _existingCenter.Value.Lon != DepotLon)
+        {
+            await JS.InvokeVoidAsync("plannerMap.recenter", DepotLat, DepotLon, 12);
+            _existingCenter = (DepotLat, DepotLon);
         }
         if (Routes != existingRoutes && Routes != null)
         {

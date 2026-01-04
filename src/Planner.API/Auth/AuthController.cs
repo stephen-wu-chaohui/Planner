@@ -1,29 +1,20 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Planner.API.Auth;
 using Planner.Infrastructure.Auth;
 using Planner.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace Planner.API.Controllers;
 
 [ApiController]
 [Route("auth")]
-public sealed class AuthController : ControllerBase {
-    private readonly PlannerDbContext _db;
-    private readonly IJwtTokenGenerator _tokenGenerator;
-
-    public AuthController(
-        PlannerDbContext db,
-        IJwtTokenGenerator tokenGenerator) {
-        _db = db;
-        _tokenGenerator = tokenGenerator;
-    }
-
+public sealed class AuthController(PlannerDbContext db,IJwtTokenGenerator tokenGenerator) : ControllerBase {
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login(
         [FromBody] LoginRequest request) {
         // 1. Load user (demo: simple lookup)
-        var user = await _db.Users
+        var user = await db.Users
             .AsNoTracking()
             .SingleOrDefaultAsync(u => u.Email == request.Email);
 
@@ -35,13 +26,22 @@ public sealed class AuthController : ControllerBase {
             return Unauthorized("Invalid credentials.");
 
         // 3. Generate JWT
-        var token = _tokenGenerator.GenerateToken(
+        var token = tokenGenerator.GenerateToken(
             userId: user.Id,
             tenantId: user.TenantId,
             role: user.Role);
 
         // 4. Return token
         return Ok(new LoginResponse(token));
+    }
+
+    [Authorize]
+    [HttpGet("diagnose")]
+    public IActionResult Diagnose() {
+        return Ok(new {
+            IsAuthenticated = User.Identity?.IsAuthenticated,
+            Claims = User.Claims.Select(c => new { c.Type, c.Value })
+        });
     }
 
     // Demo-only password check

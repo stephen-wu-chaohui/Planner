@@ -22,31 +22,4 @@ public sealed class VehicleRoutingProblemPropertyTests {
         act.Should().NotThrow<SolverInputInvalidException>();
     }
 
-    // ---------------------------------------
-    // DUPLICATE DEPOT IDS ALWAYS FAIL
-    // ---------------------------------------
-    [Fact]
-    public void Duplicate_depot_location_ids_should_throw() {
-        // Arrange
-        var request = TestRequestFactory.CreateSimpleRequest();
-
-        // Force duplicate depot LocationId
-        var duplicateDepot = request.Depots[0];
-
-        request = request with {
-            Depots = new[] {
-                duplicateDepot,
-                duplicateDepot
-            }
-        };
-
-        var solver = new VehicleRoutingProblem();
-
-        // Act
-        Action act = () => solver.Optimize(request);
-
-        // Assert
-        act.Should().Throw<SolverInputInvalidException>()
-            .WithMessage("*Duplicate Depot*");
-    }
 }

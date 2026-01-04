@@ -44,7 +44,7 @@
             <button class="btn btn-sm btn-outline-primary" @onclick="SaveToFile">💾 Save</button>
  *@        </div>
         <div class="actions-right">
-            <small class="text-muted">Stored at: wwwroot/data/vehicles.json</small>
+            <small class="text-muted">Stored at Planner.API backend</small>
         </div>
     </div>
 </div>
@@ -108,7 +108,6 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public List<Vehicle> Vehicles { get; set; } = new();
 
-    // private const string FilePath = "wwwroot/data/vehicles.json";
     private Vehicle? Editing;
     private bool IsNew;
 
@@ -166,34 +165,8 @@
 
     private async Task Delete(Vehicle v) {
         Vehicles.Remove(v);
-        // await SaveToFile();
+        // await SaveSync();
     }
-
-    // private async Task LoadFromFile() {
-    //     try {
-    //         if (!File.Exists(FilePath)) {
-    //             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-    //             await File.WriteAllTextAsync(FilePath, "[]");
-    //         }
-
-    //         var json = await File.ReadAllTextAsync(FilePath);
-    //         var data = JsonSerializer.Deserialize<List<Vehicle>>(json) ?? new();
-    //         Vehicles.Clear();
-    //         Vehicles.AddRange(data);
-    //     } catch (Exception ex) {
-    //         Console.WriteLine($"LoadFromFile error: {ex.Message}");
-    //     }
-    // }
-
-    // private async Task SaveToFile() {
-    //     try {
-    //         Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-    //         var json = JsonSerializer.Serialize(Vehicles, new JsonSerializerOptions { WriteIndented = true });
-    //         await File.WriteAllTextAsync(FilePath, json);
-    //     } catch (Exception ex) {
-    //         Console.WriteLine($"SaveToFile error: {ex.Message}");
-    //     }
-    // }
 
     private long NextId() => Vehicles.Count == 0 ? 0 : Vehicles.Max(v => v.Id) + 1;
 }

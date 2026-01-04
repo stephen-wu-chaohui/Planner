@@ -92,8 +92,6 @@
 @code {
     [Parameter] public List<CustomerFormModel> Customers { get; set; } = new();
 
-    private const string FilePath = "wwwroot/data/customers.json";
-
     private CustomerFormModel? Editing;
     private bool IsNew;
 
@@ -140,9 +138,6 @@
     }
 
     private async Task SaveToFile() {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        var json = JsonSerializer.Serialize(Customers, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(FilePath, json);
     }
 
     private long NextId() =>

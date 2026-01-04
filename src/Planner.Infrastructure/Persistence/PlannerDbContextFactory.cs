@@ -36,7 +36,10 @@ public class PlannerDbContextFactory : IDesignTimeDbContextFactory<PlannerDbCont
 
         // Configure DbContext options
         var optionsBuilder = new DbContextOptionsBuilder<PlannerDbContext>();
-        optionsBuilder.UseSqlServer(connectionString);
+        optionsBuilder
+            .UseSqlServer(connectionString)
+            .EnableDetailedErrors()
+            .EnableSensitiveDataLogging();
 
         // Create a design-time tenant context (using a default/dummy tenant ID)
         var designTimeTenantContext = new DesignTimeTenantContext();
@@ -52,10 +55,8 @@ public class PlannerDbContextFactory : IDesignTimeDbContextFactory<PlannerDbCont
     {
         public Guid TenantId { get; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
-        public bool IsSet => throw new NotImplementedException();
+        public bool IsSet => true;
 
-        public void SetTenant(Guid tenantId) {
-            throw new NotImplementedException();
-        }
+        public void SetTenant(Guid tenantId) { }
     }
 }

@@ -48,11 +48,15 @@ public static class ServiceRegistration {
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(jwt.SigningKey)),
 
-                    ClockSkew = TimeSpan.FromSeconds(30)
+                    ClockSkew = TimeSpan.FromSeconds(5)
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options => {
+            options.AddPolicy("AdminOnly", policy =>
+            policy.RequireRole("Admin"));
+        });
+
 
         return services;
     }

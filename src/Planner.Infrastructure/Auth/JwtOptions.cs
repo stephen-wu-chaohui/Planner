@@ -18,7 +18,8 @@ public record JwtOptions {
     [Required]
     public string Audience { get; init; } = string.Empty;
 
-    [Required]
+    [Required(AllowEmptyStrings = false)]
+    [MinLength(32, ErrorMessage = "SigningKey must be at least 32 characters.")]
     public string SigningKey { get; init; } = string.Empty;
 }
 

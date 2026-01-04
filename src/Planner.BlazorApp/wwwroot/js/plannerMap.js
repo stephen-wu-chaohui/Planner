@@ -3,7 +3,6 @@
     console.log("Google Maps API loaded.");
 };
 
-
 window.loadGoogleMaps = (apiKey) => {
     return new Promise((resolve, reject) => {
         if (window.google && google.maps && google.maps.marker) { resolve(); return; }
@@ -17,7 +16,7 @@ window.loadGoogleMaps = (apiKey) => {
 };
 
 /* global google */
-window.plannerMap = {
+window.plannerMap = window.plannerMap || {
     map: null,
     markers: [],
     directionsRenderers: [],
@@ -35,45 +34,57 @@ window.plannerMap = {
         });
         this.directionsService = new google.maps.DirectionsService();
         this.geocoder = new google.maps.Geocoder();
+    },
 
+    // Always present - safe even if initMap hasn't finished yet
+    recenter: function (centerLat, centerLng, zoom) {
+        if (!this.map) return;
+
+        this.map.setCenter({ lat: centerLat, lng: centerLng });
+        if (zoom !== undefined && zoom !== null) {
+            this.map.setZoom(zoom);
+        }
     },
 
     registerClickHandler: function (dotnetRef, clickHandlerName) {
-        var me = this;
-        this.map.addListener("click", function (e) {
+        const me = this;
+        if (!me.map) return;
+
+        me.map.addListener("click", function (e) {
             const domEvent = e.domEvent;
             if (!domEvent.ctrlKey) {
                 return;
             }
+
             const latLng = e.latLng;
+
             me.geocoder.geocode({ location: latLng }).then((response) => {
                 const infowindow = new google.maps.InfoWindow();
                 let address = '', region = '';
+
                 if (response.results && response.results.length > 0) {
                     address = response.results[0].formatted_address;
                     infowindow.setPosition(latLng);
                     infowindow.setContent(address);
-                    infowindow.open(map);
-                    console.log("Address:", address);
+
+                    // Fix: use the actual map instance (previously used undefined variable `map`)
+                    infowindow.open(me.map);
 
                     const components = response.results[0].address_components;
                     region = components.find(c =>
                         c.types.includes("locality")
                     )?.long_name;
-                    console.log("Region:", region);
 
                     const lat = e.latLng.lat();
                     const lng = e.latLng.lng();
 
                     dotnetRef.invokeMethodAsync(clickHandlerName, { lat, lng, address, region });
-
                 } else {
                     console.log("No address found");
                 }
             }).catch((error) => {
                 console.error("Geocoder error:", error);
             });
-
         });
     },
 
@@ -91,11 +102,12 @@ window.plannerMap = {
         });
     },
 
-    createCustomerInfoWindow: function (customer) {
+    createCustomerInfoWindow: function () {
         const content = document.createElement("div");
         content.innerHTML = `<div style='font-size:30px;backgroundColor ="red"'>📍</div>`;
         return content;
     },
+
     clearMarkers: function () {
         this.markers.forEach(m => m.map = null);
         this.markers = [];
@@ -138,7 +150,6 @@ window.plannerMap = {
             content: content
         });
 
-        // build InfoWindow HTML
         const infoHtml = `
             <div style='min-width:180px;font-size:13px;'>
                 <strong>${m.label}</strong><br/>
@@ -194,7 +205,6 @@ window.plannerMap = {
                 renderer.routeColor = color;
                 this.directionsRenderers.push(renderer);
 
-                // add small floating label
                 const midLeg = result.routes[0].legs[Math.floor(result.routes[0].legs.length / 2)];
                 const midPoint = midLeg.steps[Math.floor(midLeg.steps.length / 2)].end_location;
                 const labelDiv = document.createElement("div");

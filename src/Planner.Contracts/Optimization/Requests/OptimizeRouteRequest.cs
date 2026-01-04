@@ -19,7 +19,6 @@ public sealed record OptimizeRouteRequest(
     DateTime RequestedAt,
     IReadOnlyList<VehicleInput> Vehicles,
     IReadOnlyList<JobInput> Jobs,
-    IReadOnlyList<DepotInput> Depots,
     double OvertimeMultiplier = 2.0,
     OptimizationSettings? Settings = null
 );

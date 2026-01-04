@@ -23,12 +23,18 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         // 1. Validation
         ValidateInput(request);
-        if (request.Vehicles.Count == 0 || request.Depots.Count == 0) return CreateEmptyResponse(request);
+        if (request.Vehicles.Count == 0) return CreateEmptyResponse(request);
 
         // 2. Initialize Context
+        var depots = request.Vehicles
+            .SelectMany(v => new[] { v.StartLocation, v.EndLocation })
+            .GroupBy(l => l.LocationId)
+            .Select(g => g.First())
+            .ToList();
+
         var context = new VrpContext(
             request, request.Jobs, request.Vehicles,
-            [.. request.Depots.Select(d => d.Location), .. request.Jobs.Select(j => j.Location)],
+            [.. depots, .. request.Jobs.Select(j => j.Location)],
             TimeScale: 1, DistanceScale: 1
         );
 
@@ -38,11 +44,11 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
-            .Select(v => depotMap.NodeIndexOf(v.DepotStartId))
+            .Select(v => depotMap.NodeIndexOf(v.StartLocation.LocationId))
             .ToArray();
 
         int[] ends = context.Vehicles
-            .Select(v => depotMap.NodeIndexOf(v.DepotEndId))
+            .Select(v => depotMap.NodeIndexOf(v.EndLocation.LocationId))
             .ToArray();
 
         // 4. Model Setup
@@ -66,14 +72,23 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
     }
 
     private static void ValidateInput(OptimizeRouteRequest request) {
-        var depotIds = request.Depots.Select(d => d.Location.LocationId).ToHashSet();
-        if (depotIds.Count != request.Depots.Count) throw new SolverInputInvalidException("Duplicate Depot LocationIds.");
+        if (request.Vehicles.Count == 0)
+            throw new SolverInputInvalidException("No vehicles.");
+
+        // Depots are derived from vehicle start/end locations.
+        // To keep validation meaningful, treat the first vehicle's start/end as the canonical depot set
+        // and ensure all vehicles reference only those depots.
+        var depotIds = new HashSet<long> {
+            request.Vehicles[0].StartLocation.LocationId,
+            request.Vehicles[0].EndLocation.LocationId
+        };
 
         var jobLocIds = request.Jobs.Select(j => j.Location.LocationId).ToHashSet();
-        if (jobLocIds.Overlaps(depotIds)) throw new SolverInputInvalidException("Job/Depot LocationId collision.");
+        if (jobLocIds.Overlaps(depotIds))
+            throw new SolverInputInvalidException("Job/Depot LocationId collision.");
 
         foreach (var v in request.Vehicles) {
-            if (!depotIds.Contains(v.DepotStartId) || !depotIds.Contains(v.DepotEndId))
+            if (!depotIds.Contains(v.StartLocation.LocationId) || !depotIds.Contains(v.EndLocation.LocationId))
                 throw new SolverInputInvalidException($"Vehicle {v.VehicleId} references missing DepotId.");
         }
     }
@@ -82,8 +97,13 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         var list = new List<SolverLocation>();
         int node = 0;
 
-        foreach (var d in ctx.Request.Depots)
-            list.Add(new(node++, d.Location.LocationId, true, d.Location.Latitude, d.Location.Longitude,
+        var depotLocs = ctx.Vehicles
+            .SelectMany(v => new[] { v.StartLocation, v.EndLocation })
+            .GroupBy(l => l.LocationId)
+            .Select(g => g.First());
+
+        foreach (var d in depotLocs)
+            list.Add(new(node++, d.LocationId, true, d.Latitude, d.Longitude,
                 0, settings.HorizonMinutes, 0, 0, 0, 0, null));
 
         foreach (var j in ctx.Jobs)
@@ -195,7 +215,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
                 if (!locs[from].IsDepot && locs[from].Job is not null) {
                     var j = locs[from].Job;
                     stops.Add(new(j.JobId, j.JobType, j.Name, sol.Value(dimT.CumulVar(idx)), sol.Value(dimT.CumulVar(idx)) + locs[from].ServiceTimeMinutes,
-                        sol.Value(dimP.CumulVar(idx)), sol.Value(dimW.CumulVar(idx)), sol.Value(dimR.CumulVar(idx))));
+                        sol.Value(dimP.CumulVar(idx)), sol.Value(dimW.CumulVar(idx)), sol.Value(dimR.CumulVar(idx)), j.Location));
                 }
                 tTime += travels[from][to] + locs[from].ServiceTimeMinutes;
                 tDist += dists[from][to];
@@ -253,8 +273,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         foreach (var v in vehicles) {
             Console.WriteLine(
                 $"{v.VehicleId,5} | " +
-                $"{v.DepotStartId,10} → {depots.NodeIndexOf(v.DepotStartId),4} | " +
-                $"{v.DepotEndId,10} → {depots.NodeIndexOf(v.DepotEndId),4}"
+                $"{v.StartLocation.LocationId,10} → {depots.NodeIndexOf(v.StartLocation.LocationId),4} | " +
+                $"{v.EndLocation.LocationId,10} → {depots.NodeIndexOf(v.EndLocation.LocationId),4}"
             );
         }
     }

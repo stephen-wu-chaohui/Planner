@@ -10,15 +10,6 @@ public static class OptimizeRouteRequestSnapshot {
             req.TenantId,
             req.OptimizationRunId,
 
-            Depots = req.Depots
-                .OrderBy(d => d.Location.LocationId)
-                .Select(d => new {
-                    d.Location.LocationId,
-                    d.Location.Address,
-                    d.Location.Latitude,
-                    d.Location.Longitude
-                }),
-
             Jobs = req.Jobs
                 .OrderBy(j => j.JobId)
                 .Select(j => new {
@@ -44,8 +35,8 @@ public static class OptimizeRouteRequestSnapshot {
                     v.VehicleId,
                     v.Name,
                     v.ShiftLimitMinutes,
-                    v.DepotStartId,
-                    v.DepotEndId,
+                    StartLocationId = v.StartLocation.LocationId,
+                    EndLocationId = v.EndLocation.LocationId,
                     v.SpeedFactor,
                     CostPerMinute = Math.Round(v.CostPerMinute, 4),
                     CostPerKm = Math.Round(v.CostPerKm, 4),

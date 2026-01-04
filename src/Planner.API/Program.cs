@@ -119,7 +119,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     Predicate = _ => true
 });
 
-app.MapApiEndpoints();
+// CRUD endpoints are exposed via attribute-routed controllers under `Controllers/`.
 
 app.Run();
 
@@ -140,9 +140,10 @@ static void ValidateRequiredConfiguration(IConfiguration config)
         "RabbitMq:Pass",
         "SignalR:Client",
         "SignalR:Route",
-        "Jwt:Issuer",
-        "Jwt:Audience",
-        "Jwt:SigningKey"
+        "JwtOptions:Issuer",
+        "JwtOptions:Audience",
+        "JwtOptions:SigningKey",
+        "JwtOptions:Secret"
     };
 
     var missing = requiredKeys

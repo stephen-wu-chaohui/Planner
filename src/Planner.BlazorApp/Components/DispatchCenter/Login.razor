@@ -1,0 +1,50 @@
+﻿@page "/login"
+@using Planner.BlazorApp.Auth
+@using Planner.BlazorApp.Models
+@using Planner.BlazorApp.Services
+
+@inject PlannerApiClient ApiClient
+@inject IJwtTokenStore TokenStore
+@inject NavigationManager Nav
+
+<h3>Login</h3>
+
+<input @bind="email" placeholder="Email" />
+<input @bind="password" type="password" placeholder="Password" />
+
+<button @onclick="doLogin">Login</button>
+
+@if (error is not null) {
+    <p style="color:red">@error</p>
+}
+
+@code {
+    private string email = "";
+    private string password = "";
+    private string? error;
+
+    private async Task doLogin() {
+        error = null;
+
+        try {
+            var client = ApiClient;
+
+            var response = await client.PostAsJsonAsync(
+                "/auth/login",
+                new LoginRequest(email, password));
+
+            if (!response.IsSuccessStatusCode) {
+                error = "Invalid credentials.";
+                return;
+            }
+
+            var result =
+                await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+            TokenStore.Set(result!.AccessToken);
+            Nav.NavigateTo("/dispatch-center");
+        } catch (Exception ex) {
+            error = ex.Message;
+        }
+    }
+}

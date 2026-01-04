@@ -16,6 +16,7 @@ public class Job {
     public string Reference { get; set; } = string.Empty;
 
     // location
+    public long LocationId { get; set; }
     public required Location Location { get; set; }
 
     // constraints

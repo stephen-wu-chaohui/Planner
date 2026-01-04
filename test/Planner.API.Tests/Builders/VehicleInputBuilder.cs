@@ -39,8 +39,18 @@ public sealed class VehicleInputBuilder {
         VehicleId: _vehicleId,
         Name: _name,
         ShiftLimitMinutes: _shiftLimitMinutes,
-        DepotStartId: _depotStartId,
-        DepotEndId: _depotEndId,
+        StartLocation: new LocationInput(
+            LocationId: _depotStartId,
+            Address: "DepotStart",
+            Latitude: 0,
+            Longitude: 0
+        ),
+        EndLocation: new LocationInput(
+            LocationId: _depotEndId,
+            Address: "DepotEnd",
+            Latitude: 0,
+            Longitude: 0
+        ),
         SpeedFactor: _speedFactor,
         CostPerMinute: _costPerMinute,
         CostPerKm: _costPerKm,

@@ -6,6 +6,7 @@ using Planner.Application;
 using Planner.Contracts.Optimization.Requests;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging;
+using Planner.Testing;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -19,11 +20,17 @@ public sealed class OptimizationControllerEndToEndTests {
         var tenant = factory.Get<ITenantContext>();
         var db = factory.Get<PlannerDbContext>();
         var controller = factory.Get<OptimizationController>();
+        // 1. MOCK THE AUTHORIZATION
+        controller.MockUserContext();
 
+        // 2. ENSURE SEEDING USES THE CORRECT TENANT ID
+        // If this is empty, BuildRequestFromDomainAsync returns BadRequest
         DomainSeed.SeedSmallScenario(db, tenant.TenantId);
-
+        await db.SaveChangesAsync(); // Ensure data is committed to the in-memory/test provider
+        
         var result = await controller.Solve();
 
+        // Act
         result.Should().NotBeNull();
 
         // Build request directly to validate solver invariants

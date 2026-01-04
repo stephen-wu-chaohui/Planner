@@ -5,57 +5,68 @@ using System;
 namespace Planner.API.EndToEndTests.Fixtures;
 
 public static class DomainSeed {
-    public static void SeedSmallScenario(
-        PlannerDbContext db,
-        Guid tenantId) {
-        var depotLocation = new Location(
-            id: 1001,
-            address: "Depot",
-            latitude: -31.95,
-            longitude: 115.86);
-
-        var depot = new Depot {
-            TenantId = tenantId,
-            Name = "Main Depot",
-            Location = depotLocation
+    public static void SeedSmallScenario(PlannerDbContext db, Guid tenantId) {
+        // 1. Create a Location for the Depot
+        var depotLocation = new Location {
+            Id = 1,
+            // TenantId = tenantId,
+            Address = "Central Depot",
+            Latitude = -31.95,
+            Longitude = 115.86
         };
 
-        var vehicle = new Vehicle {
+        // 2. Create the Depot (Required by Vehicle mapping in Controller)
+        var depot = new Depot {
+            Id = 1,
             TenantId = tenantId,
-            Name = "Van-1",
-            DepotStartId = 1001,
-            DepotEndId = 1001,
+            Location = depotLocation,
+            Name = "Main Hub"
+        };
+
+        // 3. Create a Vehicle linked to the Depot
+        var vehicle = new Vehicle {
+            Id = 1,
+            TenantId = tenantId,
+            Name = "Truck 01",
+            StartDepot = depot, // Matches .Include(v => v.StartDepot)
+            EndDepot = depot,   // Matches .Include(v => v.EndDepot)
             MaxPallets = 10,
             MaxWeight = 1000,
-            RefrigeratedCapacity = 0,
-            DriverRatePerHour = 60,
-            MaintenanceRatePerHour = 0,
-            FuelRatePerKm = 1,
-            BaseFee = 0
+            ShiftLimitMinutes = 480,
+            DriverRatePerHour = 50,
+            MaintenanceRatePerHour = 10,
+            FuelRatePerKm = 1.5,
+            BaseFee = 20,
+            SpeedFactor = 1.0
         };
 
-        var jobLocation = new Location(
-            id: 2001,
-            address: "Customer",
-            latitude: -31.94,
-            longitude: 115.87);
+        // 4. Create a Job with a Location
+        var jobLocation = new Location {
+            Id = 2,
+            // TenantId = tenantId,
+            Address = "Customer A",
+            Latitude = -31.96,
+            Longitude = 115.87
+        };
 
         var job = new Job {
+            Id = 1,
             TenantId = tenantId,
-            Name = "Delivery",
+            Name = "Delivery 1",
+            Location = jobLocation, // Matches .Include(j => j.Location)
             JobType = JobType.Delivery,
-            Location = jobLocation,
+            ServiceTimeMinutes = 15,
             ReadyTime = 0,
-            DueTime = 720,
-            ServiceTimeMinutes = 10,
-            PalletDemand = 1,
-            WeightDemand = 10
+            DueTime = 1440,
+            PalletDemand = 2,
+            WeightDemand = 200
         };
 
+        db.Locations.AddRange(depotLocation, jobLocation);
         db.Depots.Add(depot);
         db.Vehicles.Add(vehicle);
         db.Jobs.Add(job);
 
-        db.SaveChanges();
+        db.SaveChanges(); // Important: Persist before controller query
     }
 }

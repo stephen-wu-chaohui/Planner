@@ -6,5 +6,6 @@ public class Depot {
     public string Name { get; set; } = string.Empty;
 
     // location
+    public long LocationId { get; set; }
     public required Location Location { get; set; }
 }

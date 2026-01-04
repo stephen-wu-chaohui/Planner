@@ -7,8 +7,12 @@ public class Vehicle {
     public string Name { get; set; } = string.Empty;
     public double SpeedFactor { get; set; } = 1.0;
     public long ShiftLimitMinutes { get; set; } = 480;
+
     public long DepotStartId { get; set; }
     public long DepotEndId { get; set; }
+
+    public Depot? StartDepot { get; set; }
+    public Depot? EndDepot { get; set; }
 
     // cost parameters
     public double DriverRatePerHour { get; set; }

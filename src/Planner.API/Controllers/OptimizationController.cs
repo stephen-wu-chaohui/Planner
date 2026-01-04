@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Application;
 using Planner.Contracts.Optimization.Inputs;
@@ -11,6 +12,7 @@ namespace Planner.API.Controllers;
 
 [ApiController]
 [Route("api/vrp")]
+[Authorize(Policy = "AdminOnly")]
 public class OptimizationController(
     IMessageBus bus,
     PlannerDbContext db,
@@ -35,10 +37,11 @@ public class OptimizationController(
             .Include(j => j.Location)
             .ToListAsync();
 
-        var vehicles = await db.Vehicles.ToListAsync();
-
-        var depots = await db.Depots
-            .Include(d => d.Location)
+        var vehicles = await db.Vehicles
+            .Include(v => v.StartDepot)
+                .ThenInclude(d => d.Location)
+            .Include(v => v.EndDepot)
+                .ThenInclude(d => d.Location)
             .ToListAsync();
 
         return new OptimizeRouteRequest(
@@ -47,7 +50,6 @@ public class OptimizationController(
             RequestedAt: DateTime.UtcNow,
             Jobs: jobs.Select(ToJobInput).ToList(),
             Vehicles: vehicles.Select(ToVehicleInput).ToList(),
-            Depots: depots.Select(d => new DepotInput(ToLocationInput(d.Location))).ToList(),
             Settings: new OptimizationSettings(
                 SearchTimeLimitSeconds: 6 * jobs.Count // 6 seconds per job
             )
@@ -72,12 +74,27 @@ public class OptimizationController(
     private static VehicleInput ToVehicleInput(Vehicle vehicle) {
         var costPerMinute = (vehicle.DriverRatePerHour + vehicle.MaintenanceRatePerHour) / 60.0;
 
+        if (vehicle.StartDepot?.Location is null)
+            throw new InvalidOperationException($"Vehicle {vehicle.Id} missing StartDepot/Location");
+        if (vehicle.EndDepot?.Location is null)
+            throw new InvalidOperationException($"Vehicle {vehicle.Id} missing EndDepot/Location");
+
         return new VehicleInput(
             VehicleId: vehicle.Id,
             Name: vehicle.Name,
             ShiftLimitMinutes: vehicle.ShiftLimitMinutes,
-            DepotStartId: vehicle.DepotStartId,
-            DepotEndId: vehicle.DepotEndId,
+            StartLocation: new LocationInput(
+                LocationId: vehicle.DepotStartId,
+                Address: vehicle.StartDepot.Location.Address,
+                Latitude: vehicle.StartDepot.Location.Latitude,
+                Longitude: vehicle.StartDepot.Location.Longitude
+            ),
+            EndLocation: new LocationInput(
+                LocationId: vehicle.DepotEndId,
+                Address: vehicle.EndDepot.Location.Address,
+                Latitude: vehicle.EndDepot.Location.Latitude,
+                Longitude: vehicle.EndDepot.Location.Longitude
+            ),
             SpeedFactor: vehicle.SpeedFactor,
             CostPerMinute: costPerMinute,
             CostPerKm: vehicle.FuelRatePerKm,

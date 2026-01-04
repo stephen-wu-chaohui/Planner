@@ -23,6 +23,7 @@ DELETE FROM Customers;
 DELETE FROM Depots;
 DELETE FROM Locations;
 DELETE FROM Tenants;
+DELETE FROM Users;
 
 -- 3. Iterate through each City
 DECLARE CityCursor CURSOR FOR SELECT Name, Lat, Lon FROM @Cities;

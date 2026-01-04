@@ -27,8 +27,18 @@ public static class VehicleFormMapper {
             VehicleId: v.VehicleId,
             Name: v.Name,
             ShiftLimitMinutes: v.ShiftLimitMinutes,
-            DepotStartId: v.DepotStartId,
-            DepotEndId: v.DepotEndId,
+            StartLocation: new LocationInput(
+                LocationId: v.DepotStartId,
+                Address: string.Empty,
+                Latitude: 0,
+                Longitude: 0
+            ),
+            EndLocation: new LocationInput(
+                LocationId: v.DepotEndId,
+                Address: string.Empty,
+                Latitude: 0,
+                Longitude: 0
+            ),
             SpeedFactor: v.SpeedFactor,
             CostPerMinute: v.CostPerMinute,
             CostPerKm: v.CostPerKm,

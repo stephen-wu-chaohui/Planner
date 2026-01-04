@@ -10,8 +10,8 @@ public sealed record VehicleInput(
 
     // Availability
     long ShiftLimitMinutes,
-    long DepotStartId,
-    long DepotEndId,
+    LocationInput StartLocation,
+    LocationInput EndLocation,
 
     // Performance
     double SpeedFactor,

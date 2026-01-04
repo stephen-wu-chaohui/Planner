@@ -146,7 +146,8 @@
             DataCenter.CollectionChanged += async msg => {
                 EndOptimizationWait();
                 ActiveTab = "Routes";
-                IsVisible = true;
+                // IsVisible = true;
+                IsVisible = false;
                 await InvokeAsync(StateHasChanged);
             };
 

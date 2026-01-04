@@ -1,6 +1,7 @@
-﻿@page "/"
+﻿@page "/dispatch-center"
 @rendermode InteractiveServer
 
+@using Planner.BlazorApp.Auth
 @using Planner.BlazorApp.Models
 @using Planner.BlazorApp.Components.WelcomeWizard
 @using Planner.BlazorApp.Services
@@ -8,6 +9,7 @@
 
 @inject DataCenterState DataCenter
 @inject IConfiguration Configuration
+@inject IJwtTokenStore TokenStore
 
 <CascadingValue Value="DataCenter">
 <div class="planner-view d-flex flex-column flex-fill">
@@ -15,32 +17,21 @@
     <div class="toolbar p-2 d-flex align-items-center bg-light border-bottom">
         <div class="d-flex gap-2">
             <button class="btn btn-info" @onclick=@(() => showWizard = true)>Show Welcome Guide</button>
-            <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Optimization Wizard</button>
+            @if (TokenStore.IsAuthenticated && TokenStore.AccessToken!.GetRole() == "Admin") {
+                <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Optimization Wizard</button>
+            }
         </div>
         <h5 class="ms-auto mb-0">Dispatch Centre</h5>
     </div>
 
     <!-- Map area -->
     <div class="planner-map-area flex-fill position-relative">
-        @if (DataCenter.Depots?.Count > 0)
-        {
-            <PlannerMap @ref="mapRef"
-                        DepotLat="@DataCenter.Depots[0].Location.Latitude"
-                        DepotLon="@DataCenter.Depots[0].Location.Longitude"
-                        JobPositionPicked="JobPositionPicked"
-                        Routes="@DataCenter.MapRoutes"
-                        Customers="@DataCenter.MapCustomers" />
-        }
-        else
-        {
-            <!-- Loading state or default depot coordinates -->
-            <PlannerMap @ref="mapRef"
-                        DepotLat="-31.953823"
-                        DepotLon="115.876140"
-                        JobPositionPicked="JobPositionPicked"
-                        Routes="@DataCenter.MapRoutes"
-                        Customers="@DataCenter.MapCustomers" />
-        }
+        <PlannerMap @ref="mapRef"
+                    DepotLat="@DataCenter.MapDepotLocation.Latitude"
+                    DepotLon="@DataCenter.MapDepotLocation.Longitude"
+                    JobPositionPicked="JobPositionPicked"
+                    Routes="@DataCenter.MapRoutes"
+                    Customers="@DataCenter.MapCustomers" />
     </div>
 
     <WelcomeWizardModal IsOpen="@showWizard" IsOpenChanged="@(val => showWizard = val)" />
@@ -58,16 +49,34 @@
     private PlannerMap? mapRef;
     private NewCustomerModal? newCustomerModal;
 
-    private static readonly Guid TenantId =
-        Guid.Parse("07B6C438-8B21-4B11-A0F3-9CFD1A2711FC"); // TEMP until auth
-
     protected override async Task OnInitializedAsync() {
         if (_subscribed) return;
 
         DataCenter.CollectionChanged += OnCollectionChanged;
-        await DataCenter.InitializeAsync(TenantId);
+        await EnsureTenantInitializedAsync();
 
         _subscribed = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_subscribed)
+            await EnsureTenantInitializedAsync();
+    }
+
+    private async Task EnsureTenantInitializedAsync()
+    {
+        if (!TokenStore.IsAuthenticated || string.IsNullOrWhiteSpace(TokenStore.AccessToken))
+            return;
+
+        var tokenTenantId = TokenStore.AccessToken.GetTenantId();
+        if (tokenTenantId is null)
+            return;
+
+        if (DataCenter.TenantId != tokenTenantId.Value)
+            DataCenter.Reset();
+
+        await DataCenter.InitializeAsync(tokenTenantId.Value);
     }
 
     private async void OnCollectionChanged(string _) {

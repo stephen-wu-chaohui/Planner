@@ -6,7 +6,7 @@ namespace Planner.Infrastructure.Persistence;
 
 public class PlannerDbContext(DbContextOptions<PlannerDbContext> options, ITenantContext tenant) : DbContext(options) {
     public DbSet<Tenant> Tenants => Set<Tenant>();
-    public DbSet<UserAccount> Users => Set<UserAccount>();
+    public DbSet<User> Users => Set<User>();
     public DbSet<SystemEvent> SystemEvents => Set<SystemEvent>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
@@ -17,11 +17,43 @@ public class PlannerDbContext(DbContextOptions<PlannerDbContext> options, ITenan
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<Location>();
+
+        modelBuilder.Entity<Customer>()
+            .HasOne(c => c.Location)
+            .WithMany()
+            .HasForeignKey(c => c.LocationId)
+            .IsRequired();
+
+        modelBuilder.Entity<Job>()
+            .HasOne(j => j.Location)
+            .WithMany()
+            .HasForeignKey(j => j.LocationId)
+            .IsRequired();
+
+        modelBuilder.Entity<Depot>()
+            .HasOne(d => d.Location)
+            .WithMany()
+            .HasForeignKey(d => d.LocationId)
+            .IsRequired();
+
+        modelBuilder.Entity<Vehicle>()
+            .HasOne(v => v.StartDepot)
+            .WithMany()
+            .HasForeignKey(v => v.DepotStartId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Vehicle>()
+            .HasOne(v => v.EndDepot)
+            .WithMany()
+            .HasForeignKey(v => v.DepotEndId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<Vehicle>()
             .HasQueryFilter(v => v.TenantId == tenant.TenantId);
         modelBuilder.Entity<Job>()
-            .HasQueryFilter(v => v.TenantId == tenant.TenantId);
-        modelBuilder.Entity<UserAccount>()
             .HasQueryFilter(v => v.TenantId == tenant.TenantId);
         modelBuilder.Entity<Customer>()
             .HasQueryFilter(v => v.TenantId == tenant.TenantId);

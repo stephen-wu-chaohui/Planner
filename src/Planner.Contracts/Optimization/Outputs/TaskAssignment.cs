@@ -1,4 +1,6 @@
-﻿namespace Planner.Contracts.Optimization.Outputs;
+﻿using Planner.Contracts.Optimization.Inputs;
+
+namespace Planner.Contracts.Optimization.Outputs;
 
 /// <summary>
 /// Describes one stop in an optimized vehicle route.
@@ -11,5 +13,6 @@ public sealed record TaskAssignment(
     double DepartureTime,
     long PalletLoad,
     long WeightLoad,
-    long RefrigeratedLoad
+    long RefrigeratedLoad,
+    LocationInput Location
 );

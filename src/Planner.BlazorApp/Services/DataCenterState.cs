@@ -9,9 +9,9 @@ using Planner.Domain;
 namespace Planner.BlazorApp.Services;
 
 public sealed class DataCenterState(
-    HttpClient http,
-    IOptimizationHubClient hub,
-    IConfiguration configuration) {
+    PlannerApiClient api,
+    IOptimizationHubClient hub)
+{
     // -----------------------------
     // State (Inputs & Outputs only)
     // -----------------------------
@@ -21,7 +21,11 @@ public sealed class DataCenterState(
     public List<JobFormModel> Jobs { get; private set; } = [];
     public List<RouteResult> Routes { get; private set; } = [];
 
-    public List<DepotInput> Depots { get; private set; } = [];
+    public LocationInput MapDepotLocation { get; private set; } = new(
+        LocationId: 0,
+        Address: "Main Depot",
+        Latitude: -31.953823,
+        Longitude: 115.876140);
 
     public Guid TenantId { get; private set; }
 
@@ -37,11 +41,30 @@ public sealed class DataCenterState(
 
     private bool _initialized;
 
+    public void Reset()
+    {
+        Customers = [];
+        Vehicles = [];
+        Jobs = [];
+        Routes = [];
+        MapRoutes = [];
+        MapCustomers = [];
+
+        MapDepotLocation = new LocationInput(
+            LocationId: 0,
+            Address: "Main Depot",
+            Latitude: -31.953823,
+            Longitude: 115.876140);
+
+        _initialized = false;
+    }
+
     // -----------------------------
     // Initialization
     // -----------------------------
 
-    public async Task InitializeAsync(Guid tenantId) {
+    public async Task InitializeAsync(Guid tenantId)
+    {
         if (_initialized)
             return;
 
@@ -49,7 +72,7 @@ public sealed class DataCenterState(
 
         await LoadCustomersAsync();
         await LoadVehiclesAsync();
-        BuildDefaultDepot();
+        SetMapDepotFromVehicles();
 
         await hub.ConnectAsync(tenantId);
         hub.OptimizationCompleted += OnOptimizationCompleted;
@@ -62,10 +85,12 @@ public sealed class DataCenterState(
     // Data loading
     // -----------------------------
 
-    private async Task LoadCustomersAsync() {
-        var customers = await http.GetFromJsonAsync<List<Customer>>("api/customers") ?? [];
+    private async Task LoadCustomersAsync()
+    {
+        var customers = await api.GetFromJsonAsync<List<Customer>>("api/customers") ?? [];
 
-        Customers = customers.Select(c => new CustomerFormModel {
+        Customers = customers.Select(c => new CustomerFormModel
+        {
             CustomerId = c.CustomerId,
             Name = c.Name,
             LocationId = c.Location.Id,
@@ -77,47 +102,33 @@ public sealed class DataCenterState(
             DefaultJobType = 1 // Assuming delivery
         }).ToList();
 
-        MapCustomers = Customers.Select(c => new JobMarker {
+        MapCustomers = Customers.Select(c => new JobMarker
+        {
             Lat = c.Latitude,
             Lng = c.Longitude,
             Label = c.Name
         }).ToList();
     }
 
-    private async Task LoadVehiclesAsync() {
-        Vehicles = await http.GetFromJsonAsync<List<Vehicle>>("api/vehicles") ?? [];
+    private async Task LoadVehiclesAsync()
+    {
+        Vehicles = await api.GetFromJsonAsync<List<Vehicle>>("api/vehicles") ?? [];
     }
 
-    private void BuildDefaultDepot() {
-        // For now: one depot per tenant
-        // Later: load from API
-        if (Vehicles.Any()) {
-            var depotVehicle = Vehicles.First();
-            var depotCustomer = Customers.FirstOrDefault(c => c.Name.Contains("Depot"));
+    private void SetMapDepotFromVehicles()
+    {
+        var depotLoc = Vehicles
+            .Select(v => v.StartDepot?.Location)
+            .FirstOrDefault(l => l is not null);
 
-            if (depotCustomer != null) {
-                Depots =
-                [
-                    new DepotInput(new LocationInput(
-                        depotVehicle.DepotStartId,
-                        depotCustomer.Address,
-                        depotCustomer.Latitude,
-                        depotCustomer.Longitude
-                    ))
-                ];
-            } else {
-                // Fallback if no depot customer is found
-                Depots =
-                [
-                    new DepotInput(new LocationInput(
-                        0,
-                        "Main Depot",
-                        -31.953823,
-                        115.876140
-                    ))
-                ];
-            }
-        }
+        if (depotLoc is null)
+            return;
+
+        MapDepotLocation = new LocationInput(
+            LocationId: depotLoc.Id,
+            Address: depotLoc.Address,
+            Latitude: depotLoc.Latitude,
+            Longitude: depotLoc.Longitude);
     }
 
     // -----------------------------
@@ -126,15 +137,14 @@ public sealed class DataCenterState(
 
     public Task SolveVrp() => SolveVrpAsync(TenantId);
 
-    public async Task SolveVrpAsync(Guid tenantId) {
-        var endpoint = "api/vrp/solve";
-        if (string.IsNullOrWhiteSpace(endpoint))
-            return;
+    public async Task SolveVrpAsync(Guid tenantId)
+    {
+        const string endpoint = "api/vrp/solve";
+        var settings = await api.GetFromJsonAsync<OptimizationSettings>(endpoint);
 
-        var settings = await http.GetFromJsonAsync<OptimizationSettings>(endpoint);
-
-        if (settings?.SearchTimeLimitSeconds > 0) {
-            int waitMinutes = (settings!.SearchTimeLimitSeconds + 59)/60;
+        if (settings?.SearchTimeLimitSeconds > 0)
+        {
+            int waitMinutes = (settings.SearchTimeLimitSeconds + 59) / 60;
             StartWait?.Invoke(waitMinutes);
         }
     }
@@ -143,30 +153,43 @@ public sealed class DataCenterState(
     // SignalR callback
     // -----------------------------
 
-    private void OnOptimizationCompleted(OptimizeRouteResponse evt) {
+    private void OnOptimizationCompleted(OptimizeRouteResponse evt)
+    {
         Routes = evt.Routes.ToList();
         BuildMapRoutes();
         CollectionChanged?.Invoke("Routes");
     }
 
-    private void BuildMapRoutes() {
-        MapRoutes = Routes.Select(route => new MapRoute {
+    private void BuildMapRoutes()
+    {
+        MapRoutes = Routes.Select(route => new MapRoute
+        {
             RouteName = route.VehicleName,
             Color = ColourHelper.ColourFromString(route.VehicleName, 0.95, 0.25) ?? "#FF0000",
-            Points = route.Stops
-                .Join(Jobs,
-                    stop => stop.JobId,
-                    job => job.JobId,
-                    (stop, job) => job)
-                .Join(Customers,
-                    job => job.LocationId,
-                    customer => customer.LocationId,
-                    (job, customer) => new JobMarker {
-                        Lat = customer.Latitude,
-                        Lng = customer.Longitude,
-                        Label = customer.Name
+            //Points = route.Stops
+            //    .Join(Jobs,
+            //        stop => stop.JobId,
+            //        job => job.JobId,
+            //        (stop, job) => job)
+            //    .Join(Customers,
+            //        job => job.LocationId,
+            //        customer => customer.LocationId,
+            //        (job, customer) => new JobMarker
+            //        {
+            //            Lat = customer.Latitude,
+            //            Lng = customer.Longitude,
+            //            Label = customer.Name
+            //        })
+            //    .ToList()
+            Points = route.Stops.Select(stop =>
+                    new JobMarker {
+                        Lat = stop.Location.Latitude,
+                        Lng = stop.Location.Longitude,
+                        Label = stop.Name,
+                        JobType = stop.JobType.ToString()
                     })
                 .ToList()
+
         }).ToList();
     }
 
@@ -174,12 +197,14 @@ public sealed class DataCenterState(
     // Mutations (UI actions)
     // -----------------------------
 
-    public void AddJob(JobFormModel job) {
+    public void AddJob(JobFormModel job)
+    {
         Jobs.Add(job);
         CollectionChanged?.Invoke("Jobs");
     }
 
-    public void ClearJobs() {
+    public void ClearJobs()
+    {
         Jobs.Clear();
         Routes.Clear();
         MapRoutes.Clear();

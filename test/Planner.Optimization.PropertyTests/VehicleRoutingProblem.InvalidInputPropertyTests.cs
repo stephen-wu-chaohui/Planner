@@ -21,31 +21,11 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         };
 
     [Fact]
-    public void Duplicate_depot_location_ids_should_throw() {
-        // Arrange
-        var request = TestRequestFactory.CreateSimpleRequest();
-
-        var depot = request.Depots[0];
-
-        request = WithFastSettings(request with {
-            Depots = new[] { depot, depot }   // force duplicate
-        });
-
-        // Act
-        Action act = () => _sut.Optimize(request);
-
-        // Assert
-        act.Should()
-           .Throw<SolverInputInvalidException>()
-           .WithMessage("*Duplicate Depot*");
-    }
-
-    [Fact]
     public void Job_and_depot_location_id_collision_should_throw() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
-        var depotLocId = request.Depots[0].Location.LocationId;
+        var depotLocId = request.Vehicles[0].StartLocation.LocationId;
         var job = request.Jobs[0];
 
         var collidingJob = job with {
@@ -78,7 +58,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         var vehicle = request.Vehicles[0];
 
         var invalidVehicle = vehicle with {
-            DepotStartId = 999999 // not in depots
+            StartLocation = vehicle.StartLocation with { LocationId = 999999 } // not in depots
         };
 
         request = WithFastSettings(request with {
@@ -105,7 +85,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         var vehicle = request.Vehicles[0];
 
         var invalidVehicle = vehicle with {
-            DepotEndId = 888888 // not in depots
+            EndLocation = vehicle.EndLocation with { LocationId = 888888 } // not in depots
         };
 
         request = WithFastSettings(request with {

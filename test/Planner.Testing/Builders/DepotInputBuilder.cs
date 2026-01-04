@@ -1,5 +1,7 @@
 ﻿namespace Planner.Testing.Builders;
 
+// Depots are derived from vehicle StartLocation/EndLocation in the solver.
+// This builder remains for backwards compatibility in tests.
 public sealed class DepotInputBuilder {
     private LocationInput _location = LocationInputBuilder.Create().WithId(TestIds.Depot1Loc).Build();
 

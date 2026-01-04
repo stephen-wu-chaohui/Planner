@@ -6,12 +6,8 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Planner.Infrastructure.Auth;
 
-public sealed class JwtTokenGenerator : IJwtTokenGenerator {
-    private readonly JwtOptions _options;
-
-    public JwtTokenGenerator(IOptions<JwtOptions> options) {
-        _options = options.Value;
-    }
+public sealed class JwtTokenGenerator(IOptions<JwtOptions> options) : IJwtTokenGenerator {
+    private readonly JwtOptions _options = options.Value;
 
     public string GenerateToken(
         long userId,
@@ -19,7 +15,8 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator {
         string role) {
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            // new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new("sub", userId.ToString()),
             new("tenant_id", tenantId.ToString()),
             new(ClaimTypes.Role, role)
         };
@@ -39,6 +36,12 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator {
             expires: DateTime.UtcNow.AddMinutes(_options.ExpirationInMinutes),
             signingCredentials: credentials);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        //return new JwtSecurityTokenHandler().WriteToken(token);
+        try {
+            var s = new JwtSecurityTokenHandler().WriteToken(token);
+            return s.ToString();
+        } catch(Exception ex) {
+            return ex.Message;
+        }
     }
 }

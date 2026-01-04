@@ -5,6 +5,7 @@ public sealed class Customer {
     public Guid TenantId { get; init; }    // boundary ID
     public string Name { get; set; } = string.Empty;
 
+    public long LocationId { get; set; }
     public Location Location { get; set; } = default!;
 
     // Defaults for job creation

@@ -236,7 +236,7 @@ namespace Planner.Infrastructure.Migrations
                     b.ToTable("Tenants");
                 });
 
-            modelBuilder.Entity("Planner.Domain.UserAccount", b =>
+            modelBuilder.Entity("Planner.Domain.User", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
