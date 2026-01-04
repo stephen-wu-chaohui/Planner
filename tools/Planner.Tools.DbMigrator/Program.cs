@@ -3,8 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Planner.Application;
 using Planner.Infrastructure;
+using Planner.Infrastructure.Persistence;
 using Planner.Tools.DbMigrator;
 using Planner.Tools.DbMigrator.Db;
+using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -69,21 +71,38 @@ switch (args[0].ToLowerInvariant()) {
             $"Unknown command '{args[0]}'. Expected migrate | seed.");
 }
 
+
 // ------------------------------------------------------
 // Local functions
 // ------------------------------------------------------
 
 static async Task RunMigrateAsync(IServiceScope scope) {
-    // You already implemented this part earlier;
-    // typically something like:
-    //
-    // var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
-    // await db.Database.MigrateAsync();
-    //
-    // I’m leaving it abstract so it matches your existing code.
+    // Retrieve the DbContext from the DI container
+    // Note: Use your actual DbContext class name (e.g., PlannerDbContext)
+    var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
 
-    await Task.CompletedTask;
+    Console.WriteLine(">>> Starting EF Core Migrations...");
+
+    // Get list of migrations not yet applied to the target database
+    var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+    var migrationList = pendingMigrations.ToList();
+
+    if (migrationList.Count == 0) {
+        Console.WriteLine(">>> No pending migrations found. Database is up to date.");
+        return;
+    }
+
+    Console.WriteLine($">>> Found {migrationList.Count} pending migration(s):");
+    foreach (var migration in migrationList) {
+        Console.WriteLine($"    - {migration}");
+    }
+
+    // Apply migrations to the database
+    await db.Database.MigrateAsync();
+
+    Console.WriteLine(">>> Migrations applied successfully.");
 }
+
 
 static async Task RunSeedAsync(
     IServiceScope scope,
