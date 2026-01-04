@@ -1,0 +1,32 @@
+﻿[
+	{
+		"iconUrl": "icons/flag.svg",
+		"imageUrl": "images/wizard/welcome.png",
+		"title": "Welcome to Planner",
+		"description": "Planner illustrates how a modern logistics platform can streamline delivery operations through intuitive workflows and automated decision-making. This walkthrough highlights the core user journey — from mapping customers to dispatching optimized routes — and demonstrates how Planner reduces operational complexity for end users."
+	},
+	{
+		"iconUrl": "icons/users.svg",
+		"imageUrl": "images/wizard/customers.png",
+		"title": "Create a Reliable Customer Map",
+		"description": "Users can add customer locations directly from the map using Ctrl-click — reducing data-entry effort and ensuring geographic accuracy. This design supports fast onboarding of new service areas and gives dispatchers clarity on where demand is coming from."
+	},
+	{
+		"iconUrl": "icons/truck.svg",
+		"imageUrl": "images/wizard/fleet.png",
+		"title": "Model Your Fleet with Real Operational Constraints",
+		"description": "Vehicles can be set up with capacity, cost, and scheduling rules, representing the operational reality of a delivery fleet. Capturing these constraints ensures the optimization engine always generates efficient and feasible routes."
+	},
+	{
+		"iconUrl": "icons/list.svg",
+		"imageUrl": "images/wizard/jobs.png",
+		"title": "Organize Today’s Jobs and Let Automation Assist",
+		"description": "Dispatchers can assemble the day’s workload and trigger the OR-Tools optimization engine. Planner automates complex routing decisions, helping teams scale operations, reduce manual planning time, and maintain service-level expectations."
+	},
+	{
+		"iconUrl": "icons/rocket.svg",
+		"imageUrl": "images/wizard/go.png",
+		"title": "Optimize Routes for Cost and Service Excellence",
+		"description": "Planner uses algorithmic intelligence to generate cost-efficient, time-effective routes. The result is improved reliability, lower operational cost, and a workflow that enables teams to focus on execution instead of solving routing puzzles."
+	}
+]
