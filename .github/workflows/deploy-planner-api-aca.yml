@@ -36,6 +36,11 @@ env:
 
   SIGNALR_CLIENT: ${{ secrets.SIGNALR_CLIENT }}   # whatever your app expects
   SIGNALR_ROUTE: ${{ secrets.SIGNALR_ROUTE }}     # e.g. /hubs/optimization
+  JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+  JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+  JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  EXPIRATION_IN_MINUTES: 60
 
 jobs:
   build-and-deploy:
@@ -124,6 +129,7 @@ jobs:
               --resource-group "${AZURE_RESOURCE_GROUP}" \
               --image "${IMAGE_TAG}" \
               --set-env-vars \
+                ASPNETCORE_ENVIRONMENT=Production  \
                 ASPNETCORE_URLS="http://+:8080" \
                 ConnectionStrings__PlannerDb="${PLANNERDB_CONNECTION}" \
                 RabbitMq__Host="${RABBITMQ_HOST}" \
@@ -131,4 +137,12 @@ jobs:
                 RabbitMq__User="${RABBITMQ_USER}" \
                 RabbitMq__Pass="${RABBITMQ_PASS}" \
                 SignalR__Client="${SIGNALR_CLIENT}" \
-                SignalR__Route="${SIGNALR_ROUTE}"
+                SignalR__Route="${SIGNALR_ROUTE}"   \
+                JwtOptions__Issuer="${JWT_ISSUER}"    \
+                JwtOptions__Audience="${JWT_AUDIENCE}"    \
+                JwtOptions__SigningKey="${JWT_SIGNING_KEY}"   \
+                JwtOptions__Secret="${JWT_SECRET}"            \
+                JwtOptions__ExpirationInMinutes="${EXPIRATION_IN_MINUTES}"
+
+
+
