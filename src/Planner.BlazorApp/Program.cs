@@ -24,6 +24,12 @@ builder.Services.AddHttpClient("PlannerApi", client =>
     );
 });
 
+builder.Services.AddServerSideBlazor()
+    .AddHubOptions(options => {
+        options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+        options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    });
+
 builder.Services.AddScoped<PlannerApiClient>();
 
 // App services
