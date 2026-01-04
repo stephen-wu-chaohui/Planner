@@ -34,7 +34,9 @@
                     Customers="@DataCenter.MapCustomers" />
     </div>
 
-    <WelcomeWizardModal IsOpen="@showWizard" IsOpenChanged="@(val => showWizard = val)" />
+    @if (showWizard) {
+        <WelcomeWizardModal IsOpen="@showWizard" IsOpenChanged="@(val => showWizard = val)" />
+    }
     <PlannerEntitiesModal @ref="entitiesModal" />
     <NewCustomerModal @ref="newCustomerModal" OnCustomerCreated="HandleNewCustomer" />
 

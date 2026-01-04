@@ -16,10 +16,6 @@ public sealed class OptimizationHubClient(IConfiguration configuration, ILogger<
             return;
         }
 
-        logger.LogDebug("Disable temporarily for fixing azure socket issue.");
-        return;
-
-
         try {
             // Get configuration values
             var signalRServer = configuration["SignalR:Server"] ?? configuration["SignalR__Server"];

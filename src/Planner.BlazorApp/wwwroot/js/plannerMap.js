@@ -9,6 +9,7 @@ window.loadGoogleMaps = (apiKey) => {
         const s = document.createElement("script");
         s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker,places&callback=mapInteropInit`;
         s.async = true;
+        s.defer = true;
         s.onload = resolve;
         s.onerror = reject;
         document.head.appendChild(s);
