@@ -63,6 +63,13 @@ builder.Services.AddHostedService<OptimizeRouteResultConsumer>();
 // Health checks
 builder.Services.AddHealthChecks();
 
+builder.Services.ConfigureApplicationCookie(options => {
+    options.Events.OnRedirectToLogin = context => {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+});
+
 //
 // ────────────────────────────────────────────────
 // Build app
