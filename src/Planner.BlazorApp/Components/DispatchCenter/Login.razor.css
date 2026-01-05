@@ -1,0 +1,149 @@
+﻿.login-page {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	background: #f6f7f9;
+}
+
+.login-card {
+	width: 720px;
+	padding: 32px;
+	background: white;
+	border-radius: 10px;
+	box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+	.login-card h2 {
+		text-align: center;
+		margin-bottom: 24px;
+	}
+
+.login-field {
+	margin-bottom: 16px;
+}
+
+	.login-field label {
+		display: block;
+		margin-bottom: 6px;
+		font-size: 0.9rem;
+		color: #555;
+	}
+
+.login-input {
+	width: 100%;
+	padding: 10px 12px;
+	border-radius: 6px;
+	border: 1px solid #ccc;
+}
+
+	.login-input:disabled {
+		background: #f1f1f1;
+	}
+
+.login-button,
+.logout-button,
+.secondary-button {
+	width: 100%;
+	padding: 12px;
+	margin-top: 12px;
+	border-radius: 6px;
+	font-size: 1rem;
+	border: none;
+	cursor: pointer;
+}
+
+.login-button {
+	background: #2563eb;
+	color: white;
+}
+
+.logout-button {
+	background: #dc2626;
+	color: white;
+}
+
+.secondary-button {
+	background: #e5e7eb;
+	color: #111;
+}
+
+.login-button:disabled,
+.logout-button:disabled {
+	background: #94a3b8;
+	cursor: not-allowed;
+}
+
+.login-error {
+	margin-top: 12px;
+	color: #dc2626;
+	text-align: center;
+}
+
+.login-status {
+	text-align: center;
+	color: #444;
+	margin-bottom: 16px;
+}
+
+/* ---- Demo hint ---- */
+
+.login-hint {
+	margin-top: 24px;
+	padding-top: 16px;
+	border-top: 1px solid #eee;
+	font-size: 0.8rem;
+}
+
+.login-hint-title {
+	font-weight: 600;
+}
+
+.login-hint-intro {
+	margin: 6px 0 12px;
+	color: #555;
+}
+
+.tenant-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+	gap: 10px;
+}
+
+.tenant-card {
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	padding: 10px;
+	background: #fafafa;
+}
+
+	.tenant-card h4 {
+		margin: 0 0 6px;
+	}
+
+.login-hint-footnote {
+	margin-top: 12px;
+	font-style: italic;
+	color: #666;
+}
+
+.login-main {
+	width: 100%;
+	max-width: 360px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+	.login-main h2 {
+		text-align: center;
+		margin-bottom: 24px;
+	}
+
+.login-hint-wrapper {
+	width: 100%;
+	margin-top: 32px;
+}

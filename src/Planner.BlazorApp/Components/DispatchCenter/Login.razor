@@ -7,31 +7,84 @@
 @inject IJwtTokenStore TokenStore
 @inject NavigationManager Nav
 
-<h3>Login</h3>
+<div class="login-page">
+    <div class="login-card">
 
-<input @bind="email" placeholder="Email" />
-<input @bind="password" type="password" placeholder="Password" />
+        <div class="login-main">
+            @if (!IsLoggedIn) {
+                <h2>Planner Demo Login</h2>
 
-<button @onclick="doLogin">Login</button>
+                <div class="login-field">
+                    <label>Email</label>
+                    <InputText class="login-input"
+                               @bind-Value="email"
+                               disabled="@IsBusy" />
+                </div>
 
-@if (error is not null) {
-    <p style="color:red">@error</p>
-}
+                <div class="login-field">
+                    <label>Password</label>
+                    <InputText class="login-input"
+                               type="password"
+                               @bind-Value="password"
+                               disabled="@IsBusy" />
+                </div>
+
+                <button class="login-button"
+                        disabled="@IsBusy"
+                        @onclick="DoLoginAsync">
+                    @(IsBusy ? "Signing in…" : "Login")
+                </button>
+
+                @if (!string.IsNullOrEmpty(error)) {
+                    <p class="login-error">@error</p>
+                }
+            } else {
+                <h2>You are logged in</h2>
+
+                <p class="login-status">
+                    Your session is active.
+                </p>
+
+                <button class="logout-button"
+                        disabled="@IsBusy"
+                        @onclick="DoLogout">
+                    Logout
+                </button>
+
+                <button class="secondary-button"
+                        @onclick="NavigateToApp">
+                    Go to Dispatch Center
+                </button>
+            }
+        </div>
+
+        <div class="login-hint-wrapper">
+            @LoginHint
+        </div>
+
+    </div>
+</div>
 
 @code {
-    private string email = "";
-    private string password = "";
+    private string? email = "perth.admin@demo.local";
+    private string? password = "admin123";
     private string? error;
+    private bool IsBusy;
 
-    private async Task doLogin() {
+    private bool IsLoggedIn =>
+        TokenStore.IsAuthenticated && !TokenStore.IsExpired();
+
+    private async Task DoLoginAsync() {
+        if (IsBusy)
+            return;
+
         error = null;
+        IsBusy = true;
 
         try {
-            var client = ApiClient;
-
-            var response = await client.PostAsJsonAsync(
-                "/auth/login",
-                new LoginRequest(email, password));
+            var response = await ApiClient.PostAsJsonAsync(
+                "auth/login",
+                new { Email = email, Password = password });
 
             if (!response.IsSuccessStatusCode) {
                 error = "Invalid credentials.";
@@ -42,9 +95,59 @@
                 await response.Content.ReadFromJsonAsync<LoginResponse>();
 
             TokenStore.Set(result!.AccessToken);
+
             Nav.NavigateTo("/dispatch-center");
         } catch (Exception ex) {
             error = ex.Message;
+        } finally {
+            IsBusy = false;
         }
     }
+
+    private void DoLogout() {
+        error = null;
+        TokenStore.Clear();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    private void NavigateToApp() {
+        Nav.NavigateTo("/dispatch-center");
+    }
+
+    private RenderFragment LoginHint => builder => {
+        builder.AddMarkupContent(0, @"
+<div class=""login-hint"">
+    <p class=""login-hint-title"">Demo tenant access</p>
+
+    <p class=""login-hint-intro"">
+        Planner is configured with multiple demo tenants.
+        Each tenant represents an independent city environment.
+    </p>
+
+    <div class=""tenant-example"">
+        <p><strong>Example tenant: Perth</strong></p>
+
+        <p>
+            <strong>Admin</strong><br />
+            Email: <code>perth.admin@demo.local</code><br />
+            Password: <code>admin123</code>
+        </p>
+
+        <p>
+            <strong>User</strong><br />
+            Email: <code>perth.user@demo.local</code><br />
+            Password: <code>user123</code>
+        </p>
+    </div>
+
+    <p class=""login-hint-footnote"">
+        To access other demo tenants, replace <code>perth</code> in the email address with one of:
+        <br />
+        <code>sydney</code>, <code>melbourne</code>, <code>taipei</code>, <code>auckland</code>, <code>christchurch</code>.
+        <br /><br />
+        Roles are inferred from the email naming convention.
+        Credentials are intentionally visible for demo purposes.
+    </p>
+</div>");
+    };
 }
