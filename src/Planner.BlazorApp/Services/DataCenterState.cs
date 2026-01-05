@@ -203,6 +203,35 @@ public sealed class DataCenterState(
         CollectionChanged?.Invoke("Jobs");
     }
 
+    public void EnsureJobsFromCustomers()
+    {
+        if (Customers.Count == 0 || Jobs.Count > 0)
+            return;
+
+        Jobs.Clear();
+
+        var nextId = 0;
+        foreach (var c in Customers)
+        {
+            Jobs.Add(new JobFormModel {
+                JobId = nextId++,
+                JobType = 1,
+                Name = c.Name,
+                Latitude = c.Latitude,
+                Longitude = c.Longitude,
+                LocationId = c.LocationId,
+                ServiceTimeMinutes = c.DefaultServiceMinutes,
+                ReadyTime = 0,
+                DueTime = 480,
+                PalletDemand = 2,
+                WeightDemand = 100,
+                RequiresRefrigeration = c.RequiresRefrigeration
+            });
+        }
+
+        CollectionChanged?.Invoke("Jobs");
+    }
+
     public void ClearJobs()
     {
         Jobs.Clear();

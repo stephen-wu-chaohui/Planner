@@ -9,7 +9,7 @@
 <div>
 
     <!-- MAIN ENTITY MODAL -->
-    <div class="modal fade @((IsVisible && !IsWaiting) ? "show d-block" : "")" tabindex="-1">
+    <div class="modal fade @(IsVisible ? "show d-block" : "")" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
 
             <div class="modal-content planner-modal-light">
@@ -62,47 +62,14 @@
             </div>
         </div>
     </div>
-
-    <!-- WAITING / OPTIMIZATION MODAL -->
-    <div class="modal fade @(IsWaiting ? "show d-block" : "")"
-         tabindex="-1" style="background:rgba(0,0,0,0.4)">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content text-center p-3 shadow-sm">
-                <div class="modal-header">
-                    <h5 class="modal-title">Please wait for about @remainingMinutes minute(s).</h5>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted">@waitingMessage</p>
-                    <div class="spinner-border text-primary mt-2"></div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
 </div>
 
 
 @code {
     private bool IsVisible { get; set; }
-    private bool IsWaiting { get; set; }
-    private string ActiveTab { get; set; } = "Customers";
-
-    private string waitingMessage = "We're now generating an optimized set of delivery routes for your fleet.\n\n"
-    + "This process sends your job and vehicle data to our routing engine, where advanced algorithms evaluate constraints, calculate travel times, and determine the most efficient plan.\n\n"
-    + "You'll see the updated routes as soon as the optimization completes.";
-
-    private double remainingMinutes;
-    private System.Timers.Timer? waitTimer;
+    private string ActiveTab { get; set; } = "Jobs";
 
     public void OpenTab(string tab) {
-        if (IsWaiting) {
-            // If optimization is running, show the waiting modal instead
-            IsVisible = false;
-            StateHasChanged();
-            return;
-        }
-
         ActiveTab = tab;
         IsVisible = true;
         StateHasChanged();
@@ -116,45 +83,4 @@
         IsVisible = false;
     }
 
-    public void StartOptimizationWait(double estimatedMinutes = 2) {
-        IsVisible = false;
-
-        IsWaiting = true;
-        remainingMinutes = estimatedMinutes;
-
-        waitTimer?.Dispose();
-        waitTimer = new System.Timers.Timer(60000); // every minute
-        waitTimer.Elapsed += (_, _) => {
-            remainingMinutes -= 1;
-            if (remainingMinutes <= 0) {
-                EndOptimizationWait();
-            }
-            InvokeAsync(StateHasChanged);
-        };
-        waitTimer.Start();
-    }
-
-    public void EndOptimizationWait() {
-        waitTimer?.Stop();
-        waitTimer?.Dispose();
-        IsWaiting = false;
-        remainingMinutes = 0;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (firstRender) {
-            DataCenter.CollectionChanged += async msg => {
-                EndOptimizationWait();
-                ActiveTab = "Routes";
-                // IsVisible = true;
-                IsVisible = false;
-                await InvokeAsync(StateHasChanged);
-            };
-
-            DataCenter.StartWait += async waitingMinutes => {
-                StartOptimizationWait(waitingMinutes);
-                await InvokeAsync(StateHasChanged);
-            };
-        }
-    }
 }

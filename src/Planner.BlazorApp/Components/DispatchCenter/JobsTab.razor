@@ -1,6 +1,7 @@
 ﻿@using Planner.Domain
 @using Planner.Contracts.Optimization.Requests
 @using Planner.BlazorApp.Forms
+@using Planner.BlazorApp.Services
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -125,6 +126,8 @@
     [Parameter] public List<Vehicle> Vehicles { get; set; } = new();
     [Parameter] public EventCallback OnSolve { get; set; }
 
+    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
+
     private JobFormModel? Editing;
     private bool IsNew;
 
@@ -138,46 +141,15 @@
     private bool editingRefrig;
 
     protected override Task OnInitializedAsync() {
-        if (Customers.Count > 0 && Jobs.Count == 0)
-            return CreateJobsForAllCustomers();
+        if (Customers.Count > 0 && Jobs.Count == 0) {
+            DataCenter?.EnsureJobsFromCustomers();
+        }
 
         return Task.CompletedTask;
     }
 
-    private JobFormModel CreateJobFromCustomer(CustomerFormModel c) =>
-        new JobFormModel {
-            JobId = NextId(),
-            JobType = 1,
-            LocationId = c.LocationId,
-            Name = c.Name,
-            Latitude = c.Latitude,
-            Longitude = c.Longitude,
-            ServiceTimeMinutes = c.DefaultServiceMinutes,
-            RequiresRefrigeration = c.RequiresRefrigeration,
-            ReadyTime = 0,
-            DueTime = 480
-        };
-
     private Task CreateJobsForAllCustomers() {
-        Jobs.Clear();
-
-        foreach (var c in Customers) {
-            Jobs.Add(new JobFormModel {
-                JobId = NextId(),
-                JobType = 1,
-                Name = c.Name,
-                Latitude = c.Latitude,
-                Longitude = c.Longitude,
-                LocationId = c.LocationId,
-                ServiceTimeMinutes = c.DefaultServiceMinutes,
-                ReadyTime = 0,
-                DueTime = 480,
-                PalletDemand = 2,
-                WeightDemand = 100,
-                RequiresRefrigeration = c.RequiresRefrigeration
-            });
-        }
-
+        DataCenter?.EnsureJobsFromCustomers();
         return Task.CompletedTask;
     }
 
@@ -263,7 +235,7 @@
 
     private void CloseEditModal() => Editing = null;
     private void Delete(JobFormModel j) => Jobs.Remove(j);
-    private void ClearAll() => Jobs.Clear();
+	private void ClearAll() => DataCenter?.ClearJobs();
 
     private int NextId() =>
         Jobs.Count == 0 ? 0 : Jobs.Max(j => j.JobId) + 1;

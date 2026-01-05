@@ -19,7 +19,7 @@
         <div class="d-flex gap-2">
                 <button class="btn btn-info" @onclick="ShowWelcomeGuide">Show Welcome Guide</button>
                 @if (TokenStore.IsAuthenticated && TokenStore.AccessToken!.GetRole() == "Admin") {
-                <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Optimization Wizard</button>
+                <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Planning Wizard</button>
             }
         </div>
         <h5 class="ms-auto mb-0">Dispatch Centre</h5>

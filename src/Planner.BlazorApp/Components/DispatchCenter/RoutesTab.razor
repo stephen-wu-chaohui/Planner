@@ -2,88 +2,169 @@
 @using Planner.Contracts.Optimization.Outputs
 
 <div class="planner-tab-wrapper">
-    <div class="table-scroll">
-        <table class="polished-table table table-sm table-bordered align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th class="sticky-col">Vehicle</th>
-                        <th>Jobs Served</th>
-                        <th>Distance (km)</th>
-                        <th>Duration (min)</th>
-                        <th>Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var r in Routes) {
-                        <tr class="vehicle-row @(!r.Used ? "text-muted" : "")">
-                            <td><strong>@r.VehicleName</strong></td>
-                            <td>@r.Stops.Count</td>
-                            <td>@($"{r.TotalDistanceKm:F1}")</td>
-                            <td>@($"{r.TotalMinutes:F0}")</td>
-                            <td>@($"{r.TotalCost:F2}")</td>
+    @if (Routes.Count == 0) {
+        <RoutesBuildPanel TotalJobs="TotalJobs"
+                         TickSeconds="TickSeconds"
+                         IsBuilding="IsBuilding"
+                         CompletedJobs="CompletedJobs"
+                         OnBuildRoutes="BuildRoutes" />
+    }
+    else {
+        <div class="table-scroll">
+            <table class="polished-table table table-sm table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="sticky-col">Vehicle</th>
+                            <th>Jobs Served</th>
+                            <th>Distance (km)</th>
+                            <th>Duration (min)</th>
+                            <th>Cost</th>
                         </tr>
-                        @if (r.Stops.Any()) {
-                            <tr>
-                                <td colspan="5" class="p-0">
-                                    <table class="table table-sm mb-0">
-                                        <thead class="table-secondary">
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Job</th>
-                                                <th>Type</th>
-                                                <th>Arrival</th>
-                                                <th>Departure</th>
-                                                <th>Pallets</th>
-                                                <th>Weight</th>
-                                                <th>Refrig</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @for (int i = 0; i < r.Stops.Count; i++) {
-                                                var s = r.Stops[i];
-                                                <tr>
-                                                    <td>@(i + 1)</td>
-                                                    <td>@s.Name</td>
-                                                    <td>@s.JobType</td>
-                                                    <td>@Readble(s.ArrivalTime)</td>
-                                                    <td>@Readble(s.DepartureTime)</td>
-                                                    <td>@s.PalletLoad</td>
-                                                    <td>@s.WeightLoad</td>
-                                                    <td>@s.RefrigeratedLoad</td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </td>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Routes) {
+                            <tr class="vehicle-row @(!r.Used ? "text-muted" : "")">
+                                <td><strong>@r.VehicleName</strong></td>
+                                <td>@r.Stops.Count</td>
+                                <td>@($"{r.TotalDistanceKm:F1}")</td>
+                                <td>@($"{r.TotalMinutes:F0}")</td>
+                                <td>@($"{r.TotalCost:F2}")</td>
                             </tr>
+                            @if (r.Stops.Any()) {
+                                <tr>
+                                    <td colspan="5" class="p-0">
+                                        <table class="table table-sm mb-0">
+                                            <thead class="table-secondary">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Job</th>
+                                                    <th>Type</th>
+                                                    <th>Arrival</th>
+                                                    <th>Departure</th>
+                                                    <th>Pallets</th>
+                                                    <th>Weight</th>
+                                                    <th>Refrig</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (int i = 0; i < r.Stops.Count; i++) {
+                                                    var s = r.Stops[i];
+                                                    <tr>
+                                                        <td>@(i + 1)</td>
+                                                        <td>@s.Name</td>
+                                                        <td>@s.JobType</td>
+                                                        <td>@Readble(s.ArrivalTime)</td>
+                                                        <td>@Readble(s.DepartureTime)</td>
+                                                        <td>@s.PalletLoad</td>
+                                                        <td>@s.WeightLoad</td>
+                                                        <td>@s.RefrigeratedLoad</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            }
                         }
-                    }
-                </tbody>
-            </table>
-    </div>
+                    </tbody>
+                </table>
+        </div>
+        <button class="btn btn-outline-success" @onclick="BuildRoutes" disabled="@IsBuilding">
+            🧮 Re-Build routes
+        </button>
+    }
 
-    <!-- FIXED ACTION BAR -->
-    <div class="planner-tab-actions d-flex justify-content-between align-items-center">
-        <button class="btn btn-outline-success" @onclick="SolveVrp">🧮 Solve VRP</button>
-        @if (Routes.Count == 0) {
-            <div class="alert alert-info mb-0">
-                No routes available. Run <strong>“Solve VRP”</strong> to generate routes.
-            </div>
-        }
-    </div>
 </div>
 
 @code {
     [Parameter] public List<RouteResult> Routes { get; set; } = new();
 
+    [Parameter] public int TickSeconds { get; set; } = 7;
+
     [CascadingParameter] public DataCenterState? DataCenter { get; set; }
 
-    private async Task SolveVrp()
+    private System.Threading.Timer? _progressTimer;
+    private bool _isBuilding;
+    private int _elapsedSlots;
+
+    private bool IsBuilding => _isBuilding;
+    private int TotalJobs => Math.Max(0, DataCenter?.Jobs?.Count ?? 0);
+    private int EstimatedSlots => TotalJobs;
+    private int CompletedJobs => Math.Min(EstimatedSlots, _elapsedSlots);
+
+    private int ProgressPercent => EstimatedSlots <= 0
+        ? 0
+        : (int)Math.Clamp((CompletedJobs * 100.0) / EstimatedSlots, 0, 100);
+
+    private int SafeTickSeconds => Math.Clamp(TickSeconds, 2, 20);
+
+    protected override void OnInitialized()
     {
+        if (DataCenter is not null)
+        {
+            DataCenter.CollectionChanged += OnCollectionChanged;
+            DataCenter.EnsureJobsFromCustomers();
+        }
+    }
+
+    public void Dispose()
+    {
+        StopProgress();
+        if (DataCenter is not null)
+        {
+            DataCenter.CollectionChanged -= OnCollectionChanged;
+        }
+    }
+
+    private void OnCollectionChanged(string msg)
+    {
+        if (Routes.Count > 0 || msg == "Routes")
+        {
+
+            // Ensure UI reaches 100% before we hide the progress panel.
+            _elapsedSlots = EstimatedSlots;
+            _ = InvokeAsync(StateHasChanged);
+
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task BuildRoutes()
+    {
+        if (IsBuilding) return;
+
         if (DataCenter != null)
         {
+            StartProgress();
             await DataCenter.SolveVrp();
         }
+    }
+
+    private void StartProgress()
+    {
+        _isBuilding = true;
+        _elapsedSlots = 0;
+
+        StopProgressTimerOnly();
+
+        _progressTimer = new System.Threading.Timer(_ =>
+        {
+            _elapsedSlots++;
+            _ = InvokeAsync(StateHasChanged);
+        }, null, dueTime: TimeSpan.FromSeconds(SafeTickSeconds), period: TimeSpan.FromSeconds(SafeTickSeconds));
+    }
+
+    private void StopProgress()
+    {
+        StopProgressTimerOnly();
+        _isBuilding = false;
+    }
+
+    private void StopProgressTimerOnly()
+    {
+        _progressTimer?.Dispose();
+        _progressTimer = null;
     }
 
     private string Readble(double minutesFromStart)

@@ -37,7 +37,7 @@
 	width: 100%;
 	padding: 10px 12px;
 	border-radius: 6px;
-	border: 1px solid #ccc;
+	border: 2px solid #ccc;
 }
 
 	.login-input:disabled {
