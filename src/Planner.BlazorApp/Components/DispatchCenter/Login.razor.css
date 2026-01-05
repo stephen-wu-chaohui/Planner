@@ -12,7 +12,7 @@
 
 .login-card {
 	width: 720px;
-	padding: 32px;
+	padding: 18px;
 	background: white;
 	border-radius: 10px;
 	box-shadow: 0 10px 30px rgba(0,0,0,0.08);
@@ -27,18 +27,21 @@
 	}
 
 .login-field {
+	display: flex;
+	align-items: center;
 	margin-bottom: 16px;
 }
 
 	.login-field label {
-		display: block;
-		margin-bottom: 6px;
+		flex: 0 0 80px;
+		margin-bottom: 0;
+		margin-right: 12px;
 		font-size: 0.9rem;
 		color: #555;
 	}
 
 .login-input {
-	width: 100%;
+	flex: 1;
 	padding: 10px 12px;
 	border-radius: 6px;
 	border: 2px solid #ccc;
