@@ -10,8 +10,8 @@
 	pointer-events: auto;
 }
 
-.wizard-backdrop {
-	visibility: hidden;
+/* Hidden by default only when the component sets visibility:hidden via inline style */
+.wizard-backdrop[style*="visibility: hidden"] {
 	pointer-events: none;
 }
 

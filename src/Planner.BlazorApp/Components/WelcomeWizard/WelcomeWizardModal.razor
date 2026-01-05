@@ -1,21 +1,24 @@
 ﻿@inherits ComponentBase
-@inject IJSRuntime JS
-@inject HttpClient Http
-@inject IConfiguration Configuration
+@inject WizardService Wizard
 
-<div class="wizard-backdrop" style="visibility: @(IsOpen? "visible" : "hidden")">
-    @if (CurrentPage != null) {
+<div class="wizard-backdrop" style="visibility: @(Wizard.IsOpen ? "visible" : "hidden")">
+    @if (CurrentStep is not null) {
         <div class="wizard-modal @AnimationClass">
 
-            <!-- TOP IMAGE -->
-            <div class="wizard-image">
-                <img src="@CurrentPage.ImageUrl" alt="">
-            </div>
+            @if (!string.IsNullOrWhiteSpace(CurrentStep.ImageUrl)) {
+                <div class="wizard-image">
+                    <img src="@CurrentStep.ImageUrl" alt="">
+                </div>
+            }
 
-            <!-- DESCRIPTION -->
-            <p class="wizard-description">@(CurrentPage.Description ?? "")</p>
+            @if (!string.IsNullOrWhiteSpace(CurrentStep.Title)) {
+                <h2 class="wizard-title">@CurrentStep.Title</h2>
+            }
 
-            <!-- ON LAST PAGE: “Don’t show again” -->
+            @if (!string.IsNullOrWhiteSpace(CurrentStep.Description)) {
+                <p class="wizard-description">@CurrentStep.Description</p>
+            }
+
             @if (IsLast) {
                 <div class="wizard-dontshow">
                     <input type="checkbox" id="dontShow" @bind="dontShowAgain" />
@@ -23,14 +26,12 @@
                 </div>
             }
 
-            <!-- PROGRESS DOTS -->
             <div class="wizard-dots">
-                @for (int i = 0; i < Pages.Count; i++) {
-                    <span class="wizard-dot @(i == index ? "active" : "")"></span>
+                @for (var i = 0; i < Steps.Count; i++) {
+                    <span class="wizard-dot @(i == Wizard.StepIndex ? "active" : "")"></span>
                 }
             </div>
 
-            <!-- CONTROLS -->
             <div class="wizard-controls">
                 <button class="btn-secondary" @onclick="Prev" disabled="@IsFirst">Previous</button>
 
@@ -40,47 +41,32 @@
                     <button class="btn-primary" @onclick="Finish">Finish</button>
                 }
 
-            <button class="btn-close" @onclick="Close">×</button>
+                <button class="btn-close" @onclick="Close">×</button>
+            </div>
         </div>
-
-    </div>
     }
 </div>
 
 @code {
-    [Parameter] public bool IsOpen { get; set; }
-    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
-
-    private int index = 0;
+    private IReadOnlyList<WizardStep> Steps { get; } = WelcomeWizardDefinition.Steps;
     private string AnimationClass = "";
-    private WizardPage? CurrentPage => (index >= 0 && index < Pages.Count) ? Pages[index] : null;
-    private List<WizardPage> Pages = new();
-    private bool dontShowAgain = false;
+    private bool dontShowAgain;
 
-    protected override async Task OnInitializedAsync() {
-        var url = Configuration["DataEndpoints:WizardPageList"] ?? "";
-        if (!string.IsNullOrEmpty(url)) {
-            Pages = await Http.GetFromJsonAsync<List<WizardPage>>(url) ?? [];
-        }
+    private WizardStep? CurrentStep =>
+        (Wizard.StepIndex >= 0 && Wizard.StepIndex < Steps.Count) ? Steps[Wizard.StepIndex] : null;
+
+    protected override void OnInitialized() {
+        Wizard.OnChange += HandleWizardChanged;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (firstRender) {
-            // ONLY now we can use JS interop safely
-            var hasSeen = await JS.InvokeAsync<bool>("wizardStorage.hasSeen");
-
-            if (hasSeen) {
-                await IsOpenChanged.InvokeAsync(false);
-            } else {
-                await IsOpenChanged.InvokeAsync(true);
-            }
-
-            StateHasChanged();  // force UI update
-        }
+    public void Dispose() {
+        Wizard.OnChange -= HandleWizardChanged;
     }
 
-    private bool IsFirst => index == 0;
-    private bool IsLast => index == Pages.Count - 1;
+    private void HandleWizardChanged() => InvokeAsync(StateHasChanged);
+
+    private bool IsFirst => Wizard.StepIndex <= 0;
+    private bool IsLast => Steps.Count > 0 && Wizard.StepIndex >= Steps.Count - 1;
 
     private void Animate(string direction) {
         // direction: "next" or "prev"
@@ -98,37 +84,23 @@
 
     private void Next() {
         if (IsLast) return;
-        index++;
+        Wizard.NextStep();
         Animate("next");
     }
 
     private void Prev() {
         if (IsFirst) return;
-        index--;
+        Wizard.PreviousStep();
         Animate("prev");
     }
 
     private async Task Finish() {
-        if (dontShowAgain)
-            await JS.InvokeVoidAsync("wizardStorage.setSeen");
-
-        await Close();
+        Close();
+        await Task.CompletedTask;
     }
 
-    private async Task Close() {
-        index = 0;
-        await IsOpenChanged.InvokeAsync(false);
-    }
-
-    public sealed class WizardPage
-    {
-        public string ImageUrl { get; init; } = "";
-        public string IconUrl  { get; init; } = "";
-        public string Title     { get; init; } = "";
-        public string Description { get; init; } = "";
-    }
-
-    public sealed class WizardPageList {
-        public List<WizardPage> Pages { get; set; } = new();
+    private void Close() {
+        dontShowAgain = false;
+        Wizard.Close();
     }
 }

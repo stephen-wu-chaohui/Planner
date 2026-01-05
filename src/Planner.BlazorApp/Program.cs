@@ -35,6 +35,7 @@ builder.Services.AddScoped<PlannerApiClient>();
 // App services
 builder.Services.AddScoped<IOptimizationHubClient, OptimizationHubClient>();
 builder.Services.AddScoped<DataCenterState>();
+builder.Services.AddScoped<WizardService>();
 
 var app = builder.Build();
 
