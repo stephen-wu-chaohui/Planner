@@ -1,247 +1,219 @@
-﻿<picture>
+<picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
-  <img alt="Planner — Clean Architecture • OR-Tools VRP • RabbitMQ • Azure" src="assets/banner-light.svg">
+  <img alt="Planner - Clean Architecture / OR-Tools / RabbitMQ / SignalR / Multi-tenant" src="assets/banner-light.svg">
 </picture>
 
-# Planner — Fleet Optimization and Visualization Platform
+# Planner
 
-**Planner** is a modular .NET 8 and Blazor-based system that demonstrates how **optimization algorithms** (Google OR-Tools) can be integrated into a **clean, message-driven architecture** for intelligent **fleet management**.  
-It combines optimization science with modern .NET engineering to create a purpose-driven, scalable, and interactive platform.
+Planner is a modular fleet planning / optimization playground built with **.NET 8**:
 
----
+- **UI**: `Planner.BlazorApp` (Blazor Server) with a map-centric Dispatch Center
+- **API**: `Planner.API` (ASP.NET Core) for CRUD + optimization commands + SignalR hub
+- **Worker**: `Planner.Optimization.Worker` (BackgroundService) running **Google OR-Tools**
+- **Messaging**: RabbitMQ decouples API and optimizer
+- **Data**: SQL Server (**EF Core**) with explicit migrate/seed tooling
+- **PaaS-ready**: JWT auth + role-based authorization + **multi-tenant isolation**
 
-## 🗺️ DispatchCenter — The Operational Core
+## Why the README changed over time
 
-`DispatchCenter.razor` is the centerpiece of the Planner ecosystem — a **map-driven orchestration layer** that connects the Blazor UI, data services, and backend optimization pipelines.  
-It showcases .NET 8 full-stack capability with live data, dependency injection, and asynchronous optimization updates.
+The earlier README focused on the UI (Dispatch Center) and the solver data-flow, and referenced JSON-in-`wwwroot` demo persistence.
+The current repo has moved to:
+- **EF Core + SQL Server** for persistence (with migrations + seed scripts)
+- **JWT authentication/authorization**
+- **Multi-tenancy** as a first-class boundary (TenantId carried end-to-end)
+- **GitHub Actions CI/CD** for Azure deployments
 
-### 🔹 Architectural Role
-DispatchCenter unifies workflow between **UI**, **state management**, and **optimization**:
+This README reflects the current situation.
 
-| Layer | Description |
-|-------|--------------|
-| **Blazor Presentation Layer** | Built with Blazor Server (.NET 8), Bootstrap 5, and Google Maps JS interop (`PlannerMap.razor`, `googleMap.js`). |
-| **Data Coordination Layer** | `DataCenterService` loads and synchronizes JSON domain data (customers, vehicles, jobs, routes). |
-| **Real-Time Update Layer** | `IMessageHubReceiver` (SignalR client) subscribes to optimization results and updates the map dynamically. |
-| **Optimization Interface** | User actions like *Solve VRP* or *Run Solver* post structured requests to Planner.API. |
+## Architecture
 
----
+```mermaid
+flowchart LR
+  UI["Planner.BlazorApp<br/>Blazor Server"] -->|HTTP/JSON| API["Planner.API<br/>ASP.NET Core API"]
+  UI -->|SignalR client| API
 
-### 🔹 Developer-Focused Features
-
-#### 🧭 Map-Centric UX
-- Dynamic markers and route overlays  
-- Custom icons (vehicles, depots, customers)  
-- Context menus and Ctrl-click coordinate picking  
-- Dark-mode map style for visual clarity  
-
-#### 🧠 Reactive State Management
-- Dependency-injected `DataCenterService` (singleton scope)  
-- Async initialization via `OnInitializedAsync()`  
-- Centralized subscription to SignalR for all components  
-
-#### ⚙️ Event-Driven Workflow
-
-    Right-click → Open Modal → Edit Entity → Update DataCenterService
-                 ↓
-              PlannerMap rerenders
-                 ↓
-          User triggers “Solve VRP”
-                 ↓
-       HTTP → API → RabbitMQ → Worker
-                 ↓
-        SignalR pushes result → Map updates
-
-#### 💾 Lightweight Persistence
-All domain data stored in `/wwwroot/data/*.json`, enabling simulation, debugging, and offline sharing — easily replaceable with EF Core or Dapper later.
-
-#### 🧱 Modular Components
-- `CustomersTab.razor`
-- `VehiclesTab.razor`
-- `JobsTab.razor`
-- `RoutesTab.razor`
-
-Bootstrap modals are toggled through Blazor event binding; each supports vertical or full-screen layouts.
-
-#### 🧩 Extensibility
-DispatchCenter is engineered for growth:
-- Plug-in solvers (VRP, Scheduling, Load Balancing)  
-- Additional visualization (heatmaps, clusters)  
-- REST / gRPC APIs  
-- Cloud-ready CI/CD pipelines  
-
----
-
-### 🔹 Technology Stack
-
-| Area | Implementation |
-|-------|----------------|
-| **Frontend** | Blazor Server (.NET 8), Bootstrap 5, Google Maps JS API |
-| **Backend** | Planner.API + RabbitMQ + Planner.Optimization.Worker |
-| **Communication** | SignalR (real-time) + HTTP JSON |
-| **State/Data** | Scoped `DataCenterService`, DI, JSON persistence |
-| **Optimization** | Google OR-Tools (Linear & VRP) |
-| **Pattern** | Clean Architecture + CQRS-style message routing |
-
----
-
-### 🧭 Summary
-DispatchCenter is more than a dashboard — it’s a **.NET 8 orchestration layer** uniting spatial data visualization, asynchronous optimization, and clean architecture.  
-It demonstrates proficiency in **Blazor**, **SignalR**, **RabbitMQ**, and **OR-Tools** — transforming complex fleet data into intuitive, interactive, and optimized decisions.
-
----
-
-## 🚚 Vehicle Routing Problem (VRP) Solver
-
-The **VRP Solver** is the purpose-driven optimization engine of Planner.  
-It converts fleet data into **optimized multi-vehicle routes** under real-world constraints using **Google OR-Tools**.
-
-### 🔸 Input Example
-```json
-{
-  "vehicles": [
-    { "id": "Truck_1", "capacity": 40, "start": "Depot_A", "end": "Depot_A", "maxDistance": 180 },
-    { "id": "Truck_2", "capacity": 40, "start": "Depot_A", "end": "Depot_A", "maxDistance": 180 }
-  ],
-  "customers": [
-    { "id": "C1", "demand": 10, "serviceTime": 8, "timeWindow": [480, 600], "location": [-32.02, 116.90] },
-    { "id": "C2", "demand": 20, "serviceTime": 10, "timeWindow": [540, 660], "location": [-32.33, 117.31] },
-    { "id": "C3", "demand": 15, "serviceTime": 5, "timeWindow": [600, 720], "location": [-33.05, 116.89] },
-    { "id": "C4", "demand": 5,  "serviceTime": 6, "timeWindow": [480, 720], "location": [-33.86, 116.33] }
-  ],
-  "depot": { "id": "Depot_A", "location": [-32.05, 116.93] },
-  "distanceMatrix": [
-    [0, 14, 23, 32, 45],
-    [14, 0, 15, 24, 36],
-    [23, 15, 0, 20, 28],
-    [32, 24, 20, 0, 18],
-    [45, 36, 28, 18, 0]
-  ],
-  "objectives": {
-    "minimizeDistance": true,
-    "balanceWorkload": true,
-    "respectTimeWindows": true
-  },
-  "options": {
-    "solver": "OR-Tools",
-    "searchStrategy": "GUIDED_LOCAL_SEARCH",
-    "timeLimitSeconds": 5
-  }
-}
+  API -->|AMQP publish| MQ[(RabbitMQ)]
+  MQ -->|AMQP consume| WK["Planner.Optimization.Worker<br/>OR-Tools"]
+  WK -->|AMQP publish| MQ
+  API -->|SignalR push| UI
 ```
 
-### 🔸 Output Example
-```json
-{
-  "routes": [
-    {
-      "vehicleId": "Truck_1",
-      "stops": [
-        { "id": "Depot_A", "arrival": 480 },
-        { "id": "C1", "arrival": 495, "departure": 503 },
-        { "id": "C2", "arrival": 540, "departure": 550 },
-        { "id": "Depot_A", "arrival": 605 }
-      ],
-      "totalDistance": 96.4,
-      "totalLoad": 30
-    },
-    {
-      "vehicleId": "Truck_2",
-      "stops": [
-        { "id": "Depot_A", "arrival": 480 },
-        { "id": "C3", "arrival": 600, "departure": 605 },
-        { "id": "C4", "arrival": 660, "departure": 666 },
-        { "id": "Depot_A", "arrival": 720 }
-      ],
-      "totalDistance": 101.8,
-      "totalLoad": 20
-    }
-  ],
-  "totalDistance": 198.2,
-  "totalVehiclesUsed": 2,
-  "computationTime": 0.472
-}
+## Project architecture summary
+
+### Product manager view
+
+- **User experience**: a Dispatch Center UI for managing fleets/jobs and running an optimization to generate routes and assignments.
+- **System behavior**: “Solve” is asynchronous; the UI requests a solve, the optimizer runs in the background, and the UI receives progress/results via real-time updates.
+- **Scalability**: the optimizer is a separate worker and can scale independently from the API/UI based on optimization load.
+- **Tenant isolation**: multi-tenancy is an end-to-end boundary (JWT → API → database → SignalR → optimization messages).
+- **Release safety**: database changes are explicit (migrate/seed tooling and CI/CD) to reduce deployment risk.
+
+### Senior developer view
+
+- **Runtime topology**: `Planner.BlazorApp` ↔ `Planner.API` (HTTP + SignalR), `Planner.API` ↔ `Planner.Optimization.Worker` (RabbitMQ AMQP).
+- **Layering**: `Planner.Domain` (model), `Planner.Application` (use cases), `Planner.Infrastructure` (EF Core/auth/adapters), with host projects for API/UI/Worker.
+- **Contracts**: `Planner.Contracts` for API DTOs and `Planner.Optimization.Contracts` for queue message payloads to keep boundaries explicit and versionable.
+- **Multi-tenancy**: `tenant_id` claim drives tenant context, EF Core query filters, SignalR group fan-out, and message payload scoping.
+- **Database lifecycle**: migrations and append-only seed scripts run via `tools/Planner.Tools.DbMigrator`; runtime auto-migrate is intentionally avoided.
+
+## Multi-tenancy (PaaS boundary)
+
+Multi-tenancy is enforced across storage, API, and realtime updates:
+
+- **JWT claim**: tokens include `tenant_id` (see `src/Planner.Infrastructure/Auth/JwtTokenGenerator.cs`).
+- **Request tenant context**: `TenantContextMiddleware` sets `ITenantContext` from the JWT claim (see `src/Planner.API/Middleware/TenantContextMiddleware.cs`).
+- **EF Core query filters**: tenant-scoped entities are filtered by `TenantId` at the DbContext level (see `src/Planner.Infrastructure/Persistence.PlannerDbContext.cs`).
+- **SignalR isolation**: clients join tenant groups (`tenant:{tenantId}`) so results are pushed only to the correct tenant (see `src/Planner.API/SignalR/PlannerHub.cs`).
+- **Optimization messages**: requests/results carry `TenantId` through RabbitMQ and the worker.
+
+## Authentication & authorization
+
+- **Auth**: JWT Bearer authentication (see `src/Planner.Infrastructure/ServiceRegistration.cs`).
+- **Roles**: role claim is `ClaimTypes.Role` and is used for policies.
+- **Admin policy**: `/api/vrp/solve` is protected by `AdminOnly` (see `src/Planner.API/Controllers/OptimizationController.cs`).
+
+Demo note: `AuthController` currently uses a demo password check (plain-text comparison). For a real PaaS, replace this with a proper password hashing/identity implementation.
+
+## EF Core + database lifecycle
+
+- `PlannerDbContext` lives in `src/Planner.Infrastructure/Persistence.PlannerDbContext.cs`.
+- Migrations are in `src/Planner.Infrastructure/Migrations/`.
+- The **API does not migrate or seed at runtime** (see `.github/WORKFLOWS.md`); database changes are explicit.
+
+### DbMigrator tool (migrate + seed)
+
+Use `tools/Planner.Tools.DbMigrator`:
+
+```bash
+dotnet run --project tools/Planner.Tools.DbMigrator migrate
+dotnet run --project tools/Planner.Tools.DbMigrator seed
 ```
 
----
+Seed scripts are **append-only** and tracked via `__SeedHistory` (see `tools/Planner.Tools.DbMigrator/SeedScripts/README.md`).
 
-### 🔸 Algorithmic Components (OR-Tools)
-| Component | Function |
-|------------|-----------|
-| **RoutingIndexManager** | Maps indices to actual nodes |
-| **RoutingModel** | Defines vehicles, nodes, and depots |
-| **Cost Evaluator** | Computes travel cost/time |
-| **Constraints** | Applies capacity, distance, and time windows |
-| **Search Parameters** | Configures metaheuristics (Tabu, GLS, CP-SAT) |
-| **Solution Formatter** | Converts solver output to `VrpResultMessage` |
+## Repository layout
 
----
+- `src/Planner.BlazorApp` - Blazor UI (map + Dispatch Center)
+- `src/Planner.API` - API + SignalR hub + background consumers
+- `src/Planner.Application` - use cases and orchestration services
+- `src/Planner.Domain` - core domain model
+- `src/Planner.Contracts` - API-facing DTO contracts
+- `src/Planner.Optimization.Worker` - queue consumer + solver execution
+- `src/Planner.Optimization` - OR-Tools VRP implementation
+- `src/Planner.Optimization.Contracts` - optimizer request/result message contracts
+- `src/Planner.Messaging` - RabbitMQ connection + message bus
+- `src/Planner.Infrastructure` - EF Core, auth, hosted services, cross-cutting wiring
+- `tools/Planner.Tools.DbMigrator` - EF Core migrate + seed runner
+- `test/` - unit/integration/end-to-end test projects
+- `.github/workflows/` - CI/CD pipelines
 
-### 🔸 Data Flow
+## Local development
+
+### Prerequisites
+
+- .NET SDK `8.0.x`
+- RabbitMQ (Docker is easiest)
+- SQL Server (LocalDB, SQL Express, or Docker)
+- A Google Maps API key (for the map view)
+
+### Start dependencies (Docker)
+
+RabbitMQ:
+```bash
+docker run -d --name planner-rabbitmq --hostname planner-rabbitmq --restart unless-stopped \
+  -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 ```
-DispatchCenter
-   ↓ (HTTP POST)
-Planner.API
-   ↓ (publish)
-RabbitMQ
-   ↓ (consume)
-Planner.Optimization.Worker (OR-Tools)
-   ↓ (result)
-SignalR → DispatchCenter
+
+SQL Server (optional if you use LocalDB):
+```bash
+docker run -d --name planner-sql --restart unless-stopped \
+  -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Your_password123" \
+  -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
 ```
 
-### 🔸 Visualization
+### Configure required settings
+
+`Planner.API` fails fast if required configuration is missing (see `src/Planner.API/Program.cs`).
+For local dev, the simplest is environment variables or the Visual Studio launch profiles.
+
+PowerShell example:
+```powershell
+$env:ConnectionStrings__PlannerDb = "Data Source=localhost;Initial Catalog=PlannerDB;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;"
+$env:RabbitMq__Host = "localhost"
+$env:RabbitMq__Port = "5672"
+$env:RabbitMq__User = "guest"
+$env:RabbitMq__Pass = "guest"
+$env:SignalR__Client = "https://localhost:7014"
+$env:SignalR__Route = "/hubs/planner"
+$env:JwtOptions__Issuer = "planner-local"
+$env:JwtOptions__Audience = "planner-local"
+$env:JwtOptions__SigningKey = "dev-signing-key-change-me-dev-signing-key"
+$env:JwtOptions__Secret = "dev-secret-change-me-dev-secret-change-me"
+
+$env:Api__BaseUrl = "https://localhost:7085/"
+$env:SignalR__Server = "https://localhost:7085"
+$env:GoogleMaps__ApiKey = "<your-google-maps-api-key>"
+$env:GoogleMaps__MapId = "<optional-google-map-id>"
+```
+
+### Prepare the database
+
+```bash
+dotnet run --project tools/Planner.Tools.DbMigrator migrate
+dotnet run --project tools/Planner.Tools.DbMigrator seed
+```
+
+The seed scripts create multiple demo tenants (cities) and demo users.
+
+### Run the services
+
+In separate terminals:
+```bash
+dotnet run --project src/Planner.API
+dotnet run --project src/Planner.Optimization.Worker
+dotnet run --project src/Planner.BlazorApp
+```
+
+Typical URLs (from current launch profiles):
+- UI: `https://localhost:7014`
+- API: `https://localhost:7085`
+- RabbitMQ UI: `http://localhost:15672`
+
+### Demo login
+
+The Blazor login page (`/login`) is pre-filled with a seeded demo admin:
+- Email: `perth.admin@demo.local`
+- Password: `admin123`
+
+Other demo tenants: `sydney`, `melbourne`, `taipei`, `auckland`, `christchurch` (replace the prefix in the email).
+
+## CI/CD (GitHub Actions)
+
+Workflows live in `.github/workflows/` and are designed for an Azure dev environment.
+They use **Azure OIDC** (`azure/login@v2`) instead of storing service principal secrets.
+
+- `db-migrator-dev.yml`
+  - Builds `tools/Planner.Tools.DbMigrator`
+  - Runs `migrate` then `seed`
+  - Has a safety check to refuse running against non-dev targets
+- `deploy-planner-api-aca.yml`
+  - Builds and pushes `src/Planner.API/Dockerfile` to ACR
+  - Updates an Azure Container App and injects required env vars (DB, RabbitMQ, SignalR, JWT)
+- `deploy-planner-optimization-worker-aca.yml`
+  - Builds and pushes `src/Planner.Optimization.Worker/Dockerfile` to ACR
+  - Updates an Azure Container App and injects RabbitMQ env vars
+- `main_planner-blazor-dev.yml`
+  - Builds/publishes `Planner.BlazorApp`
+  - Deploys to Azure App Service (`azure/webapps-deploy@v3`)
+
+## Screenshots
+
 ![VRP schematic](docs/1.png)
-
-*Figure: Example of two optimized routes from a central depot, generated by OR-Tools and visualized in DispatchCenter.*
-
 ![VRP schematic](docs/2.png)
 
-*Figure: Example of two optimized routes from a central depot, generated by OR-Tools and visualized in DispatchCenter.*
 
----
 
-### 🔸 Why OR-Tools Matters
-- Proven optimization engine from **Google Research**  
-- Supports **Constraint Programming**, **Linear Programming**, and **Metaheuristic Search**  
-- Scalable, extensible, and high-performance  
-- Ideal foundation for .NET 8 microservice optimization platforms  
+## License
 
-**Planner + OR-Tools = Real-world optimization engineering**
-
----
-
-## 🧩 LinearSolver — Foundational Introduction
-
-The **LinearSolver** module is the educational base that validates Planner’s message flow:
-
-```
-Blazor Client → API → RabbitMQ → Optimization.Worker → SignalR → Blazor Client
-```
-
-The **LinearPoster** component allows posting raw JSON to `/api/Optimization/linearsolve`, verifying end-to-end communication before extending to VRP or scheduling modules.
-
----
-
-## ⚙️ System Architecture
-
-| Project | Role |
-|----------|------|
-| **Planner.BlazorApp** | UI & visualization (DispatchCenter, LinearSolver) |
-| **Planner.API** | REST / SignalR communication hub |
-| **Planner.Optimization.Worker** | Executes OR-Tools optimization |
-| **Planner.Infrastructure** | Messaging, configuration, DI |
-| **Planner.Contracts** | Shared DTOs & message definitions |
-
----
-
-## 🚀 Summary
-
-Planner demonstrates how a **.NET 8 developer** can integrate **Google OR-Tools** into a **clean, message-driven, real-time optimization platform** — uniting algorithmic logic, modern web architecture, and interactive visualization.
-
----
-👉 [📘 Full Project Documentation →](docs/README.md)
-
----
-✅ *Built with .NET 8 · Blazor Server · SignalR · RabbitMQ · Google OR-Tools*
+This project is licensed under the MIT License.
