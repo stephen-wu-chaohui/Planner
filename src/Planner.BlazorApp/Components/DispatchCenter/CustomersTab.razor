@@ -1,6 +1,7 @@
 ﻿@using System.Text.Json
 @using Planner.BlazorApp.Forms
 @using Planner.BlazorApp.Models
+@using Planner.BlazorApp.Services
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -90,7 +91,15 @@
 }
 
 @code {
-    [Parameter] public List<CustomerFormModel> Customers { get; set; } = new();
+    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
+    private List<CustomerFormModel> Customers = new();
+
+    protected override Task OnInitializedAsync() {
+        if (DataCenter != null) {
+            Customers = DataCenter.Customers;
+        }
+        return Task.CompletedTask;
+    }
 
     private CustomerFormModel? Editing;
     private bool IsNew;

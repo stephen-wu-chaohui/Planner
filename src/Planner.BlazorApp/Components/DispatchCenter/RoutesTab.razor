@@ -77,11 +77,12 @@
 </div>
 
 @code {
-    [Parameter] public List<RouteResult> Routes { get; set; } = new();
 
     [Parameter] public int TickSeconds { get; set; } = 7;
 
     [CascadingParameter] public DataCenterState? DataCenter { get; set; }
+
+    private List<RouteResult> Routes = new();
 
     private System.Threading.Timer? _progressTimer;
     private bool _isBuilding;
@@ -102,6 +103,7 @@
     {
         if (DataCenter is not null)
         {
+            Routes = DataCenter.Routes;
             DataCenter.CollectionChanged += OnCollectionChanged;
             DataCenter.EnsureJobsFromCustomers();
         }

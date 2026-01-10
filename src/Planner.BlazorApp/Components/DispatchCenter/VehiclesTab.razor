@@ -1,4 +1,5 @@
 ﻿@using System.Text.Json
+@using Planner.BlazorApp.Services
 @using Planner.Domain
 
 <div class="planner-tab-wrapper">
@@ -104,9 +105,8 @@
 }
 
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public List<Vehicle> Vehicles { get; set; } = new();
+    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
+    private List<Vehicle> Vehicles => DataCenter?.Vehicles ?? new List<Vehicle>();
 
     private Vehicle? Editing;
     private bool IsNew;
