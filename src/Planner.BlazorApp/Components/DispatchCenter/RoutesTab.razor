@@ -122,11 +122,10 @@
     {
         if (Routes.Count > 0 || msg == "Routes")
         {
+            Routes = DataCenter?.Routes;
 
             // Ensure UI reaches 100% before we hide the progress panel.
             _elapsedSlots = EstimatedSlots;
-            _ = InvokeAsync(StateHasChanged);
-
         }
 
         _ = InvokeAsync(StateHasChanged);
