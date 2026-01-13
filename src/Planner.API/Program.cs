@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
-using Planner.API;
 using Planner.API.BackgroundServices;
 using Planner.API.Middleware;
 using Planner.API.SignalR;

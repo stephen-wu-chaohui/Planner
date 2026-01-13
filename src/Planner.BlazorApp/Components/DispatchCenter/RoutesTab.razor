@@ -78,7 +78,7 @@
 
 @code {
 
-    [Parameter] public int TickSeconds { get; set; } = 7;
+    [Parameter] public int TickSeconds { get; set; } = 1;
 
     [CascadingParameter] public DataCenterState? DataCenter { get; set; }
 
@@ -97,7 +97,7 @@
         ? 0
         : (int)Math.Clamp((CompletedJobs * 100.0) / EstimatedSlots, 0, 100);
 
-    private int SafeTickSeconds => Math.Clamp(TickSeconds, 2, 20);
+    private int SafeTickSeconds => Math.Clamp(TickSeconds, 1, 20);
 
     protected override void OnInitialized()
     {
@@ -120,10 +120,8 @@
 
     private void OnCollectionChanged(string msg)
     {
-        if (Routes.Count > 0 || msg == "Routes")
-        {
-            Routes = DataCenter?.Routes;
-
+        if (DataCenter is not null && msg == "Routes") {
+            Routes = DataCenter!.Routes;
             // Ensure UI reaches 100% before we hide the progress panel.
             _elapsedSlots = EstimatedSlots;
         }

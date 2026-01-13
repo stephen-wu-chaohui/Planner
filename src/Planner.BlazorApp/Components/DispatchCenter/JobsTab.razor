@@ -240,6 +240,6 @@
     private void Delete(JobFormModel j) => Jobs.Remove(j);
 	private void ClearAll() => DataCenter?.ClearJobs();
 
-    private int NextId() =>
+    private long NextId() =>
         Jobs.Count == 0 ? 0 : Jobs.Max(j => j.JobId) + 1;
 }

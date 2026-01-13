@@ -41,11 +41,34 @@ public sealed class PlannerApiClient(
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
-            tokenStore.Clear();
+            tokenStore?.Clear();
             return default;
         }
 
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<HttpResponseMessage> PutAsJsonAsync<T>(string requestUri, T value, CancellationToken cancellationToken = default)
+    {
+        var response = await CreateClient().PutAsJsonAsync(requestUri, value, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
+            tokenStore?.Clear();
+        }
+        return response;
+    }
+
+    public async Task<HttpResponseMessage> DeleteAsync(string requestUri, long id, CancellationToken cancellationToken = default) {
+        requestUri = $"{requestUri}/{id}";
+        var response = await CreateClient().DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
+            tokenStore.Clear();
+            return response;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return response;
+    }
+
 }
