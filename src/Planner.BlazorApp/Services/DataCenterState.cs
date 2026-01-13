@@ -41,24 +41,6 @@ public sealed class DataCenterState(
 
     private bool _initialized;
 
-    public void Reset()
-    {
-        Customers = [];
-        Vehicles = [];
-        Jobs = [];
-        Routes = [];
-        MapRoutes = [];
-        MapCustomers = [];
-
-        MapDepotLocation = new LocationInput(
-            LocationId: 0,
-            Address: "Main Depot",
-            Latitude: -31.953823,
-            Longitude: 115.876140);
-
-        _initialized = false;
-    }
-
     // -----------------------------
     // Initialization
     // -----------------------------
@@ -81,14 +63,25 @@ public sealed class DataCenterState(
         _initialized = true;
     }
 
+
+    #region Customers management
     // -----------------------------
-    // Data loading
+    // Customers management
     // -----------------------------
+    //  OnCustomerChanged -- notify subscribers of changes
+    //  LoadCustomersAsync -- load customers from API
+    //  AddNewCustomerAsync -- add a new customer via API
+    //  UpdateCustomerAsync -- update an existing customer via API
+    //  RemoveCustomerAsync -- remove a customer via API
+    // -----------------------------
+    public event Action<DataChangedEventArgs<Customer>> OnCustomerChanged;
+
+    private void NotifyCustomerChanged(Customer customer, DataChangeType type)
+            => OnCustomerChanged?.Invoke(new DataChangedEventArgs<Customer> { Item = customer, ChangeType = type });
 
     private async Task LoadCustomersAsync()
     {
         var customers = await api.GetFromJsonAsync<List<Customer>>("api/customers") ?? [];
-
         Customers = customers.Select(c => new CustomerFormModel
         {
             CustomerId = c.CustomerId,
@@ -101,7 +94,6 @@ public sealed class DataCenterState(
             RequiresRefrigeration = c.RequiresRefrigeration,
             DefaultJobType = 1 // Assuming delivery
         }).ToList();
-
         MapCustomers = Customers.Select(c => new JobMarker
         {
             Lat = c.Latitude,
@@ -110,10 +102,80 @@ public sealed class DataCenterState(
         }).ToList();
     }
 
+    public async Task AddNewCustomerAsync(CustomerFormModel customer) {
+        var customerCto = customer.ToContract();
+        var response = await api.PostAsJsonAsync("api/customers", customerCto);
+        if (response.IsSuccessStatusCode) {
+            var result = await response.Content.ReadFromJsonAsync<Customer>();
+            // Notify subscribers exactly what happened
+            if (result is not null) {
+                NotifyCustomerChanged(result, DataChangeType.Added);
+            }
+        }
+    }
+
+    public async Task UpdateCustomerAsync(CustomerFormModel customer) {
+        var customerCto = customer.ToContract();
+        var response = await api.PutAsJsonAsync("api/customers", customerCto);
+        if (response.IsSuccessStatusCode) {
+            NotifyCustomerChanged(customerCto, DataChangeType.Updated);
+        }
+    }
+
+    public async Task RemoveCustomerAsync(CustomerFormModel customer) {
+        var customerCto = customer.ToContract();
+        var response = await api.DeleteAsync("api/customers", customer.CustomerId);
+        if (response.IsSuccessStatusCode) {
+            NotifyCustomerChanged(customerCto, DataChangeType.Deleted);
+        }
+    }
+    #endregion
+
+    #region Vehicle management
+    // -----------------------------
+    // Vehicle management
+    // -----------------------------
     private async Task LoadVehiclesAsync()
     {
         Vehicles = await api.GetFromJsonAsync<List<Vehicle>>("api/vehicles") ?? [];
     }
+
+    public async Task AddNewVehicleAsync(Vehicle vehicle)
+    {
+        var response = await api.PostAsJsonAsync("api/vehicles", vehicle);
+        if (response.IsSuccessStatusCode)
+        {
+            var newVehicle = await response.Content.ReadFromJsonAsync<Vehicle>();
+            if (newVehicle is not null)
+            {
+                Vehicles.Add(newVehicle);
+            }
+            CollectionChanged?.Invoke("Vehicles");
+        }
+    }
+
+    public async Task UpdateVehicleAsync(Vehicle vehicle)
+    {
+        var response = await api.PutAsJsonAsync("api/vehicles", vehicle);
+        if (response.IsSuccessStatusCode)
+        {
+            CollectionChanged?.Invoke("Vehicles");
+        }
+    }
+
+    public async Task RemoveVehicleAsync(Vehicle vehicle)
+    {
+        var response = await api.DeleteAsync("api/vehicles", vehicle.Id);
+        if (response.IsSuccessStatusCode)
+        {
+            Vehicles.RemoveAll(v => v.Id == vehicle.Id);
+            CollectionChanged?.Invoke("Vehicles");
+        }
+    }
+
+    #endregion
+
+    #region Depot management and mapping
 
     private void SetMapDepotFromVehicles()
     {
@@ -166,21 +228,6 @@ public sealed class DataCenterState(
         {
             RouteName = route.VehicleName,
             Color = ColourHelper.ColourFromString(route.VehicleName, 0.95, 0.25) ?? "#FF0000",
-            //Points = route.Stops
-            //    .Join(Jobs,
-            //        stop => stop.JobId,
-            //        job => job.JobId,
-            //        (stop, job) => job)
-            //    .Join(Customers,
-            //        job => job.LocationId,
-            //        customer => customer.LocationId,
-            //        (job, customer) => new JobMarker
-            //        {
-            //            Lat = customer.Latitude,
-            //            Lng = customer.Longitude,
-            //            Label = customer.Name
-            //        })
-            //    .ToList()
             Points = route.Stops.Select(stop =>
                     new JobMarker {
                         Lat = stop.Location.Latitude,
@@ -192,10 +239,10 @@ public sealed class DataCenterState(
 
         }).ToList();
     }
+    
+    #endregion
 
-    // -----------------------------
-    // Mutations (UI actions)
-    // -----------------------------
+    #region Jobs management
 
     public void AddJob(JobFormModel job)
     {
@@ -239,5 +286,7 @@ public sealed class DataCenterState(
         MapRoutes.Clear();
         CollectionChanged?.Invoke("Jobs");
     }
+
+    #endregion
 }
 

@@ -121,12 +121,11 @@
 }
 
 @code {
-    [Parameter] public List<JobFormModel> Jobs { get; set; } = new();
-    [Parameter] public List<CustomerFormModel> Customers { get; set; } = new();
-    [Parameter] public List<Vehicle> Vehicles { get; set; } = new();
-    [Parameter] public EventCallback OnSolve { get; set; }
-
     [CascadingParameter] public DataCenterState? DataCenter { get; set; }
+
+    private List<JobFormModel> Jobs = new();
+    private List<CustomerFormModel> Customers = new();
+    private List<Vehicle> Vehicles = new();
 
     private JobFormModel? Editing;
     private bool IsNew;
@@ -141,10 +140,14 @@
     private bool editingRefrig;
 
     protected override Task OnInitializedAsync() {
-        if (Customers.Count > 0 && Jobs.Count == 0) {
-            DataCenter?.EnsureJobsFromCustomers();
+        if (DataCenter != null) {
+            Jobs = DataCenter.Jobs;
+            Customers = DataCenter.Customers;
+            Vehicles = DataCenter.Vehicles;
+            if (Customers.Count > 0 && Jobs.Count == 0) {
+                DataCenter?.EnsureJobsFromCustomers();
+            }
         }
-
         return Task.CompletedTask;
     }
 
@@ -237,6 +240,6 @@
     private void Delete(JobFormModel j) => Jobs.Remove(j);
 	private void ClearAll() => DataCenter?.ClearJobs();
 
-    private int NextId() =>
+    private long NextId() =>
         Jobs.Count == 0 ? 0 : Jobs.Max(j => j.JobId) + 1;
 }

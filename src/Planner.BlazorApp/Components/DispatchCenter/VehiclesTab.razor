@@ -1,4 +1,5 @@
 ﻿@using System.Text.Json
+@using Planner.BlazorApp.Services
 @using Planner.Domain
 
 <div class="planner-tab-wrapper">
@@ -104,9 +105,8 @@
 }
 
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public List<Vehicle> Vehicles { get; set; } = new();
+    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
+    private List<Vehicle> Vehicles => DataCenter?.Vehicles ?? new List<Vehicle>();
 
     private Vehicle? Editing;
     private bool IsNew;
@@ -140,32 +140,28 @@
     }
 
     private async Task SaveEdit() {
-        if (Editing is null) return;
+        if (Editing is null || DataCenter is null)
+            return;
 
         if (IsNew) {
+            await DataCenter!.AddNewVehicleAsync(Editing);
             Vehicles.Add(Editing);
         } else {
-            var existing = Vehicles.FirstOrDefault(x => x.Id == Editing.Id);
-            if (existing is not null) {
-                existing.Name = Editing.Name;
-                existing.MaxPallets = Editing.MaxPallets;
-                existing.MaxWeight = Editing.MaxWeight;
-                existing.ShiftLimitMinutes = Editing.ShiftLimitMinutes;
-                existing.DriverRatePerHour = Editing.DriverRatePerHour;
-                existing.FuelRatePerKm = Editing.FuelRatePerKm;
-                existing.BaseFee = Editing.BaseFee;
+            var index = Vehicles.FindIndex(x => x.Id == Editing.Id);
+            if (index >= 0) {
+                await DataCenter!.UpdateVehicleAsync(Editing);
             }
         }
 
         Editing = null;
-        // await SaveToFile();
     }
 
     private void CloseEditModal() => Editing = null;
 
     private async Task Delete(Vehicle v) {
-        Vehicles.Remove(v);
-        // await SaveSync();
+        if (DataCenter is null)
+            return;
+        await DataCenter!.RemoveVehicleAsync(v);
     }
 
     private long NextId() => Vehicles.Count == 0 ? 0 : Vehicles.Max(v => v.Id) + 1;

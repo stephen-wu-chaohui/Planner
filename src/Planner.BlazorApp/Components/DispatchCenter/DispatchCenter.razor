@@ -2,10 +2,11 @@
 @rendermode InteractiveServer
 
 @using Planner.BlazorApp.Auth
+@using Planner.BlazorApp.Forms
 @using Planner.BlazorApp.Models
 @using Planner.BlazorApp.Components.WelcomeWizard
 @using Planner.BlazorApp.Services
-@using Planner.Contracts.Optimization.Inputs
+@using Planner.Domain
 
 @inject DataCenterState DataCenter
 @inject IConfiguration Configuration
@@ -55,7 +56,20 @@
         DataCenter.CollectionChanged += OnCollectionChanged;
         await EnsureTenantInitializedAsync();
 
+        DataCenter.OnCustomerChanged += OnCustomerChanged;
+
         _subscribed = true;
+    }
+
+    private async void OnCustomerChanged(DataChangedEventArgs<Customer> customerChange) {
+        // 1. Update the UI to reflect changes in the customer list/sidebar
+        await InvokeAsync(StateHasChanged);
+
+        // 2. If the customer has geographical data, update the map marker or center the view
+        if (mapRef != null) {
+            // Assuming your PlannerMap has a method to refresh or focus on a specific point
+            await mapRef.OnCustomerChanged(customerChange);
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -72,9 +86,6 @@
         var tokenTenantId = TokenStore.AccessToken.GetTenantId();
         if (tokenTenantId is null)
             return;
-
-        if (DataCenter.TenantId != tokenTenantId.Value)
-            DataCenter.Reset();
 
         await DataCenter.InitializeAsync(tokenTenantId.Value);
     }
@@ -96,12 +107,8 @@
         return Task.CompletedTask;
     }
 
-    private async Task HandleNewCustomer(CustomerInput customer) {
-        // UI no longer mutates state directly.
-        // Customer creation must go through API.
-        // For now: reload reference data.
-
-        // await DataCenter.LoadCustomersAsync();
+    private async Task HandleNewCustomer(CustomerFormModel customer) {
+        await DataCenter.AddNewCustomerAsync(customer);
     }
 
     public void Dispose() {

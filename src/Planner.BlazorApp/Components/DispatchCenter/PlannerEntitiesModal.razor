@@ -45,16 +45,13 @@
 
                     <div class="planner-modal-content-area">
                         @if (ActiveTab == "Customers") {
-                            <CustomersTab Customers="@DataCenter.Customers" />
+                            <CustomersTab />
                         } else if (ActiveTab == "Vehicles") {
-                            <VehiclesTab Vehicles="@DataCenter.Vehicles" />
+                            <VehiclesTab  />
                         } else if (ActiveTab == "Jobs") {
-                            <JobsTab Jobs="@DataCenter.Jobs"
-                                        Customers="@DataCenter.Customers"
-                                        Vehicles="@DataCenter.Vehicles"
-                                        OnSolve="@DataCenter.SolveVrp" />
+                            <JobsTab />
                         } else if (ActiveTab == "Routes") {
-                            <RoutesTab Routes="@DataCenter.Routes" />
+                            <RoutesTab />
                         }
                     </div>
                 </div>

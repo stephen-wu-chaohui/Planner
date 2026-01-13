@@ -79,7 +79,7 @@ window.plannerMap = window.plannerMap || {
                     const lat = e.latLng.lat();
                     const lng = e.latLng.lng();
 
-                    dotnetRef.invokeMethodAsync(clickHandlerName, { lat, lng, address, region });
+                    dotnetRef.invokeMethodAsync(clickHandlerName, { lat, lng, address, label: region });
                 } else {
                     console.log("No address found");
                 }
@@ -109,6 +109,14 @@ window.plannerMap = window.plannerMap || {
         return content;
     },
 
+    removeMarker: function (title) {
+        if (!this.markers || this.markers.length === 0) return;
+        const toRemove = this.markers.filter(m => m.title === title);
+        toRemove.forEach(m => m.map = null);
+
+        this.markers = this.markers.filter(m => m.title !== title);
+    },
+
     clearMarkers: function () {
         this.markers.forEach(m => m.map = null);
         this.markers = [];
@@ -131,45 +139,17 @@ window.plannerMap = window.plannerMap || {
     },
 
     // --- Add marker with rich info popup ---
-    addMarker: function (m) {
+    addMarker: function (c) {
         if (!this.map) return;
 
-        const content = document.createElement("div");
-        content.innerHTML = `
-            <div style="
-                background:'orange';
-                border-radius:50%;
-                width:12px;
-                height:12px;
-                margin:4px;">
-            </div>`;
-
-        const advMarker = new google.maps.marker.AdvancedMarkerElement({
-            position: { lat: m.lat, lng: m.lng },
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            position: { lat: c.lat, lng: c.lng },
             map: this.map,
-            title: `${m.label} (${m.jobType})`,
-            content: content
+            title: c.label,
+            content: this.createCustomerInfoWindow(c)
         });
 
-        const infoHtml = `
-            <div style='min-width:180px;font-size:13px;'>
-                <strong>${m.label}</strong><br/>
-                Type: <span style="color:${m.color}">${m.jobType}</span><br/>
-                Vehicle: ${m.routeName}<br/>
-                Arrival: ${m.arrival?.toFixed?.(1) ?? m.arrival}<br/>
-                Departure: ${m.departure?.toFixed?.(1) ?? m.departure}<br/>
-                Pallets: ${m.palletLoad ?? 0}<br/>
-                Weight: ${m.weightLoad ?? 0}<br/>
-                Refrig: ${m.refrigeratedLoad ?? 0}
-            </div>`;
-
-        const info = new google.maps.InfoWindow({ content: infoHtml });
-
-        advMarker.addListener("click", () => {
-            info.open(this.map, advMarker);
-        });
-
-        this.markers.push(advMarker);
+        this.markers.push(marker);
     },
 
     // --- Draw route along roads ---

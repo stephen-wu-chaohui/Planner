@@ -1,8 +1,6 @@
 ﻿
 @using Planner.BlazorApp.Forms
-@using Planner.BlazorApp.Mappers
 @using Planner.BlazorApp.Models
-@using Planner.Contracts.Optimization.Inputs
 @using Planner.Domain
 @inherits LayoutComponentBase
 
@@ -27,19 +25,19 @@
                     <div class="row">
                         <div class="col">
                             <label class="form-label">Latitude</label>
-                            <InputNumber @bind-Value="newCustomer.Latitude" class="form-control" />
+                            <div class="form-control border bg-light">@newCustomer.Latitude.ToString("F6")</div>
                         </div>
                         <div class="col">
                             <label class="form-label">Longitude</label>
-                            <InputNumber @bind-Value="newCustomer.Longitude" class="form-control" />
+                            <div class="form-control border bg-light">@newCustomer.Longitude.ToString("F6")</div>
                         </div>
                     </div>
 
                     <div class="mt-3">
                         <label class="form-label">Default Job Type</label>
                         <select class="form-select" @bind="newCustomer.DefaultJobType">
-                            <option>Pickup</option>
-                            <option>Delivery</option>
+                            <option value="1">Delivery</option>
+                            <option value="2">Pickup</option>
                         </select>
                     </div>
 
@@ -57,15 +55,19 @@
     private bool isVisible;
     private CustomerFormModel newCustomer = new();
 
-    [Parameter] public EventCallback<CustomerInput> OnCustomerCreated { get; set; }
+    [Parameter] public EventCallback<CustomerFormModel> OnCustomerCreated { get; set; }
 
     public void Open(MapPosition args) {
-        newCustomer = new CustomerFormModel();
-        newCustomer.Latitude = args.Lat;
-        newCustomer.Longitude = args.Lng;
-        newCustomer.Name = args.Label;
-        newCustomer.Address = args.Address;
-        newCustomer.DefaultJobType = 1; // Delivery
+        newCustomer = new CustomerFormModel {
+            Name = args.Label,
+            LocationId = 0,
+            Latitude = args.Lat,
+            Longitude = args.Lng,
+            Address = args.Address,
+            DefaultServiceMinutes = 30,
+            RequiresRefrigeration = false,
+            DefaultJobType = 1 // Assuming delivery
+        };
         isVisible = true;
         StateHasChanged();
     }
@@ -74,8 +76,7 @@
         // persist to service or emit event
         if (OnCustomerCreated.HasDelegate)
         {
-            var c = newCustomer.ToContract();
-            await OnCustomerCreated.InvokeAsync(c);
+            await OnCustomerCreated.InvokeAsync(newCustomer);
         }
 
         isVisible = false;

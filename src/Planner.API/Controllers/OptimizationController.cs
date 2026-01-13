@@ -33,6 +33,9 @@ public class OptimizationController(
     }
 
     private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync() {
+
+        EnsureJobsForAllCustomers();
+
         var jobs = await db.Jobs
             .Include(j => j.Location)
             .ToListAsync();
@@ -51,9 +54,41 @@ public class OptimizationController(
             Jobs: jobs.Select(ToJobInput).ToList(),
             Vehicles: vehicles.Select(ToVehicleInput).ToList(),
             Settings: new OptimizationSettings(
-                SearchTimeLimitSeconds: 6 * jobs.Count // 6 seconds per job
+                SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
             )
         );
+    }
+
+    private void EnsureJobsForAllCustomers() {
+        var jobsWithNoCustomers = db.Jobs
+            .Where(j => !db.Customers.Any(c => c.CustomerId == j.CustomerId))
+            .ToList();
+        db.Jobs.RemoveRange(jobsWithNoCustomers);
+
+        var customersWithNoJobs = db.Customers
+            .Where(c => !db.Jobs.Any(j => j.CustomerId == c.CustomerId))
+            .ToList();
+        // 1. Create a list of new Job objects for each customer found
+        var newJobs = customersWithNoJobs.Select(c => new Job {
+            CustomerId = c.CustomerId,
+            TenantId = tenant.TenantId,
+            Name = $"Job for {c.Name}",
+            LocationId = c.LocationId,
+            Location = c.Location,
+            JobType = JobType.Delivery,
+            ServiceTimeMinutes = c.DefaultServiceMinutes,
+            PalletDemand = 0,
+            WeightDemand = 0,
+            ReadyTime = 0,
+            DueTime = 8 * 60, // 8 hours from start of day
+            RequiresRefrigeration = false
+        }).ToList();
+
+        // 2. Add the entire collection to the Jobs DbSet
+        db.Jobs.AddRange(newJobs);
+
+        // 3. Save changes to the database
+        db.SaveChanges();
     }
 
     private static JobInput ToJobInput(Job job) {

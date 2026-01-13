@@ -1,14 +1,23 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.Application;
 using Planner.Domain;
 using Planner.Infrastructure.Persistence;
+using System.Reflection;
 
 namespace Planner.API.Controllers;
 
 [Route("api/customers")]
 [Authorize]
-public sealed class CustomersController(PlannerDbContext db) : ControllerBase {
+public sealed class CustomersController(PlannerDbContext db, ITenantContext tenant) : ControllerBase {
+    private static readonly PropertyInfo? CustomerTenantIdProperty =
+        typeof(Customer).GetProperty(nameof(Customer.TenantId));
+
+    private static void ForceTenant(Customer entity, Guid tenantId) {
+        CustomerTenantIdProperty?.SetValue(entity, tenantId);
+    }
+
     [HttpGet]
     public async Task<ActionResult<List<Customer>>> GetAll() {
         var items = await db.Customers
@@ -31,6 +40,7 @@ public sealed class CustomersController(PlannerDbContext db) : ControllerBase {
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] Customer entity) {
+        ForceTenant(entity, tenant.TenantId);
         db.Customers.Add(entity);
         await db.SaveChangesAsync();
         return Created($"/api/customers/{entity.CustomerId}", entity);
@@ -42,6 +52,7 @@ public sealed class CustomersController(PlannerDbContext db) : ControllerBase {
         if (existing is null)
             return NotFound();
 
+        ForceTenant(updated, tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
         await db.SaveChangesAsync();
         return NoContent();
