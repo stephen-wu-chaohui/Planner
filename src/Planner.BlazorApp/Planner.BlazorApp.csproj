@@ -15,7 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Planner.Application\Planner.Application.csproj" />
     <ProjectReference Include="..\Planner.Contracts\Planner.Contracts.csproj" />
-    <ProjectReference Include="..\Planner.Domain\Planner.Domain.csproj" />
     <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
   </ItemGroup>
 

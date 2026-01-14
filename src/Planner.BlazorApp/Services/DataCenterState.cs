@@ -1,10 +1,13 @@
 ﻿using Planner.BlazorApp.Forms;
 using Planner.BlazorApp.Models;
+using Planner.Contracts.API;
 using Planner.Contracts.Optimization.Inputs;
 using Planner.Contracts.Optimization.Outputs;
 using Planner.Contracts.Optimization.Requests;
 using Planner.Contracts.Optimization.Responses;
-using Planner.Domain;
+using System;
+using System.Security.Cryptography.Xml;
+using System.Xml.Linq;
 
 namespace Planner.BlazorApp.Services;
 
@@ -16,9 +19,9 @@ public sealed class DataCenterState(
     // State (Inputs & Outputs only)
     // -----------------------------
 
-    public List<CustomerFormModel> Customers { get; private set; } = [];
-    public List<Vehicle> Vehicles { get; private set; } = [];
-    public List<JobFormModel> Jobs { get; private set; } = [];
+    public List<CustomerDto> Customers { get; private set; } = [];
+    public List<VehicleDto> Vehicles { get; private set; } = [];
+    public List<JobDto> Jobs { get; private set; } = [];
     public List<RouteResult> Routes { get; private set; } = [];
 
     public LocationInput MapDepotLocation { get; private set; } = new(
@@ -74,39 +77,28 @@ public sealed class DataCenterState(
     //  UpdateCustomerAsync -- update an existing customer via API
     //  RemoveCustomerAsync -- remove a customer via API
     // -----------------------------
-    public event Action<DataChangedEventArgs<Customer>> OnCustomerChanged;
+    public event Action<DataChangedEventArgs<CustomerDto>>? OnCustomerChanged;
 
-    private void NotifyCustomerChanged(Customer customer, DataChangeType type)
-            => OnCustomerChanged?.Invoke(new DataChangedEventArgs<Customer> { Item = customer, ChangeType = type });
+    private void NotifyCustomerChanged(CustomerDto customer, DataChangeType type)
+        => OnCustomerChanged?.Invoke(new DataChangedEventArgs<CustomerDto> { Item = customer, ChangeType = type });
 
     private async Task LoadCustomersAsync()
     {
-        var customers = await api.GetFromJsonAsync<List<Customer>>("api/customers") ?? [];
-        Customers = customers.Select(c => new CustomerFormModel
-        {
-            CustomerId = c.CustomerId,
-            Name = c.Name,
-            LocationId = c.Location.Id,
-            Latitude = c.Location.Latitude,
-            Longitude = c.Location.Longitude,
-            Address = c.Location.Address,
-            DefaultServiceMinutes = c.DefaultServiceMinutes,
-            RequiresRefrigeration = c.RequiresRefrigeration,
-            DefaultJobType = 1 // Assuming delivery
-        }).ToList();
+        var customers = await api.GetFromJsonAsync<List<CustomerDto>>("api/customers") ?? [];
+        Customers = customers;
         MapCustomers = Customers.Select(c => new JobMarker
         {
-            Lat = c.Latitude,
-            Lng = c.Longitude,
+            Lat = c.Location.Latitude,
+            Lng = c.Location.Longitude,
             Label = c.Name
         }).ToList();
     }
 
     public async Task AddNewCustomerAsync(CustomerFormModel customer) {
-        var customerCto = customer.ToContract();
-        var response = await api.PostAsJsonAsync("api/customers", customerCto);
+        var dto = customer.ToDto();
+        var response = await api.PostAsJsonAsync("api/customers", dto);
         if (response.IsSuccessStatusCode) {
-            var result = await response.Content.ReadFromJsonAsync<Customer>();
+            var result = await response.Content.ReadFromJsonAsync<CustomerDto>();
             // Notify subscribers exactly what happened
             if (result is not null) {
                 NotifyCustomerChanged(result, DataChangeType.Added);
@@ -115,18 +107,18 @@ public sealed class DataCenterState(
     }
 
     public async Task UpdateCustomerAsync(CustomerFormModel customer) {
-        var customerCto = customer.ToContract();
-        var response = await api.PutAsJsonAsync("api/customers", customerCto);
+        var dto = customer.ToDto();
+        var response = await api.PutAsJsonAsync("api/customers", dto);
         if (response.IsSuccessStatusCode) {
-            NotifyCustomerChanged(customerCto, DataChangeType.Updated);
+            NotifyCustomerChanged(dto, DataChangeType.Updated);
         }
     }
 
     public async Task RemoveCustomerAsync(CustomerFormModel customer) {
-        var customerCto = customer.ToContract();
         var response = await api.DeleteAsync("api/customers", customer.CustomerId);
         if (response.IsSuccessStatusCode) {
-            NotifyCustomerChanged(customerCto, DataChangeType.Deleted);
+            var dto = customer.ToDto();
+            NotifyCustomerChanged(dto, DataChangeType.Deleted);
         }
     }
     #endregion
@@ -137,15 +129,15 @@ public sealed class DataCenterState(
     // -----------------------------
     private async Task LoadVehiclesAsync()
     {
-        Vehicles = await api.GetFromJsonAsync<List<Vehicle>>("api/vehicles") ?? [];
+        Vehicles = await api.GetFromJsonAsync<List<VehicleDto>>("api/vehicles") ?? [];
     }
 
-    public async Task AddNewVehicleAsync(Vehicle vehicle)
+    public async Task AddNewVehicleAsync(VehicleDto vehicle)
     {
         var response = await api.PostAsJsonAsync("api/vehicles", vehicle);
         if (response.IsSuccessStatusCode)
         {
-            var newVehicle = await response.Content.ReadFromJsonAsync<Vehicle>();
+            var newVehicle = await response.Content.ReadFromJsonAsync<VehicleDto>();
             if (newVehicle is not null)
             {
                 Vehicles.Add(newVehicle);
@@ -154,7 +146,7 @@ public sealed class DataCenterState(
         }
     }
 
-    public async Task UpdateVehicleAsync(Vehicle vehicle)
+    public async Task UpdateVehicleAsync(VehicleDto vehicle)
     {
         var response = await api.PutAsJsonAsync("api/vehicles", vehicle);
         if (response.IsSuccessStatusCode)
@@ -163,7 +155,7 @@ public sealed class DataCenterState(
         }
     }
 
-    public async Task RemoveVehicleAsync(Vehicle vehicle)
+    public async Task RemoveVehicleAsync(VehicleDto vehicle)
     {
         var response = await api.DeleteAsync("api/vehicles", vehicle.Id);
         if (response.IsSuccessStatusCode)
@@ -177,20 +169,19 @@ public sealed class DataCenterState(
 
     #region Depot management and mapping
 
-    private void SetMapDepotFromVehicles()
+    private async void SetMapDepotFromVehicles()
     {
-        var depotLoc = Vehicles
-            .Select(v => v.StartDepot?.Location)
-            .FirstOrDefault(l => l is not null);
-
-        if (depotLoc is null)
+        // Vehicles DTOs do not include depot navigation; fetch a depot for map center.
+        var depots = await api.GetFromJsonAsync<List<DepotDto>>("api/depots") ?? [];
+        var depot = depots.FirstOrDefault();
+        if (depot is null)
             return;
 
         MapDepotLocation = new LocationInput(
-            LocationId: depotLoc.Id,
-            Address: depotLoc.Address,
-            Latitude: depotLoc.Latitude,
-            Longitude: depotLoc.Longitude);
+            LocationId: depot.Location.Id,
+            Address: depot.Location.Address,
+            Latitude: depot.Location.Latitude,
+            Longitude: depot.Location.Longitude);
     }
 
     // -----------------------------
@@ -244,7 +235,7 @@ public sealed class DataCenterState(
 
     #region Jobs management
 
-    public void AddJob(JobFormModel job)
+    public void AddJob(JobDto job)
     {
         Jobs.Add(job);
         CollectionChanged?.Invoke("Jobs");
@@ -260,20 +251,21 @@ public sealed class DataCenterState(
         var nextId = 0;
         foreach (var c in Customers)
         {
-            Jobs.Add(new JobFormModel {
-                JobId = nextId++,
-                JobType = 1,
-                Name = c.Name,
-                Latitude = c.Latitude,
-                Longitude = c.Longitude,
-                LocationId = c.LocationId,
-                ServiceTimeMinutes = c.DefaultServiceMinutes,
-                ReadyTime = 0,
-                DueTime = 480,
-                PalletDemand = 2,
-                WeightDemand = 100,
-                RequiresRefrigeration = c.RequiresRefrigeration
-            });
+            Jobs.Add(new JobDto(
+                Id: nextId++,
+                Name: c.Name,
+                OrderId: 0,
+                CustomerId: c.CustomerId,
+                JobType: JobTypeDto.Delivery,
+                Reference: $"JOB-{nextId}",
+                Location: c.Location,
+                ServiceTimeMinutes: c.DefaultServiceMinutes,
+                ReadyTime: 0,
+                DueTime: 480,
+                PalletDemand: 2,
+                WeightDemand: 100,
+                RequiresRefrigeration: c.RequiresRefrigeration
+            ));
         }
 
         CollectionChanged?.Invoke("Jobs");

@@ -1,7 +1,7 @@
-﻿@using Planner.Domain
-@using Planner.Contracts.Optimization.Requests
+﻿@using Planner.Contracts.Optimization.Requests
 @using Planner.BlazorApp.Forms
 @using Planner.BlazorApp.Services
+@using Planner.Contracts.API
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -125,7 +125,7 @@
 
     private List<JobFormModel> Jobs = new();
     private List<CustomerFormModel> Customers = new();
-    private List<Vehicle> Vehicles = new();
+    private List<Planner.Contracts.API.VehicleDto> Vehicles = new();
 
     private JobFormModel? Editing;
     private bool IsNew;
@@ -141,8 +141,8 @@
 
     protected override Task OnInitializedAsync() {
         if (DataCenter != null) {
-            Jobs = DataCenter.Jobs;
-            Customers = DataCenter.Customers;
+            Jobs = DataCenter.Jobs.Select(j => j.ToFormModel()).ToList();  
+            Customers = DataCenter.Customers.Select(c => c.ToFormModel()).ToList();
             Vehicles = DataCenter.Vehicles;
             if (Customers.Count > 0 && Jobs.Count == 0) {
                 DataCenter?.EnsureJobsFromCustomers();

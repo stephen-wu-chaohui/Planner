@@ -1,4 +1,5 @@
-﻿using Planner.Domain;
+﻿using System;
+using Planner.Contracts.API;
 
 namespace Planner.BlazorApp.Forms;
 
@@ -34,41 +35,55 @@ public sealed class JobFormModel {
 
 
 /// <summary>
-/// Maps UI job form models to contracts.  Use Domain.Job as the contract here.
-/// Maps contracts to UI job form models.  Use Domain.Job as the contract here.
+/// Maps UI job form models to contracts.
+/// Maps contracts to UI job form models.
 /// </summary>
 public static class JobMapper {
-    public static Job ToContract(JobFormModel form) {
+    public static JobDto ToDto(this JobFormModel form, long orderId = 0, long customerId = 0, string reference = "") {
         ArgumentNullException.ThrowIfNull(form);
-        return new Job { 
-            Id = form.JobId,
-            JobType = (JobType)form.JobType,
-            Name = form.Name,
-            Location = new Location(form.LocationId, "", form.Latitude, form.Longitude),
-            ServiceTimeMinutes = form.ServiceTimeMinutes,
-            ReadyTime = form.ReadyTime,
-            DueTime = form.DueTime,
-            PalletDemand = form.PalletDemand,
-            WeightDemand = form.WeightDemand,
-            RequiresRefrigeration = form.RequiresRefrigeration
+        return new JobDto(
+            Id: form.JobId,
+            Name: form.Name,
+            OrderId: orderId,
+            CustomerId: customerId,
+            JobType: form.JobType switch {
+                0 => JobTypeDto.Depot,
+                1 => JobTypeDto.Delivery,
+                2 => JobTypeDto.Pickup,
+                _ => throw new ArgumentOutOfRangeException(nameof(form.JobType), form.JobType, "Unknown job type")
+            },
+            Reference: reference,
+            Location: new LocationDto(form.LocationId, string.Empty, form.Latitude, form.Longitude),
+            ServiceTimeMinutes: form.ServiceTimeMinutes,
+            PalletDemand: form.PalletDemand,
+            WeightDemand: form.WeightDemand,
+            ReadyTime: form.ReadyTime,
+            DueTime: form.DueTime,
+            RequiresRefrigeration: form.RequiresRefrigeration
+        );
+    }
+
+    public static JobFormModel ToFormModel(this JobDto dto) {
+        ArgumentNullException.ThrowIfNull(dto);
+        return new JobFormModel {
+            JobId = dto.Id,
+            JobType = dto.JobType switch {
+                JobTypeDto.Depot => 0,
+                JobTypeDto.Delivery => 1,
+                JobTypeDto.Pickup => 2,
+                _ => throw new ArgumentOutOfRangeException(nameof(dto.JobType), dto.JobType, "Unknown job type")
+            },
+            Name = dto.Name,
+            LocationId = dto.Location.Id,
+            Latitude = dto.Location.Latitude,
+            Longitude = dto.Location.Longitude,
+            ServiceTimeMinutes = dto.ServiceTimeMinutes,
+            ReadyTime = dto.ReadyTime,
+            DueTime = dto.DueTime,
+            PalletDemand = dto.PalletDemand,
+            WeightDemand = dto.WeightDemand,
+            RequiresRefrigeration = dto.RequiresRefrigeration
         };
     }
 
-    public static JobFormModel ToFormModel(Job job) {
-        ArgumentNullException.ThrowIfNull(job);
-        return new JobFormModel {
-            JobId = job.Id,
-            JobType = (int)job.JobType,
-            Name = job.Name,
-            LocationId = job.Location.Id,
-            Latitude = job.Location.Latitude,
-            Longitude = job.Location.Longitude,
-            ServiceTimeMinutes = job.ServiceTimeMinutes,
-            ReadyTime = job.ReadyTime,
-            DueTime = job.DueTime,
-            PalletDemand = job.PalletDemand,
-            WeightDemand = job.WeightDemand,
-            RequiresRefrigeration = job.RequiresRefrigeration
-        };
-    }
 }
