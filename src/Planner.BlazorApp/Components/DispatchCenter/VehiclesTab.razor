@@ -1,6 +1,7 @@
 ﻿@using System.Text.Json
+@using Planner.BlazorApp.Forms
 @using Planner.BlazorApp.Services
-@using Planner.Domain
+@using Planner.Contracts.API
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -21,13 +22,13 @@
             <tbody>
                 @foreach (var v in Vehicles) {
                     <tr>
-                        <td>@v.Id</td>
+                        <td>@v.VehicleId</td>
                         <td>@v.Name</td>
                         <td>@v.MaxPallets</td>
                         <td>@(v.MaxWeight/1000) t</td>
                         <td>@(v.ShiftLimitMinutes/60) hr</td>
-                        <td>$@v.DriverRatePerHour</td>
-                        <td>$@v.FuelRatePerKm</td>
+                        <td>$@v.CostPerMinute</td>
+                        <td>$@v.CostPerKm</td>
                         <td>$@v.BaseFee</td>
                         <td class="actions">
                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(v))">✏️</button>
@@ -83,11 +84,11 @@
                     <div class="row mb-2">
                         <div class="col">
                             <label class="form-label">Hourly Rate</label>
-                            <input class="form-control" type="number" step="0.1" @bind="Editing.DriverRatePerHour" />
+                            <input class="form-control" type="number" step="0.1" @bind="Editing.CostPerMinute" />
                         </div>
                         <div class="col">
                             <label class="form-label">Distance Fee / km</label>
-                            <input class="form-control" type="number" step="0.01" @bind="Editing.FuelRatePerKm" />
+                            <input class="form-control" type="number" step="0.01" @bind="Editing.CostPerKm" />
                         </div>
                     </div>
                     <div class="mb-2">
@@ -106,36 +107,30 @@
 
 @code {
     [CascadingParameter] public DataCenterState? DataCenter { get; set; }
-    private List<Vehicle> Vehicles => DataCenter?.Vehicles ?? new List<Vehicle>();
+    private List<VehicleFormModel> Vehicles => DataCenter?.Vehicles.Select(v => v.ToFormModel()).ToList() ?? new List<VehicleFormModel>();
 
-    private Vehicle? Editing;
+    private VehicleFormModel? Editing;
     private bool IsNew;
 
     private void AddNew() {
-        Editing = new Vehicle {
-            Id = NextId(),
+        Editing = new VehicleFormModel {
             Name = $"Vehicle {Vehicles.Count + 1}",
+            SpeedFactor = 1.0,
+            ShiftLimitMinutes = 360,
+            DepotStartId = 0,
+            DepotEndId = 0,
+            CostPerMinute = 100,
+            CostPerKm = 0.5,
+            BaseFee = 120,
             MaxPallets = 20,
             MaxWeight = 10000,
-            ShiftLimitMinutes = 360,
-            DriverRatePerHour = 100,
-            FuelRatePerKm = 0.5,
-            BaseFee = 120
+            RefrigeratedCapacity = 0
         };
         IsNew = true;
     }
 
-    private void Edit(Vehicle v) {
-        Editing = new Vehicle {
-            Id = v.Id,
-            Name = v.Name,
-            MaxPallets = v.MaxPallets,
-            MaxWeight = v.MaxWeight,
-            ShiftLimitMinutes = v.ShiftLimitMinutes,
-            DriverRatePerHour = v.DriverRatePerHour,
-            FuelRatePerKm = v.FuelRatePerKm,
-            BaseFee = v.BaseFee
-        };
+    private void Edit(VehicleFormModel v) {
+        Editing = v;
         IsNew = false;
     }
 
@@ -144,12 +139,12 @@
             return;
 
         if (IsNew) {
-            await DataCenter!.AddNewVehicleAsync(Editing);
+            await DataCenter!.AddNewVehicleAsync(Editing.ToDto());
             Vehicles.Add(Editing);
         } else {
-            var index = Vehicles.FindIndex(x => x.Id == Editing.Id);
+            var index = Vehicles.FindIndex(x => x.VehicleId == Editing.VehicleId);
             if (index >= 0) {
-                await DataCenter!.UpdateVehicleAsync(Editing);
+                await DataCenter!.UpdateVehicleAsync(Editing.ToDto());
             }
         }
 
@@ -158,11 +153,9 @@
 
     private void CloseEditModal() => Editing = null;
 
-    private async Task Delete(Vehicle v) {
+    private async Task Delete(VehicleFormModel v) {
         if (DataCenter is null)
             return;
-        await DataCenter!.RemoveVehicleAsync(v);
+        await DataCenter!.RemoveVehicleAsync(v.ToDto());
     }
-
-    private long NextId() => Vehicles.Count == 0 ? 0 : Vehicles.Max(v => v.Id) + 1;
 }

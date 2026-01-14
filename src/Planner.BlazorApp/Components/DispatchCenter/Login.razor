@@ -1,7 +1,8 @@
 ﻿@page "/login"
 @using Planner.BlazorApp.Auth
-@using Planner.BlazorApp.Models
+@using Planner.BlazorApp.Forms
 @using Planner.BlazorApp.Services
+@using Planner.Contracts.API.Auth
 
 @inject PlannerApiClient ApiClient
 @inject IJwtTokenStore TokenStore
@@ -17,7 +18,7 @@
                 <div class="login-field">
                     <label>Email</label>
                     <InputText class="login-input"
-                               @bind-Value="email"
+                               @bind-Value="form.Email"
                                disabled="@IsBusy" />
                 </div>
 
@@ -25,7 +26,7 @@
                     <label>Password</label>
                     <InputText class="login-input"
                                type="password"
-                               @bind-Value="password"
+                               @bind-Value="form.Password"
                                disabled="@IsBusy" />
                 </div>
 
@@ -66,8 +67,10 @@
 </div>
 
 @code {
-    private string? email = "perth.admin@demo.local";
-    private string? password = "admin123";
+    private LoginFormModel form = new() {
+        Email = "perth.admin@demo.local",
+        Password = "admin123"
+    };
     private string? error;
     private bool IsBusy;
 
@@ -84,7 +87,7 @@
         try {
             var response = await ApiClient.PostAsJsonAsync(
                 "auth/login",
-                new { Email = email, Password = password });
+                form.ToRequestDto());
 
             if (!response.IsSuccessStatusCode) {
                 error = "Invalid credentials.";

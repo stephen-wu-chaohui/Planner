@@ -1,16 +1,18 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Planner.Domain;
+using Planner.Application;
+using Planner.API.Mappings;
+using Planner.Contracts.API;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.API.Controllers;
 
 [Route("api/vehicles")]
 [Authorize]
-public sealed class VehiclesController(PlannerDbContext db) : ControllerBase {
+public sealed class VehiclesController(PlannerDbContext db, ITenantContext tenant) : ControllerBase {
     [HttpGet]
-    public async Task<ActionResult<List<Vehicle>>> GetAll() {
+    public async Task<ActionResult<List<VehicleDto>>> GetAll() {
         var items = await db.Vehicles
             .AsNoTracking()
             .Include(v => v.StartDepot)
@@ -29,11 +31,11 @@ public sealed class VehiclesController(PlannerDbContext db) : ControllerBase {
                 $"{items.Count - valid.Count} vehicle(s) omitted due to missing StartDepot/EndDepot navigation.");
         }
 
-        return Ok(valid);
+        return Ok(valid.Select(v => v.ToDto()).ToList());
     }
 
     [HttpGet("{id:long}")]
-    public async Task<ActionResult<Vehicle>> GetById(long id) {
+    public async Task<ActionResult<VehicleDto>> GetById(long id) {
         var entity = await db.Vehicles
             .AsNoTracking()
             .Include(v => v.StartDepot)
@@ -42,22 +44,24 @@ public sealed class VehiclesController(PlannerDbContext db) : ControllerBase {
             .ThenInclude(d => d.Location)
             .FirstOrDefaultAsync(v => v.Id == id);
 
-        return entity is null ? NotFound() : Ok(entity);
+        return entity is null ? NotFound() : Ok(entity.ToDto());
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] Vehicle entity) {
+    public async Task<IActionResult> Create([FromBody] VehicleDto dto) {
+        var entity = dto.ToDomain(tenant.TenantId);
         db.Vehicles.Add(entity);
         await db.SaveChangesAsync();
-        return Created($"/api/vehicles/{entity.Id}", entity);
+        return Created($"/api/vehicles/{entity.Id}", entity.ToDto());
     }
 
     [HttpPut("{id:long}")]
-    public async Task<IActionResult> Update(long id, [FromBody] Vehicle updated) {
+    public async Task<IActionResult> Update(long id, [FromBody] VehicleDto dto) {
         var existing = await db.Vehicles.FirstOrDefaultAsync(v => v.Id == id);
         if (existing is null)
             return NotFound();
 
+        var updated = dto.ToDomain(tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
         await db.SaveChangesAsync();
         return NoContent();

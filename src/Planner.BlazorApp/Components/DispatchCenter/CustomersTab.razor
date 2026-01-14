@@ -2,7 +2,7 @@
 @using Planner.BlazorApp.Forms
 @using Planner.BlazorApp.Models
 @using Planner.BlazorApp.Services
-@using Planner.Domain
+@using Planner.Contracts.API
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -84,13 +84,13 @@
 
     protected override Task OnInitializedAsync() {
         if (DataCenter != null) {
-            Customers = DataCenter.Customers;
+            Customers = DataCenter.Customers.Select(c => c.ToFormModel()).ToList();
             DataCenter.OnCustomerChanged += OnCustomerChanged;
         }
         return Task.CompletedTask;
     }
 
-    private async void OnCustomerChanged(DataChangedEventArgs<Customer> args) {
+    private async void OnCustomerChanged(DataChangedEventArgs<CustomerDto> args) {
         if (args.ChangeType == DataChangeType.Added) {
             Customers.Add(args.Item.ToFormModel());
         } else if (args.ChangeType == DataChangeType.Updated) {

@@ -1,4 +1,5 @@
-﻿using Planner.Domain;
+﻿using System;
+using Planner.Contracts.API;
 
 namespace Planner.BlazorApp.Forms;
 
@@ -36,35 +37,35 @@ public sealed record CustomerFormModel {
 
 
 /// <summary>
-/// Maps UI customer models to transport-safe contract models.  Use Domain.Customer as the contract here.
-/// Maps contracts to UI customer models.  Use Domain.Customer as the contract here.
+/// Maps UI customer models to transport-safe contract models.
+/// Maps contracts to UI customer models.
 /// </summary>
 public static class CustomerMapper {
-    public static Customer ToContract(this CustomerFormModel model) {
-        return new Customer {
-            CustomerId = model.CustomerId,
-            Name = model.Name,
-            Location = new Location(
+    public static CustomerDto ToDto(this CustomerFormModel model) {
+        return new CustomerDto(
+            CustomerId: model.CustomerId,
+            Name: model.Name,
+            Location: new LocationDto(
                 model.LocationId,
                 model.Address,
                 model.Latitude,
-                model.Longitude
-            ),
-            DefaultServiceMinutes = model.DefaultServiceMinutes,
-            RequiresRefrigeration = model.RequiresRefrigeration,
-        };
+                model.Longitude),
+            DefaultServiceMinutes: model.DefaultServiceMinutes,
+            RequiresRefrigeration: model.RequiresRefrigeration
+        );
     }
 
-    public static CustomerFormModel ToFormModel(this Customer customer) {
+    public static CustomerFormModel ToFormModel(this CustomerDto dto) {
         return new CustomerFormModel {
-            CustomerId = customer.CustomerId,
-            Name = customer.Name,
-            LocationId = customer.Location.Id,
-            Address = customer.Location.Address,
-            Latitude = customer.Location.Latitude,
-            Longitude = customer.Location.Longitude,
-            DefaultServiceMinutes = customer.DefaultServiceMinutes,
-            RequiresRefrigeration = customer.RequiresRefrigeration
+            CustomerId = dto.CustomerId,
+            Name = dto.Name,
+            LocationId = dto.Location.Id,
+            Address = dto.Location.Address,
+            Latitude = dto.Location.Latitude,
+            Longitude = dto.Location.Longitude,
+            DefaultServiceMinutes = dto.DefaultServiceMinutes,
+            RequiresRefrigeration = dto.RequiresRefrigeration,
+            DefaultJobType = 1
         };
     }
 }

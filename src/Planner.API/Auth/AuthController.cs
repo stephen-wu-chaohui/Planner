@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.API.Auth;
+using Planner.Contracts.API.Auth;
 using Planner.Infrastructure.Auth;
 using Planner.Infrastructure.Persistence;
 
@@ -25,14 +26,8 @@ public sealed class AuthController(PlannerDbContext db,IJwtTokenGenerator tokenG
         if (!VerifyPassword(request.Password, user.PasswordHash))
             return Unauthorized("Invalid credentials.");
 
-        // 3. Generate JWT
-        var token = tokenGenerator.GenerateToken(
-            userId: user.Id,
-            tenantId: user.TenantId,
-            role: user.Role);
-
-        // 4. Return token
-        return Ok(new LoginResponse(token));
+        // 3. Generate JWT and shape response
+        return Ok(user.ToLoginResponse(tokenGenerator));
     }
 
     [Authorize]

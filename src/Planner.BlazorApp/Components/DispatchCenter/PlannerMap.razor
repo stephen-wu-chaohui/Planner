@@ -1,6 +1,6 @@
 ﻿@using Planner.BlazorApp.Services
-@using Planner.Domain
 @using Planner.BlazorApp.Models
+@using Planner.Contracts.API
 @inject IJSRuntime JS
 @inject IConfiguration Config
 @inject ILogger<PlannerMap> Logger
@@ -136,7 +136,7 @@
     public async Task FitToBoundsAsync() =>
         await JS.InvokeVoidAsync("plannerMap.fitToBounds");
 
-    public async Task OnCustomerChanged(DataChangedEventArgs<Customer> customerChange) {
+    public async Task OnCustomerChanged(DataChangedEventArgs<Planner.Contracts.API.CustomerDto> customerChange) {
         if (!_initialized) return;
         if (customerChange.ChangeType == DataChangeType.Added && customerChange.Item != null) {
             var marker = new JobMarker {

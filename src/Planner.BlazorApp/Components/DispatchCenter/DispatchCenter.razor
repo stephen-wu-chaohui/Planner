@@ -6,7 +6,7 @@
 @using Planner.BlazorApp.Models
 @using Planner.BlazorApp.Components.WelcomeWizard
 @using Planner.BlazorApp.Services
-@using Planner.Domain
+@using Planner.Contracts.API
 
 @inject DataCenterState DataCenter
 @inject IConfiguration Configuration
@@ -61,7 +61,7 @@
         _subscribed = true;
     }
 
-    private async void OnCustomerChanged(DataChangedEventArgs<Customer> customerChange) {
+    private async void OnCustomerChanged(DataChangedEventArgs<Planner.Contracts.API.CustomerDto> customerChange) {
         // 1. Update the UI to reflect changes in the customer list/sidebar
         await InvokeAsync(StateHasChanged);
 
