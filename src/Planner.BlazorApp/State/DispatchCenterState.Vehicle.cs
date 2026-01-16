@@ -45,11 +45,20 @@ public partial class DispatchCenterState : IVehicleState {
                 if (!resp.IsSuccessStatusCode) return false;
             } else {
                 // Convert FormModel back to a DTO or Request object for the API
+                var DepotStartId = this.MainDepot?.Id ?? 0;
+                var DepotEndId = this.MainDepot?.Id ?? 0;
+                if (model.DepotStartId == 0 && DepotStartId > 0) {
+                    model.DepotStartId = DepotStartId;
+                }
+                if (model.DepotEndId == 0 && DepotEndId > 0) {
+                    model.DepotEndId = DepotEndId;
+                }
+
                 var request = model.ToDto();
 
                 var resp = request.Id == 0
                     ? await api.PostAsJsonAsync("api/vehicles", request)
-                    : await api.PutAsJsonAsync("api/vehicles", request);
+                    : await api.PutAsJsonAsync($"api/vehicles/{request.Id}", request);
                 if (!resp.IsSuccessStatusCode) return false;
             }
         }

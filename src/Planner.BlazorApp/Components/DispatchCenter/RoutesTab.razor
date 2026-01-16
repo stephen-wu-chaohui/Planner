@@ -9,7 +9,7 @@
 @inject IRouteState RouteState
 
 <div class="planner-tab-wrapper">
-    @if (Routes.Count == 0) {
+    @if (Routes is null || Routes!.Count == 0) {
         <RoutesBuildPanel TotalJobs="TotalJobs"
                          TickSeconds="TickSeconds"
                          IsBuilding="IsBuilding"

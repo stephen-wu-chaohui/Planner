@@ -1,7 +1,7 @@
 ﻿namespace Planner.BlazorApp.FormModels;
 
 public class EditableFlags {
-    public bool IsDirty { get; internal set; } = true;
+    public bool IsDirty { get; internal set; } = false;
     public bool PendingDeletion { get; internal set; } = false;
 
     public EditableFlags() { }

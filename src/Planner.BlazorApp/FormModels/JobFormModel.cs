@@ -66,7 +66,7 @@ public static class JobMapper {
     public static JobDto ToDto(this JobFormModel form, long orderId = 0, long customerId = 0, string reference = "") {
         ArgumentNullException.ThrowIfNull(form);
         return new JobDto(
-            Id: form.JobId,
+            Id: Math.Max(form.JobId, 0),
             Name: form.Name,
             OrderId: orderId == 0 ? form.OrderId : orderId,
             CustomerId: customerId == 0 ? form.CustomerId : customerId,

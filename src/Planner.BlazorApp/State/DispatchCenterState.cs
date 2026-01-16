@@ -32,7 +32,7 @@ public partial class DispatchCenterState(
         hub.OptimizationCompleted += OnOptimizationCompleted;
     }
 
-    public LocationDto? MapCenter { get; private set; }
+    public DepotDto ? MainDepot { get; private set; }
 
     private async void SetMapDepotFromVehicles() {
         // Vehicles DTOs do not include depot navigation; fetch a depot for map center.
@@ -41,7 +41,7 @@ public partial class DispatchCenterState(
         if (depot is null)
             return;
 
-        MapCenter = depot.Location;
+        MainDepot = depot;
     }
 
 }

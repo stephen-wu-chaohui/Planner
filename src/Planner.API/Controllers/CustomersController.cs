@@ -42,13 +42,20 @@ public sealed class CustomersController(PlannerDbContext db, ITenantContext tena
 
     [HttpPut("{id:long}")]
     public async Task<IActionResult> Update(long id, [FromBody] CustomerDto dto) {
-        var existing = await db.Customers.FirstOrDefaultAsync(c => c.CustomerId == id);
-        if (existing is null)
-            return NotFound();
+        if (id != dto.CustomerId) {
+            return BadRequest("ID mismatch");
+        }
 
+        var existing = db.Customers.Find(id);
+        if (existing == null) {
+            return NotFound();
+        }
+
+        // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
-        await db.SaveChangesAsync();
+        db.SaveChanges();
+
         return NoContent();
     }
 

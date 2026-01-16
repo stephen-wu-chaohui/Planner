@@ -46,7 +46,7 @@ public sealed class VehicleFormModel : EditableFlags {
 public static class VehicleFormMapper {
     public static VehicleDto ToDto(this VehicleFormModel v) {
         return new VehicleDto(
-            Id: v.VehicleId,
+            Id: Math.Max(v.VehicleId, 0),
             Name: v.Name,
             SpeedFactor: v.SpeedFactor,
             ShiftLimitMinutes: v.ShiftLimitMinutes,

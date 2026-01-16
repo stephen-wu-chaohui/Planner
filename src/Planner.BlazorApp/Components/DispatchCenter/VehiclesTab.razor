@@ -45,9 +45,9 @@
     <div class="planner-tab-actions">
         <div class="actions-left">
             <button class="btn btn-sm btn-success me-1" @onclick="AddNew">➕ Add</button>
-@*             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="LoadFromFile">📂 Load</button>
-            <button class="btn btn-sm btn-outline-primary" @onclick="SaveToFile">💾 Save</button>
- *@        </div>
+            <button class="btn btn-sm btn-outline-primary" @onclick="Save">💾 Save</button>
+            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="Discard">🧹 Discard</button>
+         </div>
         <div class="actions-right">
             <small class="text-muted">Stored at Planner.API backend</small>
         </div>
@@ -128,6 +128,8 @@
 
     private void AddNew() {
         Editing = new VehicleFormModel {
+            IsDirty = true,
+            VehicleId = GetNextTemporaryVehicleId(),
             Name = $"Vehicle {Vehicles.Count + 1}",
             SpeedFactor = 1.0,
             ShiftLimitMinutes = 360,
@@ -145,16 +147,13 @@
 
     private void Edit(VehicleFormModel v) {
         Editing = new(v);
+        Editing.IsDirty = true;
         IsNew = false;
     }
 
     private async Task SaveEdit() {
         if (Editing is null)
             return;
-
-        if (IsNew) {
-            Vehicles.Add(Editing);
-        }
 
         if (IsNew) {
             Vehicles.Add(Editing);
@@ -166,8 +165,8 @@
             }
         }
 
-
         Editing = null;
+
         await Task.CompletedTask;
     }
 
@@ -186,5 +185,14 @@
 
     private void Discard() {
         HandleVehiclesChanged();
+    }
+
+    /// <summary>
+    /// Temporary VehicleID counter for new vehicles
+    /// </summary>
+    private int TemporaryVehicleIdCounter = -1;
+
+    private int GetNextTemporaryVehicleId() {
+        return TemporaryVehicleIdCounter--;
     }
 }

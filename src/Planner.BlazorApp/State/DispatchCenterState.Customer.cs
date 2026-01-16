@@ -40,9 +40,9 @@ public partial class DispatchCenterState : ICustomerState {
                 if (!resp.IsSuccessStatusCode) return false;
             } else {
                 var request = model.ToDto();
-                var resp = request.CustomerId == 0
+                var resp = request.CustomerId <= 0
                     ? await api.PostAsJsonAsync("api/customers", request)
-                    : await api.PutAsJsonAsync("api/customers", request);
+                    : await api.PutAsJsonAsync($"api/customers/{request.CustomerId}", request);
                 if (!resp.IsSuccessStatusCode) return false;
             }
         }

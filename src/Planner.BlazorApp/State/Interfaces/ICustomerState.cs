@@ -5,7 +5,7 @@ namespace Planner.BlazorApp.State.Interfaces;
 
 // ICustomerState.cs
 public interface ICustomerState : IDispatchStateProcessing {
-    LocationDto? MapCenter { get; }
+    DepotDto? MainDepot { get; }
     IReadOnlyList<CustomerDto> Customers { get; }
     event Action OnCustomersChanged;
     Task SaveChangesAsync(IEnumerable<CustomerFormModel> models);

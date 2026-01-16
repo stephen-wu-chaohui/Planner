@@ -108,7 +108,8 @@
 
     public void OpenForNewCustomer(MapPosition pos) {
         Editing = new CustomerFormModel {
-            CustomerId = 0,
+            IsDirty = true,
+            CustomerId = GetNextTemporaryCustomerId(),
             LocationId = 0,
             Name = pos.Label,
             Address = pos.Address,
@@ -123,6 +124,7 @@
 
     private void Edit(CustomerFormModel c) {
         Editing = new CustomerFormModel(c);
+        Editing.IsDirty = true;
         IsNew = false;
     }
 
@@ -158,5 +160,14 @@
 
     private void Discard() {
         HandleCustomersChanged();
+    }
+
+    /// <summary>
+    /// Temporary CustomerID counter for new customers
+    /// </summary>
+    private int TemporaryCustomerIdCounter = -1;
+
+    private int GetNextTemporaryCustomerId() {
+        return TemporaryCustomerIdCounter--;
     }
 }

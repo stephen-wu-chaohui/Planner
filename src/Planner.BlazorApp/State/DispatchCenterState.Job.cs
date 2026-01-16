@@ -40,9 +40,9 @@ public partial class DispatchCenterState : IJobState {
                 if (!resp.IsSuccessStatusCode) return false;
             } else {
                 var request = model.ToDto();
-                var resp = request.Id == 0
+                var resp = request.Id <= 0
                     ? await api.PostAsJsonAsync("api/jobs", request)
-                    : await api.PutAsJsonAsync("api/jobs", request);
+                    : await api.PutAsJsonAsync($"api/jobs/{request.Id}", request);
                 if (!resp.IsSuccessStatusCode) return false;
             }
         }

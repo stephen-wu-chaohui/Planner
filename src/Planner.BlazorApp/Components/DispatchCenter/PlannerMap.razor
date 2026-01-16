@@ -69,7 +69,7 @@
 
             try
             {
-                var mapCenter = CustomerState.MapCenter ?? new LocationDto(Id: 0, Address: "Perth", Latitude: -31.9505, Longitude: 115.8605);
+                var mapCenter = CustomerState.MainDepot?.Location ?? new LocationDto(Id: 0, Address: "Perth", Latitude: -31.9505, Longitude: 115.8605);
                 await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
                 if (mapCenter is not null)
                 {

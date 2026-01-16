@@ -57,14 +57,14 @@ public sealed class CustomerFormModel : EditableFlags {
 public static class CustomerMapper {
     public static CustomerDto ToDto(this CustomerFormModel model) {
         return new CustomerDto(
-            CustomerId: model.CustomerId,
+            CustomerId: Math.Max(model.CustomerId, 0),
             Name: model.Name,
             Location: new LocationDto(
                 model.LocationId,
                 model.Address,
                 model.Latitude,
                 model.Longitude),
-            DefaultServiceMinutes: model.DefaultServiceMinutes,
+            DefaultServiceMinutes: Math.Max(model.DefaultServiceMinutes, 0),
             RequiresRefrigeration: model.RequiresRefrigeration
         );
     }

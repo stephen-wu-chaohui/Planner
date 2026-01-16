@@ -57,13 +57,20 @@ public sealed class VehiclesController(PlannerDbContext db, ITenantContext tenan
 
     [HttpPut("{id:long}")]
     public async Task<IActionResult> Update(long id, [FromBody] VehicleDto dto) {
-        var existing = await db.Vehicles.FirstOrDefaultAsync(v => v.Id == id);
-        if (existing is null)
-            return NotFound();
+        if (id != dto.Id) {
+            return BadRequest("ID mismatch");
+        }
 
+        var existing = db.Vehicles.Find(id);
+        if (existing == null) {
+            return NotFound();
+        }
+
+        // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
-        await db.SaveChangesAsync();
+        db.SaveChanges();
+
         return NoContent();
     }
 

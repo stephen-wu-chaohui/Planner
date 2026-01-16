@@ -49,6 +49,7 @@
         <div class="actions-left">
             <button class="btn btn-sm btn-success me-1" @onclick="CreateJobsForAllCustomers">👥 Build</button>
             <button class="btn btn-sm btn-success me-1" @onclick="AddNew">➕ Add</button>
+            <button class="btn btn-sm btn-primary me-1" @onclick="Save">Save Changes</button>
             <button class="btn btn-sm btn-outline-danger me-1" @onclick="Discard">🧹 Discard</button>
         </div>
         <div class="actions-right">
@@ -121,15 +122,6 @@
     private JobFormModel? Editing;
     private bool IsNew;
 
-    private long editingLocationId;
-    private int editingJobType;
-    private long editingReady;
-    private long editingDue;
-    private long editingService;
-    private long editingPallets;
-    private long editingWeight;
-    private bool editingRefrig;
-
     protected override Task OnInitializedAsync() {
         Jobs = JobState.Jobs.Select(job => job.ToFormModel()).ToList();
         Customers = CustomerState.Customers.Select(c => c.ToFormModel()).ToList();
@@ -151,7 +143,8 @@
 
     private void AddNew() {
         Editing = new JobFormModel {
-            JobId = 0,
+            IsDirty = true,
+            JobId = GetNextTemporaryJobId(),
             JobType = 1,
             Name = "",
             Latitude = 0,
@@ -170,6 +163,7 @@
 
     private void Edit(JobFormModel j) {
         Editing = new JobFormModel(j);
+        Editing.IsDirty = true;
         IsNew = false;
     }
 
@@ -208,5 +202,14 @@
     private Task CreateJobsForAllCustomers(MouseEventArgs args)
     {
         throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Temporary JobID counter for new jobs
+    /// </summary>
+    private int TemporaryJobIdCounter = -1;
+
+    private int GetNextTemporaryJobId() {
+        return TemporaryJobIdCounter--;
     }
 }
