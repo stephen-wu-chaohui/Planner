@@ -1,25 +1,29 @@
 ﻿@page "/dispatch-center"
 @rendermode InteractiveServer
 
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
 @using Planner.BlazorApp.Auth
-@using Planner.BlazorApp.Forms
-@using Planner.BlazorApp.Models
-@using Planner.BlazorApp.Components.WelcomeWizard
+@using Planner.BlazorApp.Components.DispatchCenter
+@using Planner.BlazorApp.State
+@using Planner.BlazorApp.State.Interfaces
+@using Planner.BlazorApp.WelcomeWizard
+@using Planner.BlazorApp.PlannerEntitiesModal
+@using Planner.BlazorApp.FormModels
 @using Planner.BlazorApp.Services
 @using Planner.Contracts.API
 
-@inject DataCenterState DataCenter
-@inject IConfiguration Configuration
-@inject IJwtTokenStore TokenStore
+@inject ICustomerState CustomerState
 @inject WizardService Wizard
+@inject IJwtTokenStore TokenStore
 
-<CascadingValue Value="DataCenter">
+@namespace Planner.BlazorApp.DispatchCenter
+
 <div class="planner-view d-flex flex-column flex-fill">
     <!-- Top toolbar -->
     <div class="toolbar p-2 d-flex align-items-center bg-light border-bottom">
         <div class="d-flex gap-2">
-                <button class="btn btn-info" @onclick="ShowWelcomeGuide">Show Welcome Guide</button>
-                @if (TokenStore.IsAuthenticated && TokenStore.AccessToken!.GetRole() == "Admin") {
+            <button class="btn btn-info" @onclick="ShowWelcomeGuide">Show Welcome Guide</button>
+            @if (TokenStore.IsAuthenticated && TokenStore.AccessToken!.GetRole() == "Admin") {
                 <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Planning Wizard</button>
             }
         </div>
@@ -28,20 +32,14 @@
 
     <!-- Map area -->
     <div class="planner-map-area flex-fill position-relative">
-        <PlannerMap @ref="mapRef"
-                    DepotLat="@DataCenter.MapDepotLocation.Latitude"
-                    DepotLon="@DataCenter.MapDepotLocation.Longitude"
-                    JobPositionPicked="JobPositionPicked"
-                    Routes="@DataCenter.MapRoutes"
-                    Customers="@DataCenter.MapCustomers" />
+        <PlannerMap @ref="mapRef" JobPositionPicked="JobPositionPicked"/>
     </div>
-    <WelcomeWizardModal />
 
+    <WelcomeWizardModal />
     <PlannerEntitiesModal @ref="entitiesModal" />
     <NewCustomerModal @ref="newCustomerModal" OnCustomerCreated="HandleNewCustomer" />
 
 </div>
-</CascadingValue>
 
 @code {
     private bool _subscribed;
@@ -51,43 +49,11 @@
     private NewCustomerModal? newCustomerModal;
 
     protected override async Task OnInitializedAsync() {
-        if (_subscribed) return;
-
-        DataCenter.CollectionChanged += OnCollectionChanged;
-        await EnsureTenantInitializedAsync();
-
-        DataCenter.OnCustomerChanged += OnCustomerChanged;
-
-        _subscribed = true;
-    }
-
-    private async void OnCustomerChanged(DataChangedEventArgs<Planner.Contracts.API.CustomerDto> customerChange) {
-        // 1. Update the UI to reflect changes in the customer list/sidebar
-        await InvokeAsync(StateHasChanged);
-
-        // 2. If the customer has geographical data, update the map marker or center the view
-        if (mapRef != null) {
-            // Assuming your PlannerMap has a method to refresh or focus on a specific point
-            await mapRef.OnCustomerChanged(customerChange);
-        }
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (_subscribed)
-            await EnsureTenantInitializedAsync();
-    }
-
-    private async Task EnsureTenantInitializedAsync()
-    {
         if (!TokenStore.IsAuthenticated || string.IsNullOrWhiteSpace(TokenStore.AccessToken))
             return;
-
-        var tokenTenantId = TokenStore.AccessToken.GetTenantId();
-        if (tokenTenantId is null)
-            return;
-
-        await DataCenter.InitializeAsync(tokenTenantId.Value);
+        if (_subscribed) return;
+        await CustomerState.InitializeAsync();
+        _subscribed = true;
     }
 
     private async void OnCollectionChanged(string _) {
@@ -108,10 +74,6 @@
     }
 
     private async Task HandleNewCustomer(CustomerFormModel customer) {
-        await DataCenter.AddNewCustomerAsync(customer);
-    }
-
-    public void Dispose() {
-        DataCenter.CollectionChanged -= OnCollectionChanged;
+        await CustomerState.SaveChangesAsync([customer]);
     }
 }

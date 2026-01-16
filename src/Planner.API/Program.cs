@@ -127,8 +127,6 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     Predicate = _ => true
 });
 
-// CRUD endpoints are exposed via attribute-routed controllers under `Controllers/`.
-
 app.Run();
 
 

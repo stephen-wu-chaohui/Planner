@@ -1,6 +1,6 @@
-﻿namespace Planner.BlazorApp.Models;
+﻿namespace Planner.BlazorApp.FormModels;
 
-public class JobMarker : MapPosition {
+public class CustomerMarker : MapPosition {
     public string JobType { get; set; } = string.Empty;
     public string Color { get; set; } = "#000000";
     public string RouteName { get; set; } = string.Empty;

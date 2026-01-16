@@ -1,7 +1,8 @@
-﻿
-@using Planner.BlazorApp.Forms
-@using Planner.BlazorApp.Models
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
+
+@using Microsoft.AspNetCore.Components.Forms
+@using Planner.BlazorApp.FormModels
+@using Planner.BlazorApp.Services
 
 <div class="modal fade @(isVisible ? "show d-block" : "")" tabindex="-1" style="background:rgba(0,0,0,0.4)">
     <div class="modal-dialog modal-dialog-centered">

@@ -1,8 +1,10 @@
 ﻿@using System.Text.Json
-@using Planner.BlazorApp.Forms
-@using Planner.BlazorApp.Models
+@using Planner.BlazorApp.FormModels
 @using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.API
+
+@inject ICustomerState CustomerState
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -11,7 +13,7 @@
                 <tr>
                     <th class="sticky-col">ID</th>
                     <th>Name</th>
-                    <th>Default Job Type</th>
+                    <th>Job Type</th>
                     <th>Address</th>
                     <th style="width:100px;"></th>
                 </tr>
@@ -37,6 +39,14 @@
                 }
             </tbody>
         </table>
+    </div>
+
+    <div class="planner-tab-actions d-flex justify-content-end p-2 border-top bg-light">
+        <button class="btn btn-outline-secondary me-2" @onclick="Discard" disabled="@(!HasChanges || CustomerState.IsProcessing)">Discard</button>
+        <button class="btn btn-primary" @onclick="Save" disabled="@(!HasChanges || CustomerState.IsProcessing)">
+            @if(CustomerState.IsProcessing) { <span class="spinner-border spinner-border-sm me-1"></span> }
+            Save Changes
+        </button>
     </div>
 </div>
 
@@ -71,7 +81,7 @@
 
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
-                    <button class="btn btn-primary" @onclick="SaveEdit">Save</button>
+                    <button class="btn btn-primary" @onclick="SaveEdit">OK</button>
                 </div>
             </div>
         </div>
@@ -79,29 +89,18 @@
 }
 
 @code {
-    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
     private List<CustomerFormModel> Customers = new();
 
     protected override Task OnInitializedAsync() {
-        if (DataCenter != null) {
-            Customers = DataCenter.Customers.Select(c => c.ToFormModel()).ToList();
-            DataCenter.OnCustomerChanged += OnCustomerChanged;
-        }
+        Customers = CustomerState.Customers.Select(c => c.ToFormModel()).ToList();
+        CustomerState.OnCustomersChanged += HandleCustomersChanged;
         return Task.CompletedTask;
     }
 
-    private async void OnCustomerChanged(DataChangedEventArgs<CustomerDto> args) {
-        if (args.ChangeType == DataChangeType.Added) {
-            Customers.Add(args.Item.ToFormModel());
-        } else if (args.ChangeType == DataChangeType.Updated) {
-            var index = Customers.FindIndex(c => c.CustomerId == args.Item.CustomerId);
-            if (index >= 0) {
-                Customers[index] = args.Item.ToFormModel();
-            }
-        } else if (args.ChangeType == DataChangeType.Deleted) {
-            Customers.RemoveAll(c => c.CustomerId == args.Item.CustomerId);
-        }
-        await InvokeAsync(StateHasChanged);
+    private void HandleCustomersChanged()
+    {
+        Customers = CustomerState.Customers.Select(c => c.ToFormModel()).ToList();
+        InvokeAsync(StateHasChanged);
     }
 
     private CustomerFormModel? Editing;
@@ -109,8 +108,8 @@
 
     public void OpenForNewCustomer(MapPosition pos) {
         Editing = new CustomerFormModel {
-            CustomerId = NextId(),
-            LocationId = NextLocationId(),
+            CustomerId = 0,
+            LocationId = 0,
             Name = pos.Label,
             Address = pos.Address,
             Latitude = pos.Lat,
@@ -123,38 +122,41 @@
     }
 
     private void Edit(CustomerFormModel c) {
-        Editing = c with { };
+        Editing = new CustomerFormModel(c);
         IsNew = false;
     }
 
     private async Task SaveEdit() {
-        if (Editing is null || DataCenter is null) 
+        if (Editing is null) 
             return;
 
         if (IsNew) {
-            await DataCenter!.AddNewCustomerAsync(Editing);
+            Customers.Add(Editing);
+            IsNew = false;
         } else {
             var index = Customers.FindIndex(x => x.CustomerId == Editing.CustomerId);
-            if (index >= 0)
-            {
-                await DataCenter!.UpdateCustomerAsync(Editing);
+            if (index >= 0) {
+                Customers[index] = Editing;
             }
         }
         Editing = null;
+        await Task.CompletedTask;
     }
 
     private void CloseEditModal() => Editing = null;
 
     private async Task Delete(CustomerFormModel c) {
-        if (DataCenter is null)
-            return;
-        await DataCenter!.RemoveCustomerAsync(c);
+        c.PendingDeletion = !c.PendingDeletion;
+        await Task.CompletedTask;
     }
 
+    private bool HasChanges => Customers.Any(c => c.IsDirty || c.PendingDeletion);
 
-    private long NextId() =>
-        Customers.Count == 0 ? 1 : Customers.Max(c => c.CustomerId) + 1;
+    private async Task Save() {
+        await CustomerState.SaveChangesAsync(Customers);
+    }
 
-    private long NextLocationId() =>
-        Customers.Count == 0 ? 1 : Customers.Max(c => c.LocationId) + 1;
+    private void Discard() {
+        HandleCustomersChanged();
+    }
 }

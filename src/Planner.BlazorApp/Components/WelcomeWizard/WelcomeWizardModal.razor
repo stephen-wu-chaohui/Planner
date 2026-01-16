@@ -1,6 +1,8 @@
 ﻿@inherits ComponentBase
 @inject WizardService Wizard
 
+@namespace Planner.BlazorApp.WelcomeWizard
+
 <div class="wizard-backdrop" style="visibility: @(Wizard.IsOpen ? "visible" : "hidden")">
     @if (CurrentStep is not null) {
         <div class="wizard-modal @AnimationClass">
@@ -50,7 +52,7 @@
 @code {
     private IReadOnlyList<WizardStep> Steps { get; } = WelcomeWizardDefinition.Steps;
     private string AnimationClass = "";
-    private bool dontShowAgain;
+    private bool dontShowAgain = false;
 
     private WizardStep? CurrentStep =>
         (Wizard.StepIndex >= 0 && Wizard.StepIndex < Steps.Count) ? Steps[Wizard.StepIndex] : null;
@@ -100,7 +102,6 @@
     }
 
     private void Close() {
-        dontShowAgain = false;
         Wizard.Close();
     }
 }

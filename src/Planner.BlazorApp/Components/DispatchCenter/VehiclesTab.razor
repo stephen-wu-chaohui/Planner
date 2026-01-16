@@ -1,7 +1,10 @@
 ﻿@using System.Text.Json
-@using Planner.BlazorApp.Forms
+@using Planner.BlazorApp.FormModels
 @using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.API
+
+@inject IVehicleState VehicleState
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
@@ -106,8 +109,19 @@
 }
 
 @code {
-    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
-    private List<VehicleFormModel> Vehicles => DataCenter?.Vehicles.Select(v => v.ToFormModel()).ToList() ?? new List<VehicleFormModel>();
+    private List<VehicleFormModel> Vehicles = new();
+
+    protected override Task OnInitializedAsync() {
+        Vehicles = VehicleState.Vehicles.Select(vehicle => vehicle.ToFormModel()).ToList();
+        VehicleState.OnVehiclesChanged += HandleVehiclesChanged;
+
+        return Task.CompletedTask;
+    }
+
+    private void HandleVehiclesChanged() {
+        Vehicles = VehicleState.Vehicles.Select(vehicle => vehicle.ToFormModel()).ToList();
+        InvokeAsync(StateHasChanged);
+    }
 
     private VehicleFormModel? Editing;
     private bool IsNew;
@@ -130,32 +144,47 @@
     }
 
     private void Edit(VehicleFormModel v) {
-        Editing = v;
+        Editing = new(v);
         IsNew = false;
     }
 
     private async Task SaveEdit() {
-        if (Editing is null || DataCenter is null)
+        if (Editing is null)
             return;
 
         if (IsNew) {
-            await DataCenter!.AddNewVehicleAsync(Editing.ToDto());
             Vehicles.Add(Editing);
+        }
+
+        if (IsNew) {
+            Vehicles.Add(Editing);
+            IsNew = false;
         } else {
             var index = Vehicles.FindIndex(x => x.VehicleId == Editing.VehicleId);
             if (index >= 0) {
-                await DataCenter!.UpdateVehicleAsync(Editing.ToDto());
+                Vehicles[index] = Editing;
             }
         }
 
+
         Editing = null;
+        await Task.CompletedTask;
     }
 
     private void CloseEditModal() => Editing = null;
 
     private async Task Delete(VehicleFormModel v) {
-        if (DataCenter is null)
-            return;
-        await DataCenter!.RemoveVehicleAsync(v.ToDto());
+        v.PendingDeletion = !v.PendingDeletion;
+        await Task.CompletedTask;
+    }
+
+    private bool HasChanges => Vehicles.Any(v => v.IsDirty || v.PendingDeletion);
+
+    private async Task Save() {
+        await VehicleState.SaveChangesAsync(Vehicles);
+    }
+
+    private void Discard() {
+        HandleVehiclesChanged();
     }
 }

@@ -1,14 +1,18 @@
 ﻿using System;
 using Planner.Contracts.API;
 
-namespace Planner.BlazorApp.Forms;
+namespace Planner.BlazorApp.FormModels;
 
 /// <summary>
 /// UI form model for defining optimization jobs.
 /// Location is reference-only and not editable.
 /// </summary>
-public sealed class JobFormModel {
+public sealed class JobFormModel : EditableFlags {
     public long JobId { get; set; }
+
+    public long CustomerId { get; set; }
+    public long OrderId { get; set; }
+    public string Reference { get; set; } = string.Empty;
 
     /// <summary>
     /// 0 = Depot, 1 = Delivery, 2 = Pickup
@@ -31,6 +35,26 @@ public sealed class JobFormModel {
     public long PalletDemand { get; set; }
     public long WeightDemand { get; set; }
     public bool RequiresRefrigeration { get; set; }
+
+    public JobFormModel() { }
+
+    public JobFormModel(JobFormModel other) : base(other) {
+        JobId = other.JobId;
+        CustomerId = other.CustomerId;
+        OrderId = other.OrderId;
+        Reference = other.Reference;
+        JobType = other.JobType;
+        Name = other.Name;
+        LocationId = other.LocationId;
+        Latitude = other.Latitude;
+        Longitude = other.Longitude;
+        ServiceTimeMinutes = other.ServiceTimeMinutes;
+        ReadyTime = other.ReadyTime;
+        DueTime = other.DueTime;
+        PalletDemand = other.PalletDemand;
+        WeightDemand = other.WeightDemand;
+        RequiresRefrigeration = other.RequiresRefrigeration;
+    }
 }
 
 
@@ -44,15 +68,15 @@ public static class JobMapper {
         return new JobDto(
             Id: form.JobId,
             Name: form.Name,
-            OrderId: orderId,
-            CustomerId: customerId,
+            OrderId: orderId == 0 ? form.OrderId : orderId,
+            CustomerId: customerId == 0 ? form.CustomerId : customerId,
             JobType: form.JobType switch {
                 0 => JobTypeDto.Depot,
                 1 => JobTypeDto.Delivery,
                 2 => JobTypeDto.Pickup,
                 _ => throw new ArgumentOutOfRangeException(nameof(form.JobType), form.JobType, "Unknown job type")
             },
-            Reference: reference,
+            Reference: string.IsNullOrEmpty(reference) ? form.Reference : reference,
             Location: new LocationDto(form.LocationId, string.Empty, form.Latitude, form.Longitude),
             ServiceTimeMinutes: form.ServiceTimeMinutes,
             PalletDemand: form.PalletDemand,
@@ -67,6 +91,9 @@ public static class JobMapper {
         ArgumentNullException.ThrowIfNull(dto);
         return new JobFormModel {
             JobId = dto.Id,
+            CustomerId = dto.CustomerId,
+            OrderId = dto.OrderId,
+            Reference = dto.Reference,
             JobType = dto.JobType switch {
                 JobTypeDto.Depot => 0,
                 JobTypeDto.Delivery => 1,

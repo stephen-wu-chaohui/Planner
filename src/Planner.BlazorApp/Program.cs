@@ -1,6 +1,8 @@
 ﻿using Planner.BlazorApp.Auth;
 using Planner.BlazorApp.Components;
 using Planner.BlazorApp.Services;
+using Planner.BlazorApp.State;
+using Planner.BlazorApp.State.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,7 +36,13 @@ builder.Services.AddScoped<PlannerApiClient>();
 
 // App services
 builder.Services.AddScoped<IOptimizationHubClient, OptimizationHubClient>();
-builder.Services.AddScoped<DataCenterState>();
+
+builder.Services.AddScoped<DispatchCenterState>();
+builder.Services.AddScoped<IVehicleState>(sp => sp.GetRequiredService<DispatchCenterState>());
+builder.Services.AddScoped<ICustomerState>(sp => sp.GetRequiredService<DispatchCenterState>());
+builder.Services.AddScoped<IJobState>(sp => sp.GetRequiredService<DispatchCenterState>());
+builder.Services.AddScoped<IRouteState>(sp => sp.GetRequiredService<DispatchCenterState>());
+
 builder.Services.AddScoped<WizardService>();
 
 var app = builder.Build();
