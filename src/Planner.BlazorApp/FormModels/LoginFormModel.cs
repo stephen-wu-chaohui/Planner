@@ -1,6 +1,6 @@
-using Planner.Contracts.API.Auth;
+﻿using Planner.Contracts.API.Auth;
 
-namespace Planner.BlazorApp.Forms;
+namespace Planner.BlazorApp.FormModels;
 
 /// <summary>
 /// UI form model for the login screen.

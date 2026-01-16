@@ -1,7 +1,8 @@
 ﻿using Planner.Contracts.API;
-namespace Planner.BlazorApp.Forms;
 
-public sealed class VehicleFormModel {
+namespace Planner.BlazorApp.FormModels;
+
+public sealed class VehicleFormModel : EditableFlags {
     public long VehicleId { get; set; } = 0;
     public string Name { get; set; } = string.Empty;
 
@@ -18,6 +19,23 @@ public sealed class VehicleFormModel {
     public long MaxPallets { get; set; }
     public long MaxWeight { get; set; }
     public long RefrigeratedCapacity { get; set; }
+
+    public VehicleFormModel() { }
+
+    public VehicleFormModel(VehicleFormModel other) : base(other) {
+        VehicleId = other.VehicleId;
+        Name = other.Name;
+        ShiftLimitMinutes = other.ShiftLimitMinutes;
+        DepotStartId = other.DepotStartId;
+        DepotEndId = other.DepotEndId;
+        SpeedFactor = other.SpeedFactor;
+        CostPerMinute = other.CostPerMinute;
+        CostPerKm = other.CostPerKm;
+        BaseFee = other.BaseFee;
+        MaxPallets = other.MaxPallets;
+        MaxWeight = other.MaxWeight;
+        RefrigeratedCapacity = other.RefrigeratedCapacity;
+    }
 }
 
 /// <summary>
@@ -28,7 +46,7 @@ public sealed class VehicleFormModel {
 public static class VehicleFormMapper {
     public static VehicleDto ToDto(this VehicleFormModel v) {
         return new VehicleDto(
-            Id: v.VehicleId,
+            Id: Math.Max(v.VehicleId, 0),
             Name: v.Name,
             SpeedFactor: v.SpeedFactor,
             ShiftLimitMinutes: v.ShiftLimitMinutes,

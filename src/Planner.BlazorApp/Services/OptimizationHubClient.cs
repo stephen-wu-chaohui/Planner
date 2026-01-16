@@ -1,15 +1,19 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
+using Planner.BlazorApp.Auth;
 using Planner.Contracts.Optimization.Responses;
 using Planner.Messaging;
 
 namespace Planner.BlazorApp.Services;
 
-public sealed class OptimizationHubClient(IConfiguration configuration, ILogger<OptimizationHubClient> logger) : IOptimizationHubClient {
+public sealed class OptimizationHubClient(
+    IConfiguration configuration,
+    ILogger<OptimizationHubClient> logger,
+    IJwtTokenStore tokenStore) : IOptimizationHubClient {
     private HubConnection? _connection;
 
     public event Action<OptimizeRouteResponse>? OptimizationCompleted;
 
-    public async Task ConnectAsync(Guid tenantId, Guid? optimizationRunId = null) {
+    public async Task ConnectAsync(Guid? optimizationRunId = null) {
         if (_connection != null)
         {
             logger.LogDebug("SignalR connection already exists, skipping reconnection");
@@ -39,6 +43,8 @@ public sealed class OptimizationHubClient(IConfiguration configuration, ILogger<
             _connection = new HubConnectionBuilder()
                 .WithUrl(hubUrl, options =>
                 {
+                    options.AccessTokenProvider = () => Task.FromResult(tokenStore.AccessToken)!;
+
                     // For development, ignore SSL certificate errors
                     if (configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Development")
                     {
@@ -61,16 +67,17 @@ public sealed class OptimizationHubClient(IConfiguration configuration, ILogger<
                 MessageRoutes.Response,
                 evt => 
                 {
-                    logger.LogInformation("Received OptimizationCompleted event for tenant {TenantId}", evt.TenantId);
+                    logger.LogInformation("Received OptimizationCompleted event for run {OptimizationRunId}", evt.OptimizationRunId);
                     OptimizationCompleted?.Invoke(evt);
                 });
 
-            _connection.Closed += async (error) =>
+            _connection.Closed += (error) =>
             {
                 if (error != null)
                     logger.LogError(error, "SignalR connection closed with error");
                 else
                     logger.LogInformation("SignalR connection closed normally");
+                return Task.CompletedTask;
             };
 
             _connection.Reconnecting += (error) =>
@@ -88,14 +95,10 @@ public sealed class OptimizationHubClient(IConfiguration configuration, ILogger<
             await _connection.StartAsync();
             logger.LogInformation("SignalR connection established. ConnectionId: {ConnectionId}", _connection.ConnectionId);
 
-            // Join tenant group
-            await _connection.InvokeAsync("JoinTenant", tenantId);
-            logger.LogInformation("Joined tenant group for {TenantId}", tenantId);
-
             // Optionally join optimization run group
             if (optimizationRunId.HasValue) {
-                await _connection.InvokeAsync("JoinOptimizationRun", tenantId, optimizationRunId.Value);
-                logger.LogInformation("Joined optimization run group for {TenantId}:{OptimizationRunId}", tenantId, optimizationRunId.Value);
+                await _connection.InvokeAsync("JoinOptimizationRun", optimizationRunId.Value);
+                logger.LogInformation("Joined optimization run group for {OptimizationRunId}", optimizationRunId.Value);
             }
         }
         catch (Exception ex)

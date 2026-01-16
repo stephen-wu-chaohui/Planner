@@ -1,8 +1,15 @@
-﻿@using Planner.BlazorApp.Services
+﻿@using Planner.BlazorApp.Components.DispatchCenter
+@using Planner.BlazorApp.DispatchCenter
+@using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.Optimization.Outputs
 
+@inject IJobState JobState
+@inject IVehicleState VehicleState
+@inject IRouteState RouteState
+
 <div class="planner-tab-wrapper">
-    @if (Routes.Count == 0) {
+    @if (Routes is null || Routes!.Count == 0) {
         <RoutesBuildPanel TotalJobs="TotalJobs"
                          TickSeconds="TickSeconds"
                          IsBuilding="IsBuilding"
@@ -80,16 +87,14 @@
 
     [Parameter] public int TickSeconds { get; set; } = 1;
 
-    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
-
-    private List<RouteResult> Routes = new();
+    private IReadOnlyList<RouteResult>? Routes;
 
     private System.Threading.Timer? _progressTimer;
     private bool _isBuilding;
     private int _elapsedSlots;
 
     private bool IsBuilding => _isBuilding;
-    private int TotalJobs => Math.Max(0, DataCenter?.Jobs?.Count ?? 0);
+    private int TotalJobs => JobState.Jobs.Count;
     private int EstimatedSlots => TotalJobs;
     private int CompletedJobs => Math.Min(EstimatedSlots, _elapsedSlots);
 
@@ -101,31 +106,21 @@
 
     protected override void OnInitialized()
     {
-        if (DataCenter is not null)
-        {
-            Routes = DataCenter.Routes;
-            DataCenter.CollectionChanged += OnCollectionChanged;
-            DataCenter.EnsureJobsFromCustomers();
-        }
+        Routes = RouteState.Routes;
+        RouteState.OnRoutesChanged += HandleRoutesChanged;
     }
 
     public void Dispose()
     {
         StopProgress();
-        if (DataCenter is not null)
-        {
-            DataCenter.CollectionChanged -= OnCollectionChanged;
-        }
+        RouteState.OnRoutesChanged -= HandleRoutesChanged;
     }
 
-    private void OnCollectionChanged(string msg)
+    // Fix: Implement the missing handler for RouteState.OnRoutesChanged
+    private void HandleRoutesChanged()
     {
-        if (DataCenter is not null && msg == "Routes") {
-            Routes = DataCenter!.Routes;
-            // Ensure UI reaches 100% before we hide the progress panel.
-            _elapsedSlots = EstimatedSlots;
-        }
-
+        Routes = RouteState.Routes;
+        _elapsedSlots = EstimatedSlots;
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -133,11 +128,8 @@
     {
         if (IsBuilding) return;
 
-        if (DataCenter != null)
-        {
-            StartProgress();
-            await DataCenter.SolveVrp();
-        }
+        StartProgress();
+        await RouteState.SolveVrpAsync();
     }
 
     private void StartProgress()

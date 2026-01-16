@@ -41,13 +41,20 @@ public sealed class JobsController(PlannerDbContext db, ITenantContext tenant) :
 
     [HttpPut("{id:long}")]
     public async Task<IActionResult> Update(long id, [FromBody] JobDto dto) {
-        var existing = await db.Jobs.FirstOrDefaultAsync(j => j.Id == id);
-        if (existing is null)
-            return NotFound();
+        if (id != dto.Id) {
+            return BadRequest("ID mismatch");
+        }
 
+        var existing = db.Jobs.Find(id);
+        if (existing == null) {
+            return NotFound();
+        }
+
+        // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
-        await db.SaveChangesAsync();
+        db.SaveChanges();
+
         return NoContent();
     }
 

@@ -10,14 +10,4 @@ public static class JwtExtensions {
         return token.Claims
             .FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
     }
-
-    public static Guid? GetTenantId(this string jwt) {
-        var handler = new JwtSecurityTokenHandler();
-        var token = handler.ReadJwtToken(jwt);
-        var value = token.Claims.FirstOrDefault(c => c.Type == "tenant_id")?.Value;
-
-        return Guid.TryParse(value, out var id)
-            ? id
-            : null;
-    }
 }

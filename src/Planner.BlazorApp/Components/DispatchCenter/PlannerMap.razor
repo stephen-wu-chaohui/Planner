@@ -1,9 +1,15 @@
-﻿@using Planner.BlazorApp.Services
-@using Planner.BlazorApp.Models
+﻿@using Microsoft.JSInterop
+@using Planner.BlazorApp.FormModels
+@using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.API
+
 @inject IJSRuntime JS
 @inject IConfiguration Config
 @inject ILogger<PlannerMap> Logger
+@inject ICustomerState CustomerState
+@inject IRouteState RouteState
+
 @implements IAsyncDisposable
 
 <div class="map-wrapper position-relative" style="width:@Width; height:@Height;">
@@ -20,23 +26,25 @@
 @code {
     [Parameter] public string Width { get; set; } = "100%";
     [Parameter] public string Height { get; set; } = "100%";
-    [Parameter] public double DepotLat { get; set; }
-    [Parameter] public double DepotLon { get; set; }
-    [Parameter] public IReadOnlyList<JobMarker>? Customers { get; set; }
-    [Parameter] public IReadOnlyList<MapRoute>? Routes { get; set; }
     [Parameter] public EventCallback<MapPosition> JobPositionPicked { get; set; }
 
+    private List<CustomerMarker> customers = [];
+    private List<MapRoute> routes = [];
     private DotNetObjectReference<PlannerMap>? dotNetRef;
 
-    public async ValueTask DisposeAsync() {
+    public ValueTask DisposeAsync() {
         dotNetRef?.Dispose();
         dotNetRef = null;
+        return ValueTask.CompletedTask;
+    }
+
+    protected override void OnInitialized() {
+        // 1. Subscribe to the event when the component initializes
+        CustomerState.OnCustomersChanged += OnCustomersChanged;
+        RouteState.OnRoutesChanged += OnRoutesChanged;
     }
 
     private bool _initialized;
-    public IReadOnlyList<JobMarker>? existingCustomers = null;
-    public IReadOnlyList<MapRoute>? existingRoutes = null;
-    private (double Lat, double Lon)? _existingCenter;
 
     private bool _showError;
     private string? _errorMessage;
@@ -61,13 +69,15 @@
 
             try
             {
+                var mapCenter = CustomerState.MainDepot?.Location ?? new LocationDto(Id: 0, Address: "Perth", Latitude: -31.9505, Longitude: 115.8605);
                 await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
-                await JS.InvokeVoidAsync("plannerMap.initMap", DepotLat, DepotLon, apiMapId);
+                if (mapCenter is not null)
+                {
+                    await JS.InvokeVoidAsync("plannerMap.initMap", mapCenter!.Latitude, mapCenter!.Longitude, apiMapId);
+                }
                 await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
 
                 _initialized = true;
-
-                await OnParametersSetAsync();
             }
             catch (JSException jsex)
             {
@@ -86,28 +96,6 @@
         }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!_initialized) {
-            return;
-        }
-
-        if (_existingCenter is null || _existingCenter.Value.Lat != DepotLat || _existingCenter.Value.Lon != DepotLon)
-        {
-            await JS.InvokeVoidAsync("plannerMap.recenter", DepotLat, DepotLon, 12);
-            _existingCenter = (DepotLat, DepotLon);
-        }
-        if (Routes != existingRoutes && Routes != null)
-        {
-            await JS.InvokeVoidAsync("plannerMap.updateRoutes", Routes);
-            existingRoutes = Routes;
-        }
-        if (Customers != existingCustomers && Customers != null)
-        {
-            await JS.InvokeVoidAsync("plannerMap.updateCustomers", Customers);
-            existingCustomers = Customers;
-        }
-    }
 
     [JSInvokable]
     public Task OnMapClick(MapPosition position) {
@@ -116,15 +104,46 @@
         return Task.CompletedTask;
     }
 
-    public async Task ClearRoutesAsync()
+    // Add missing OnCustomersChanged method to fix CS0103
+    private async void OnCustomersChanged()
     {
+        if (!_initialized)
+            return;
+
+        customers = CustomerState.Customers.Select(c => new CustomerMarker
+        {
+            Label = c.Name,
+            Lat = c.Location.Latitude,
+            Lng = c.Location.Longitude
+            // Add other properties as needed
+        }).ToList();
+
+        await JS.InvokeVoidAsync("plannerMap.updateCustomers", customers);
+    }
+
+    // Add missing OnRoutesChanged method if needed for similar usage
+    private async void OnRoutesChanged()
+    {
+        if (!_initialized)
+            return;
+        var routes = RouteState.MapRoutes;
+        await JS.InvokeVoidAsync("plannerMap.updateRoutes", routes);
+    }
+
+
+    /// <summary>
+    /// //////////////////////////////
+    /// </summary>
+    /// 
+
+    public async Task ClearRoutesAsync() {
         await JS.InvokeVoidAsync("plannerMap.clearRoutes");
     }
 
-    public async Task AddMarkerAsync(JobMarker marker) =>
+    public async Task AddMarkerAsync(CustomerMarker marker) =>
         await JS.InvokeVoidAsync("plannerMap.addMarker", marker);
 
-    public async Task DrawRouteAsync(string routeName, string color, List<JobMarker> markers) =>
+    public async Task DrawRouteAsync(string routeName, string color, List<CustomerMarker> markers) =>
         await JS.InvokeVoidAsync("plannerMap.drawRoute", routeName, color, markers);
 
     public async Task HighlightRouteAsync(string routeName) =>
@@ -136,18 +155,6 @@
     public async Task FitToBoundsAsync() =>
         await JS.InvokeVoidAsync("plannerMap.fitToBounds");
 
-    public async Task OnCustomerChanged(DataChangedEventArgs<Planner.Contracts.API.CustomerDto> customerChange) {
-        if (!_initialized) return;
-        if (customerChange.ChangeType == DataChangeType.Added && customerChange.Item != null) {
-            var marker = new JobMarker {
-                Label = customerChange.Item.Name,
-                Lat = customerChange.Item.Location.Latitude,
-                Lng = customerChange.Item.Location.Longitude
-            };
-            await JS.InvokeVoidAsync("plannerMap.addMarker", marker);
-        }
-        else if (customerChange.ChangeType == DataChangeType.Deleted && customerChange.Item != null) {
-            await JS.InvokeVoidAsync("plannerMap.removeMarker", customerChange.Item.Name);
-        }
-    }
 }
+
+

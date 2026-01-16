@@ -1,14 +1,18 @@
-﻿@using Planner.Contracts.Optimization.Requests
-@using Planner.BlazorApp.Forms
+﻿@using Planner.BlazorApp.FormModels
+@using Planner.BlazorApp.State.Interfaces
+@using Planner.Contracts.Optimization.Requests
 @using Planner.BlazorApp.Services
 @using Planner.Contracts.API
+
+@inject ICustomerState CustomerState
+@inject IJobState JobState
+
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
         <table class="polished-table">
             <thead>
                 <tr>
-                    <th class="sticky-col">ID</th>
                     <th>Customer</th>
                     <th>Type</th>
                     <th>Ready</th>
@@ -22,8 +26,7 @@
             </thead>
             <tbody>
                 @foreach (var j in Jobs) {
-                    <tr>
-                        <td>@j.JobId</td>
+                    <tr class="@j.GetRowClass()" @key="j.JobId">
                         <td>@j.Name</td>
                         <td>@(j.JobType == 1 ? "Delivery" : "Pickup")</td>
                         <td>@j.ReadyTime</td>
@@ -46,7 +49,8 @@
         <div class="actions-left">
             <button class="btn btn-sm btn-success me-1" @onclick="CreateJobsForAllCustomers">👥 Build</button>
             <button class="btn btn-sm btn-success me-1" @onclick="AddNew">➕ Add</button>
-            <button class="btn btn-sm btn-outline-danger me-1" @onclick="ClearAll">🧹 Clear</button>
+            <button class="btn btn-sm btn-primary me-1" @onclick="Save">Save Changes</button>
+            <button class="btn btn-sm btn-outline-danger me-1" @onclick="Discard">🧹 Discard</button>
         </div>
         <div class="actions-right">
             <small class="text-muted">Define today's pickup / delivery jobs</small>
@@ -65,17 +69,13 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-2">
-                        <label class="form-label">Customer</label>
-                        <select class="form-select" @bind="editingLocationId">
-                            @foreach (var c in Customers) {
-                                <option value="@c.LocationId">@c.Name</option>
-                            }
-                        </select>
+                        <label class="form-label">Name</label>
+                        <input class="form-control" @bind="Editing.Name" />
                     </div>
 
                     <div class="mb-2">
                         <label class="form-label">Job Type</label>
-                        <select class="form-select" @bind="editingJobType">
+                        <select class="form-select" @bind="Editing.JobType">
                             <option value="1">Delivery</option>
                             <option value="2">Pickup</option>
                         </select>
@@ -84,30 +84,30 @@
                     <div class="row mb-2">
                         <div class="col">
                             <label class="form-label">Ready Time</label>
-                            <input class="form-control" type="number" @bind="editingReady" />
+                            <input class="form-control" type="number" @bind="Editing.ReadyTime" />
                         </div>
                         <div class="col">
                             <label class="form-label">Due Time</label>
-                            <input class="form-control" type="number" @bind="editingDue" />
+                            <input class="form-control" type="number" @bind="Editing.DueTime" />
                         </div>
                         <div class="col">
                             <label class="form-label">Service</label>
-                            <input class="form-control" type="number" @bind="editingService" />
+                            <input class="form-control" type="number" @bind="Editing.ServiceTimeMinutes" />
                         </div>
                     </div>
 
                     <div class="row mb-2">
                         <div class="col">
                             <label class="form-label">Pallets</label>
-                            <input class="form-control" type="number" @bind="editingPallets" />
+                            <input class="form-control" type="number" @bind="Editing.PalletDemand" />
                         </div>
                         <div class="col">
                             <label class="form-label">Weight</label>
-                            <input class="form-control" type="number" @bind="editingWeight" />
+                            <input class="form-control" type="number" @bind="Editing.WeightDemand" />
                         </div>
                         <div class="col">
                             <label class="form-label">Refrigerated</label>
-                            <input class="form-control" type="checkbox" @bind="editingRefrig" />
+                            <input class="form-control" type="checkbox" @bind="Editing.RequiresRefrigeration" />
                         </div>
                     </div>
                 </div>
@@ -121,44 +121,35 @@
 }
 
 @code {
-    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
-
     private List<JobFormModel> Jobs = new();
     private List<CustomerFormModel> Customers = new();
-    private List<Planner.Contracts.API.VehicleDto> Vehicles = new();
 
     private JobFormModel? Editing;
     private bool IsNew;
 
-    private long editingLocationId;
-    private int editingJobType;
-    private long editingReady;
-    private long editingDue;
-    private long editingService;
-    private long editingPallets;
-    private long editingWeight;
-    private bool editingRefrig;
-
     protected override Task OnInitializedAsync() {
-        if (DataCenter != null) {
-            Jobs = DataCenter.Jobs.Select(j => j.ToFormModel()).ToList();  
-            Customers = DataCenter.Customers.Select(c => c.ToFormModel()).ToList();
-            Vehicles = DataCenter.Vehicles;
-            if (Customers.Count > 0 && Jobs.Count == 0) {
-                DataCenter?.EnsureJobsFromCustomers();
-            }
-        }
+        Jobs = JobState.Jobs.Select(job => job.ToFormModel()).ToList();
+        Customers = CustomerState.Customers.Select(c => c.ToFormModel()).ToList();
+        JobState.OnJobsChanged += HandleJobsChanged;
+        CustomerState.OnCustomersChanged += HandleCustomersChanged;
+
         return Task.CompletedTask;
     }
 
-    private Task CreateJobsForAllCustomers() {
-        DataCenter?.EnsureJobsFromCustomers();
-        return Task.CompletedTask;
+    private void HandleJobsChanged() {
+        Jobs = JobState.Jobs.Select(job => job.ToFormModel()).ToList();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleCustomersChanged() {
+        Customers = CustomerState.Customers.Select(c => c.ToFormModel()).ToList();
+        InvokeAsync(StateHasChanged);
     }
 
     private void AddNew() {
         Editing = new JobFormModel {
-            JobId = NextId(),
+            IsDirty = true,
+            JobId = GetNextTemporaryJobId(),
             JobType = 1,
             Name = "",
             Latitude = 0,
@@ -172,58 +163,18 @@
             RequiresRefrigeration = false
         };
 
-        LoadEditingFields(Editing);
         IsNew = true;
     }
 
     private void Edit(JobFormModel j) {
-        Editing = new JobFormModel {
-            JobId = j.JobId,
-            JobType = j.JobType,
-            Name = j.Name,
-            Latitude = j.Latitude,
-            Longitude = j.Longitude,
-            LocationId = j.LocationId,
-            ReadyTime = j.ReadyTime,
-            DueTime = j.DueTime,
-            ServiceTimeMinutes = j.ServiceTimeMinutes,
-            PalletDemand = j.PalletDemand,
-            WeightDemand = j.WeightDemand,
-            RequiresRefrigeration = j.RequiresRefrigeration
-        };
-
-        LoadEditingFields(Editing);
+        Editing = new JobFormModel(j);
+        Editing.IsDirty = true;
         IsNew = false;
     }
 
-    private void LoadEditingFields(JobFormModel j) {
-        editingLocationId = j.LocationId;
-        editingJobType = j.JobType;
-        editingReady = j.ReadyTime;
-        editingDue = j.DueTime;
-        editingService = j.ServiceTimeMinutes;
-        editingPallets = j.PalletDemand;
-        editingWeight = j.WeightDemand;
-        editingRefrig = j.RequiresRefrigeration;
-    }
-
     private void SaveEdit() {
-        var customer = Customers.FirstOrDefault(c => c.LocationId == editingLocationId);
-
-        Editing = new JobFormModel {
-            JobId = Editing!.JobId,
-            Name = customer?.Name ?? "Unknown",
-            Latitude = customer?.Latitude ?? 0,
-            Longitude = customer?.Longitude ?? 0,
-            LocationId = editingLocationId,
-            JobType = editingJobType,
-            ReadyTime = editingReady,
-            DueTime = editingDue,
-            ServiceTimeMinutes = editingService,
-            PalletDemand = editingPallets,
-            WeightDemand = editingWeight,
-            RequiresRefrigeration = editingRefrig
-        };
+        if (Editing is null)
+            return;
 
         if (IsNew) {
             Jobs.Add(Editing);
@@ -237,9 +188,33 @@
     }
 
     private void CloseEditModal() => Editing = null;
-    private void Delete(JobFormModel j) => Jobs.Remove(j);
-	private void ClearAll() => DataCenter?.ClearJobs();
 
-    private long NextId() =>
-        Jobs.Count == 0 ? 0 : Jobs.Max(j => j.JobId) + 1;
+
+    private async Task Delete(JobFormModel job) {
+        job.PendingDeletion = !job.PendingDeletion;
+        await Task.CompletedTask;
+    }
+
+    private bool HasChanges => Jobs.Any(j => j.IsDirty || j.PendingDeletion);
+    private async Task Save() {
+        await JobState.SaveChangesAsync(Jobs);
+    }
+
+    private void Discard() {
+        HandleJobsChanged();
+    }
+
+    private Task CreateJobsForAllCustomers(MouseEventArgs args)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Temporary JobID counter for new jobs
+    /// </summary>
+    private int TemporaryJobIdCounter = -1;
+
+    private int GetNextTemporaryJobId() {
+        return TemporaryJobIdCounter--;
+    }
 }

@@ -1,12 +1,13 @@
 ﻿@inherits LayoutComponentBase
-@using Planner.Application.Messaging
-@using Planner.BlazorApp.Services
 
-@inject DataCenterState DataCenter
-@inject IConfiguration configuration
+@using Planner.Application.Messaging
+@using Planner.BlazorApp.Components.DispatchCenter
+@using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State.Interfaces
+
+@namespace Planner.BlazorApp.PlannerEntitiesModal
 
 <div>
-
     <!-- MAIN ENTITY MODAL -->
     <div class="modal fade @(IsVisible ? "show d-block" : "")" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -77,6 +78,7 @@
 
     private void Close() {
         IsVisible = false;
+        StateHasChanged();
     }
 
 }

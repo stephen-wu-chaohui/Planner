@@ -1,14 +1,16 @@
 ﻿@using System.Text.Json
-@using Planner.BlazorApp.Forms
+@using Planner.BlazorApp.FormModels
 @using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.API
+
+@inject IVehicleState VehicleState
 
 <div class="planner-tab-wrapper">
     <div class="table-scroll">
         <table class="polished-table table table-sm table-bordered align-middle">
             <thead class="table-light">
                 <tr>
-                    <th class="sticky-col">ID</th>
                     <th>Name</th>
                     <th>Max Pallets</th>
                     <th>Max Weight</th>
@@ -21,8 +23,7 @@
             </thead>
             <tbody>
                 @foreach (var v in Vehicles) {
-                    <tr>
-                        <td>@v.VehicleId</td>
+                    <tr class="@v.GetRowClass()" @key="v.VehicleId">
                         <td>@v.Name</td>
                         <td>@v.MaxPallets</td>
                         <td>@(v.MaxWeight/1000) t</td>
@@ -42,9 +43,9 @@
     <div class="planner-tab-actions">
         <div class="actions-left">
             <button class="btn btn-sm btn-success me-1" @onclick="AddNew">➕ Add</button>
-@*             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="LoadFromFile">📂 Load</button>
-            <button class="btn btn-sm btn-outline-primary" @onclick="SaveToFile">💾 Save</button>
- *@        </div>
+            <button class="btn btn-sm btn-outline-primary" @onclick="Save">💾 Save</button>
+            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="Discard">🧹 Discard</button>
+         </div>
         <div class="actions-right">
             <small class="text-muted">Stored at Planner.API backend</small>
         </div>
@@ -106,14 +107,27 @@
 }
 
 @code {
-    [CascadingParameter] public DataCenterState? DataCenter { get; set; }
-    private List<VehicleFormModel> Vehicles => DataCenter?.Vehicles.Select(v => v.ToFormModel()).ToList() ?? new List<VehicleFormModel>();
+    private List<VehicleFormModel> Vehicles = new();
+
+    protected override Task OnInitializedAsync() {
+        Vehicles = VehicleState.Vehicles.Select(vehicle => vehicle.ToFormModel()).ToList();
+        VehicleState.OnVehiclesChanged += HandleVehiclesChanged;
+
+        return Task.CompletedTask;
+    }
+
+    private void HandleVehiclesChanged() {
+        Vehicles = VehicleState.Vehicles.Select(vehicle => vehicle.ToFormModel()).ToList();
+        InvokeAsync(StateHasChanged);
+    }
 
     private VehicleFormModel? Editing;
     private bool IsNew;
 
     private void AddNew() {
         Editing = new VehicleFormModel {
+            IsDirty = true,
+            VehicleId = GetNextTemporaryVehicleId(),
             Name = $"Vehicle {Vehicles.Count + 1}",
             SpeedFactor = 1.0,
             ShiftLimitMinutes = 360,
@@ -130,32 +144,53 @@
     }
 
     private void Edit(VehicleFormModel v) {
-        Editing = v;
+        Editing = new(v);
+        Editing.IsDirty = true;
         IsNew = false;
     }
 
     private async Task SaveEdit() {
-        if (Editing is null || DataCenter is null)
+        if (Editing is null)
             return;
 
         if (IsNew) {
-            await DataCenter!.AddNewVehicleAsync(Editing.ToDto());
             Vehicles.Add(Editing);
+            IsNew = false;
         } else {
             var index = Vehicles.FindIndex(x => x.VehicleId == Editing.VehicleId);
             if (index >= 0) {
-                await DataCenter!.UpdateVehicleAsync(Editing.ToDto());
+                Vehicles[index] = Editing;
             }
         }
 
         Editing = null;
+
+        await Task.CompletedTask;
     }
 
     private void CloseEditModal() => Editing = null;
 
     private async Task Delete(VehicleFormModel v) {
-        if (DataCenter is null)
-            return;
-        await DataCenter!.RemoveVehicleAsync(v.ToDto());
+        v.PendingDeletion = !v.PendingDeletion;
+        await Task.CompletedTask;
+    }
+
+    private bool HasChanges => Vehicles.Any(v => v.IsDirty || v.PendingDeletion);
+
+    private async Task Save() {
+        await VehicleState.SaveChangesAsync(Vehicles);
+    }
+
+    private void Discard() {
+        HandleVehiclesChanged();
+    }
+
+    /// <summary>
+    /// Temporary VehicleID counter for new vehicles
+    /// </summary>
+    private int TemporaryVehicleIdCounter = -1;
+
+    private int GetNextTemporaryVehicleId() {
+        return TemporaryVehicleIdCounter--;
     }
 }

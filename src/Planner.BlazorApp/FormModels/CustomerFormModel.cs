@@ -1,13 +1,13 @@
 ﻿using System;
 using Planner.Contracts.API;
 
-namespace Planner.BlazorApp.Forms;
+namespace Planner.BlazorApp.FormModels;
 
 /// <summary>
 /// UI form model for editing customers.
 /// Owns location data only at creation / edit time.
 /// </summary>
-public sealed record CustomerFormModel {
+public sealed class CustomerFormModel : EditableFlags {
     /// <summary>
     /// Tenant-scoped customer identifier.
     /// </summary>
@@ -33,6 +33,20 @@ public sealed record CustomerFormModel {
     /// 0 = Depot, 1 = Delivery, 2 = Pickup
     /// </summary>
     public int DefaultJobType { get; set; } = 1;
+
+    public CustomerFormModel() { }
+
+    public CustomerFormModel(CustomerFormModel other) : base(other) {
+        CustomerId = other.CustomerId;
+        Name = other.Name;
+        LocationId = other.LocationId;
+        Address = other.Address;
+        Latitude = other.Latitude;
+        Longitude = other.Longitude;
+        DefaultServiceMinutes = other.DefaultServiceMinutes;
+        RequiresRefrigeration = other.RequiresRefrigeration;
+        DefaultJobType = other.DefaultJobType;
+    }
 }
 
 
@@ -43,14 +57,14 @@ public sealed record CustomerFormModel {
 public static class CustomerMapper {
     public static CustomerDto ToDto(this CustomerFormModel model) {
         return new CustomerDto(
-            CustomerId: model.CustomerId,
+            CustomerId: Math.Max(model.CustomerId, 0),
             Name: model.Name,
             Location: new LocationDto(
                 model.LocationId,
                 model.Address,
                 model.Latitude,
                 model.Longitude),
-            DefaultServiceMinutes: model.DefaultServiceMinutes,
+            DefaultServiceMinutes: Math.Max(model.DefaultServiceMinutes, 0),
             RequiresRefrigeration: model.RequiresRefrigeration
         );
     }
