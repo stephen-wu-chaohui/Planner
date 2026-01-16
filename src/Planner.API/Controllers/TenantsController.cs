@@ -14,6 +14,10 @@ public sealed class TenantsController(PlannerDbContext db, ITenantContext tenant
     /// <summary>
     /// Get tenant metadata including tenant name and main depot.
     /// </summary>
+    /// <remarks>
+    /// The main depot is determined by selecting the first depot associated with the tenant.
+    /// In a future enhancement, this could be replaced with an explicit main depot designation.
+    /// </remarks>
     [HttpGet("metadata")]
     public async Task<ActionResult<TenantDto>> GetMetadata() {
         var tenantEntity = await db.Tenants

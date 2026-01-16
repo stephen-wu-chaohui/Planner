@@ -38,9 +38,11 @@ public partial class DispatchCenterState(
     public DepotDto ? MainDepot { get; private set; }
 
     private async Task SetMapDepotFromTenantOrVehicles() {
+        // Fetch all depots once
+        var depots = await api.GetFromJsonAsync<List<DepotDto>>("api/depots") ?? [];
+        
         // Try to use the main depot from tenant metadata first
         if (_tenant?.MainDepotId != null) {
-            var depots = await api.GetFromJsonAsync<List<DepotDto>>("api/depots") ?? [];
             var depot = depots.FirstOrDefault(d => d.Id == _tenant.MainDepotId);
             if (depot != null) {
                 MainDepot = depot;
@@ -48,9 +50,8 @@ public partial class DispatchCenterState(
             }
         }
 
-        // Fallback: fetch any depot for map center
-        var fallbackDepots = await api.GetFromJsonAsync<List<DepotDto>>("api/depots") ?? [];
-        var fallbackDepot = fallbackDepots.FirstOrDefault();
+        // Fallback: use any depot for map center
+        var fallbackDepot = depots.FirstOrDefault();
         if (fallbackDepot is null)
             return;
 
