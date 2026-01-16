@@ -50,4 +50,21 @@ h1:focus {
     border-color: #929292;
 }
 
+/* Editable item states */
+.item-dirty {
+    background-color: #fff3cd !important;
+    border-left: 3px solid #ffc107;
+}
+
+.item-pending-deletion {
+    background-color: #f8d7da !important;
+    border-left: 3px solid #dc3545;
+    opacity: 0.7;
+    text-decoration: line-through;
+}
+
+.item-pending-deletion td {
+    color: #6c757d;
+}
+
 

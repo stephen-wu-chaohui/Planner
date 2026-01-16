@@ -26,7 +26,7 @@
             </thead>
             <tbody>
                 @foreach (var j in Jobs) {
-                    <tr>
+                    <tr class="@j.GetRowClass()" @key="j.JobId">
                         <td>@j.Name</td>
                         <td>@(j.JobType == 1 ? "Delivery" : "Pickup")</td>
                         <td>@j.ReadyTime</td>
@@ -68,6 +68,11 @@
                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" @bind="Editing.Name" />
+                    </div>
+
                     <div class="mb-2">
                         <label class="form-label">Job Type</label>
                         <select class="form-select" @bind="Editing.JobType">

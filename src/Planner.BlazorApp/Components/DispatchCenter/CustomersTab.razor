@@ -11,19 +11,15 @@
         <table class="polished-table">
             <thead>
                 <tr>
-                    <th class="sticky-col">ID</th>
                     <th>Name</th>
-                    <th>Job Type</th>
                     <th>Address</th>
                     <th style="width:100px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var c in Customers) {
-                    <tr>
-                        <td>@c.CustomerId</td>
+                    <tr class="@c.GetRowClass()" @key="c.CustomerId">
                         <td>@c.Name</td>
-                        <td>@c.DefaultJobType</td>
                         <td>@c.Address</td>
                         <td class="actions">
                             <button class="btn btn-sm btn-outline-secondary me-1"
@@ -68,14 +64,6 @@
                     <div class="mb-2">
                         <label class="form-label">Address</label>
                         <input class="form-control" @bind="Editing.Address" />
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">Default Job Type</label>
-                        <select class="form-select" @bind="Editing.DefaultJobType">
-                            <option value="1">Delivery</option>
-                            <option value="2">Pickup</option>
-                        </select>
                     </div>
                 </div>
 
