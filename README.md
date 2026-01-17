@@ -212,7 +212,70 @@ They use **Azure OIDC** (`azure/login@v2`) instead of storing service principal 
 ![VRP schematic](docs/1.png)
 ![VRP schematic](docs/2.png)
 
+## Solved Issues
 
+This section summarizes the key issues that have been resolved in the Planner project:
+
+### 1. [EMERGENCY] Fix broken Google Map loading (#13)
+**Type:** Bug  
+**Status:** Closed  
+**Solution:** Fixed a race condition in Google Map loading by:
+- Moving map loading to App level
+- Using TaskCompletionSource as a mutex for all Google Maps operations
+- Implementing googleMapsPromise as a JS level mutex
+
+This resolved critical issues where the Google Map failed to load or display properly, restoring core functionality for map-based features.
+
+### 2. Implement Tenant Metadata Registry (#8)
+**Type:** Enhancement  
+**Status:** Closed  
+**Solution:** Implemented a comprehensive tenant metadata registry with:
+- `TenantDto` contract with tenant ID, name, and main depot reference
+- `/api/tenants/metadata` endpoint for retrieving tenant metadata
+- `ITenantState` interface following existing state management patterns
+- `DispatchCenterState.Tenant.cs` partial class implementation
+- Auto-load tenant metadata during initialization before fetching entities
+- Depot selection now prefers tenant's main depot
+
+This enhancement enables automatic retrieval of tenant details after login and proper initialization of tenant-scoped entities (vehicles, customers, jobs).
+
+### 3. Make BlazorApp Implementation Solid (#5)
+**Type:** Enhancement  
+**Status:** Closed  
+**Solution:** Improved BlazorApp resilience and clarity through:
+- Synchronized cache of vehicles, customers, jobs, and depots with CRUD APIs
+- Separated interface injections for domain entities
+- DataChanges notifications sent to both dashboard and editor modules
+- Robust error handling with entity refresh and clear error messages
+- Clean separation of concerns for various domain entities
+
+These changes prevent stale data, improve user experience, and ensure actionable feedback for API failures.
+
+### 4. Refactor API Controllers to Use DTOs (#3)
+**Type:** Enhancement  
+**Status:** Closed  
+**Solution:** Enforced architectural best practices by:
+- Defining DTO records in `Planner.Contracts`
+- Creating mapping classes in `Planner.API` and `Planner.BlazorApp`
+- Ensuring API and BlazorApp no longer directly access Domain objects
+- All API endpoints exclusively accept/return DTOs
+
+This refactoring promotes:
+- Separation of Concerns (SoC)
+- Encapsulation (Information Hiding)
+- Single Responsibility Principle (SRP)
+
+### 5. Improve Customer Maintenance (#1)
+**Type:** Enhancement  
+**Status:** Closed  
+**Solution:** Enhanced customer maintenance workflow with map-based interactions:
+- Add new customers via Ctrl+Click on map locations
+- Delete customers by selecting the marker and choosing delete from context menu
+- Edit customers by selecting the marker and choosing edit from context menu
+- API integration with proper notifications via NotifyCustomerChanged
+- Automatic marker creation for new customers
+
+This streamlines customer management and reduces navigation steps, making common operations accessible directly from the map interface.
 
 ## License
 
