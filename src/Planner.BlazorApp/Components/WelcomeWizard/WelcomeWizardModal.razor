@@ -12,38 +12,42 @@
                     <img src="@CurrentStep.ImageUrl" alt="">
                 </div>
             }
+            
+            <div class="wizard-content-wrapper">
+                @if (!string.IsNullOrWhiteSpace(CurrentStep.Title)) {
+                    <h2 class="wizard-title">@CurrentStep.Title</h2>
+                }
 
-            @if (!string.IsNullOrWhiteSpace(CurrentStep.Title)) {
-                <h2 class="wizard-title">@CurrentStep.Title</h2>
-            }
+                @if (!string.IsNullOrWhiteSpace(CurrentStep.Description)) {
+                    <p class="wizard-description">@CurrentStep.Description</p>
+                }
 
-            @if (!string.IsNullOrWhiteSpace(CurrentStep.Description)) {
-                <p class="wizard-description">@CurrentStep.Description</p>
-            }
+                <div class="wizard-footer">
+                    @if (IsLast) {
+                        <div class="wizard-dontshow">
+                            <input type="checkbox" id="dontShow" @bind="dontShowAgain" />
+                            <label for="dontShow">Don’t show this again</label>
+                        </div>
+                    }
 
-            @if (IsLast) {
-                <div class="wizard-dontshow">
-                    <input type="checkbox" id="dontShow" @bind="dontShowAgain" />
-                    <label for="dontShow">Don’t show this again</label>
+                    <div class="wizard-dots">
+                        @for (var i = 0; i < Steps.Count; i++) {
+                            <span class="wizard-dot @(i == Wizard.StepIndex ? "active" : "")"></span>
+                        }
+                    </div>
+
+                    <div class="wizard-controls">
+                        <button class="btn-secondary" @onclick="Prev" disabled="@IsFirst">Previous</button>
+
+                        @if (!IsLast) {
+                            <button class="btn-primary" @onclick="Next">Next</button>
+                        } else {
+                            <button class="btn-primary" @onclick="Finish">Finish</button>
+                        }
+
+                        <button class="btn-close" @onclick="Close">×</button>
+                    </div>
                 </div>
-            }
-
-            <div class="wizard-dots">
-                @for (var i = 0; i < Steps.Count; i++) {
-                    <span class="wizard-dot @(i == Wizard.StepIndex ? "active" : "")"></span>
-                }
-            </div>
-
-            <div class="wizard-controls">
-                <button class="btn-secondary" @onclick="Prev" disabled="@IsFirst">Previous</button>
-
-                @if (!IsLast) {
-                    <button class="btn-primary" @onclick="Next">Next</button>
-                } else {
-                    <button class="btn-primary" @onclick="Finish">Finish</button>
-                }
-
-                <button class="btn-close" @onclick="Close">×</button>
             </div>
         </div>
     }
