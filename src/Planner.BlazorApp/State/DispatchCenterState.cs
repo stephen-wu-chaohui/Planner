@@ -11,8 +11,7 @@ public partial class DispatchCenterState(
         IsProcessing = true;
         NotifyStatus();
         try {
-            // Load tenant metadata first
-            await LoadTenantMetadataAsync();
+            await LoadTenantInfo();
 
             var vTask = api.GetFromJsonAsync<List<VehicleDto>>("/api/vehicles");
             var cTask = api.GetFromJsonAsync<List<CustomerDto>>("/api/customers");
@@ -22,7 +21,7 @@ public partial class DispatchCenterState(
             _customers = cTask.Result ?? [];
             _jobs = jTask.Result ?? [];
 
-            await SetMapDepotFromTenantOrVehicles();
+            // SetMapDepotFromVehicles();
             OnVehiclesChanged?.Invoke();
             OnCustomersChanged?.Invoke();
             OnJobsChanged?.Invoke();
@@ -35,27 +34,16 @@ public partial class DispatchCenterState(
         hub.OptimizationCompleted += OnOptimizationCompleted;
     }
 
-    public DepotDto ? MainDepot { get; private set; }
+    //public DepotDto ? MainDepot { get; private set; }
 
-    private async Task SetMapDepotFromTenantOrVehicles() {
-        // Fetch all depots once
-        var depots = await api.GetFromJsonAsync<List<DepotDto>>("api/depots") ?? [];
-        
-        // Try to use the main depot from tenant metadata first
-        if (_tenant?.MainDepotId != null) {
-            var depot = depots.FirstOrDefault(d => d.Id == _tenant.MainDepotId);
-            if (depot != null) {
-                MainDepot = depot;
-                return;
-            }
-        }
+    //private async void SetMapDepotFromVehicles() {
+    //    // Vehicles DTOs do not include depot navigation; fetch a depot for map center.
+    //    var depots = await api.GetFromJsonAsync<List<DepotDto>>("api/depots") ?? [];
+    //    var depot = depots.FirstOrDefault();
+    //    if (depot is null)
+    //        return;
 
-        // Fallback: use any depot for map center
-        var fallbackDepot = depots.FirstOrDefault();
-        if (fallbackDepot is null)
-            return;
-
-        MainDepot = fallbackDepot;
-    }
+    //    MainDepot = depot;
+    //}
 
 }

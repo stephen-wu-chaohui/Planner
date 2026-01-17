@@ -1,4 +1,4 @@
-using Planner.Contracts.API;
+﻿using Planner.Contracts.API;
 
 namespace Planner.BlazorApp.State.Interfaces;
 
@@ -7,17 +7,17 @@ namespace Planner.BlazorApp.State.Interfaces;
 /// </summary>
 public interface ITenantState : IDispatchStateProcessing {
     /// <summary>
-    /// Gets the current tenant metadata.
+    /// Retrieves and updates tenant metadata.
     /// </summary>
-    TenantDto? Tenant { get; }
+    Task LoadTenantInfo();
+
+    /// <summary>
+    /// Gets information about the current tenant, if available.
+    /// </summary>
+    TenantInfo? TenantInfo { get; }
 
     /// <summary>
     /// Event triggered when tenant metadata changes.
     /// </summary>
-    event Action OnTenantChanged;
-
-    /// <summary>
-    /// Retrieves and updates tenant metadata.
-    /// </summary>
-    Task LoadTenantMetadataAsync();
+    event Action OnTenantInfoReady;
 }
