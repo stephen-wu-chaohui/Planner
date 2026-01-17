@@ -61,7 +61,7 @@ public sealed class VehiclesController(PlannerDbContext db, ITenantContext tenan
             return BadRequest("ID mismatch");
         }
 
-        var existing = db.Vehicles.Find(id);
+        var existing = await db.Vehicles.FindAsync(id);
         if (existing == null) {
             return NotFound();
         }
@@ -69,7 +69,7 @@ public sealed class VehiclesController(PlannerDbContext db, ITenantContext tenan
         // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
-        db.SaveChanges();
+        await db.SaveChangesAsync();
 
         return NoContent();
     }
