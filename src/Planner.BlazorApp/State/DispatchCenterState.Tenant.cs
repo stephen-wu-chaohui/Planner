@@ -5,7 +5,7 @@ namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState : ITenantState {
     public TenantInfo? TenantInfo { get; private set; }
-
+    
     public event Action OnTenantInfoReady = delegate { };
 
     public async Task LoadTenantInfo() {
