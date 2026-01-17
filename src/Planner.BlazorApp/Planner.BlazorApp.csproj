@@ -8,8 +8,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Components\Shared\**" />
     <Content Remove="..\Planner.API\appsettings*.json" />
     <Content Remove="..\Planner.Optimization.Worker\appsettings*.json" />
+    <Content Remove="Components\Shared\**" />
+    <EmbeddedResource Remove="Components\Shared\**" />
+    <None Remove="Components\Shared\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,7 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Components\Shared\" />
     <Folder Include="wwwroot\images\wizard\" />
   </ItemGroup>
 

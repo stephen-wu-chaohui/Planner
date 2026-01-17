@@ -21,7 +21,6 @@ public partial class DispatchCenterState(
             _customers = cTask.Result ?? [];
             _jobs = jTask.Result ?? [];
 
-            // SetMapDepotFromVehicles();
             OnVehiclesChanged?.Invoke();
             OnCustomersChanged?.Invoke();
             OnJobsChanged?.Invoke();
@@ -33,17 +32,5 @@ public partial class DispatchCenterState(
         await hub.ConnectAsync();
         hub.OptimizationCompleted += OnOptimizationCompleted;
     }
-
-    //public DepotDto ? MainDepot { get; private set; }
-
-    //private async void SetMapDepotFromVehicles() {
-    //    // Vehicles DTOs do not include depot navigation; fetch a depot for map center.
-    //    var depots = await api.GetFromJsonAsync<List<DepotDto>>("api/depots") ?? [];
-    //    var depot = depots.FirstOrDefault();
-    //    if (depot is null)
-    //        return;
-
-    //    MainDepot = depot;
-    //}
 
 }
