@@ -4,6 +4,9 @@ using Planner.Domain;
 namespace Planner.API.Mappings;
 
 public static class DomainDtoMappings {
+    public static TenantDto ToDto(this Tenant tenant, long? mainDepotId = null) =>
+        new(tenant.Id, tenant.Name, mainDepotId);
+
     public static LocationDto ToDto(this Location location) =>
         new(location.Id, location.Address, location.Latitude, location.Longitude);
 
