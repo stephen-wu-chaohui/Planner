@@ -45,8 +45,8 @@ public partial class DispatchCenterState : IVehicleState {
                 if (!resp.IsSuccessStatusCode) return false;
             } else {
                 // Convert FormModel back to a DTO or Request object for the API
-                var DepotStartId = this.MainDepot?.Id ?? 0;
-                var DepotEndId = this.MainDepot?.Id ?? 0;
+                var DepotStartId = TenantInfo?.MainDepot?.Id ?? 0;
+                var DepotEndId = TenantInfo?.MainDepot?.Id ?? 0;
                 if (model.DepotStartId == 0 && DepotStartId > 0) {
                     model.DepotStartId = DepotStartId;
                 }

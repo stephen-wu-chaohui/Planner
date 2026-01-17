@@ -105,7 +105,7 @@ window.plannerMap = window.plannerMap || {
 
     createCustomerInfoWindow: function () {
         const content = document.createElement("div");
-        content.innerHTML = `<div style='font-size:30px;backgroundColor ="red"'>📍</div>`;
+        content.innerHTML = `<div style='font-size:24px;backgroundColor ="red"'>📍</div>`;
         return content;
     },
 

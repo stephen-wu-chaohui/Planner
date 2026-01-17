@@ -46,7 +46,7 @@ public sealed class CustomersController(PlannerDbContext db, ITenantContext tena
             return BadRequest("ID mismatch");
         }
 
-        var existing = db.Customers.Find(id);
+        var existing = await db.Customers.FindAsync(id);
         if (existing == null) {
             return NotFound();
         }
@@ -54,7 +54,7 @@ public sealed class CustomersController(PlannerDbContext db, ITenantContext tena
         // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
-        db.SaveChanges();
+        await db.SaveChangesAsync();
 
         return NoContent();
     }

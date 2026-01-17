@@ -9,6 +9,7 @@
 @inject ILogger<PlannerMap> Logger
 @inject ICustomerState CustomerState
 @inject IRouteState RouteState
+@inject ITenantState TenantState
 
 @implements IAsyncDisposable
 
@@ -42,6 +43,7 @@
         // 1. Subscribe to the event when the component initializes
         CustomerState.OnCustomersChanged += OnCustomersChanged;
         RouteState.OnRoutesChanged += OnRoutesChanged;
+        TenantState.OnTenantInfoReady += OnTenantChanged;
     }
 
     private bool _initialized;
@@ -56,7 +58,6 @@
             dotNetRef = DotNetObjectReference.Create(this);
 
             var apiKey = Config["GoogleMaps:ApiKey"];
-            var apiMapId = Config["GoogleMaps:MapId"];
 
             if (string.IsNullOrWhiteSpace(apiKey))
             {
@@ -69,14 +70,8 @@
 
             try
             {
-                var mapCenter = CustomerState.MainDepot?.Location ?? new LocationDto(Id: 0, Address: "Perth", Latitude: -31.9505, Longitude: 115.8605);
                 await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
-                if (mapCenter is not null)
-                {
-                    await JS.InvokeVoidAsync("plannerMap.initMap", mapCenter!.Latitude, mapCenter!.Longitude, apiMapId);
-                }
                 await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
-
                 _initialized = true;
             }
             catch (JSException jsex)
@@ -104,24 +99,18 @@
         return Task.CompletedTask;
     }
 
-    // Add missing OnCustomersChanged method to fix CS0103
     private async void OnCustomersChanged()
     {
-        if (!_initialized)
-            return;
-
         customers = CustomerState.Customers.Select(c => new CustomerMarker
         {
             Label = c.Name,
             Lat = c.Location.Latitude,
             Lng = c.Location.Longitude
-            // Add other properties as needed
         }).ToList();
 
         await JS.InvokeVoidAsync("plannerMap.updateCustomers", customers);
     }
 
-    // Add missing OnRoutesChanged method if needed for similar usage
     private async void OnRoutesChanged()
     {
         if (!_initialized)
@@ -130,6 +119,15 @@
         await JS.InvokeVoidAsync("plannerMap.updateRoutes", routes);
     }
 
+    /// <summary>
+    /// Updates the map center based on the selected tenant.
+    /// </summary>
+    private async void OnTenantChanged()
+    {
+        var mapCenter = TenantState.TenantInfo?.MainDepot?.Location ?? new LocationDto(Id: 0, Address: "Perth", Latitude: -31.9505, Longitude: 115.8605);
+        var apiMapId = Config["GoogleMaps:MapId"];
+        await JS.InvokeVoidAsync("plannerMap.initMap", mapCenter.Latitude, mapCenter.Longitude, apiMapId);
+    }
 
     /// <summary>
     /// //////////////////////////////

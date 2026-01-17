@@ -38,6 +38,7 @@ builder.Services.AddScoped<PlannerApiClient>();
 builder.Services.AddScoped<IOptimizationHubClient, OptimizationHubClient>();
 
 builder.Services.AddScoped<DispatchCenterState>();
+builder.Services.AddScoped<ITenantState>(sp => sp.GetRequiredService<DispatchCenterState>());
 builder.Services.AddScoped<IVehicleState>(sp => sp.GetRequiredService<DispatchCenterState>());
 builder.Services.AddScoped<ICustomerState>(sp => sp.GetRequiredService<DispatchCenterState>());
 builder.Services.AddScoped<IJobState>(sp => sp.GetRequiredService<DispatchCenterState>());

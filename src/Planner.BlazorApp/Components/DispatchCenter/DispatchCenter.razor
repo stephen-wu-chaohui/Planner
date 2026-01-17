@@ -15,6 +15,8 @@
 @inject ICustomerState CustomerState
 @inject WizardService Wizard
 @inject IJwtTokenStore TokenStore
+@inject ITenantState TenantState
+@inject NavigationManager Nav
 
 @namespace Planner.BlazorApp.DispatchCenter
 
@@ -27,7 +29,7 @@
                 <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Planning Wizard</button>
             }
         </div>
-        <h5 class="ms-auto mb-0">Dispatch Centre</h5>
+        <h5 class="ms-auto mb-0">@(TenantState.TenantInfo?.TenantName ?? "Dispatch Centre")</h5>
     </div>
 
     <!-- Map area -->
@@ -50,7 +52,10 @@
 
     protected override async Task OnInitializedAsync() {
         if (!TokenStore.IsAuthenticated || string.IsNullOrWhiteSpace(TokenStore.AccessToken))
+        {
+            Nav.NavigateTo("/login");
             return;
+        }
         if (_subscribed) return;
         await CustomerState.InitializeAsync();
         _subscribed = true;

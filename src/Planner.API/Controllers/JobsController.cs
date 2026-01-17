@@ -45,7 +45,7 @@ public sealed class JobsController(PlannerDbContext db, ITenantContext tenant) :
             return BadRequest("ID mismatch");
         }
 
-        var existing = db.Jobs.Find(id);
+        var existing = await db.Jobs.FindAsync(id);
         if (existing == null) {
             return NotFound();
         }
@@ -53,7 +53,7 @@ public sealed class JobsController(PlannerDbContext db, ITenantContext tenant) :
         // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
         db.Entry(existing).CurrentValues.SetValues(updated);
-        db.SaveChanges();
+        await db.SaveChangesAsync();
 
         return NoContent();
     }
