@@ -14,9 +14,9 @@ public partial class DispatchCenterState : IRouteState
 
     private IReadOnlyList<MapRoute> _mapRoutes = [];
 
-    public event Action OnRoutesChanged;
+    public event Action OnRoutesChanged = delegate { };
 
-    public event Action<int> StartWait;
+    public event Action<int> StartWait = delegate { };
 
     IReadOnlyList<MapRoute> IRouteState.MapRoutes => _mapRoutes;
 

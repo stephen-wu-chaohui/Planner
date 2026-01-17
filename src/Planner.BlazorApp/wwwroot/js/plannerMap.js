@@ -1,19 +1,23 @@
-﻿window.mapInteropInit = () => {
-    // Called by Google script once loaded
+﻿
+let mapsResolver;
+const googleMapsPromise = new Promise((resolve) => { mapsResolver = resolve; });
+
+window.mapInteropInit = () => {
     console.log("Google Maps API loaded.");
+    if (mapsResolver) {
+        mapsResolver();
+    }
 };
 
 window.loadGoogleMaps = (apiKey) => {
-    return new Promise((resolve, reject) => {
-        if (window.google && google.maps && google.maps.marker) { resolve(); return; }
-        const s = document.createElement("script");
-        s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker,places&callback=mapInteropInit`;
-        s.async = true;
-        s.defer = true;
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-    });
+    // 1. If Google Maps is already fully loaded, return immediately.
+    if (window.google && google.maps && google.maps.marker) { 
+        return Promise.resolve(); 
+    }
+
+    // 2. Otherwise, wait for the 'mapInteropInit' callback to resolve this promise.
+    //    We assume the script tag in App.razor has already started the process.
+    return googleMapsPromise;
 };
 
 /* global google */
