@@ -46,7 +46,7 @@
         TenantState.OnTenantInfoReady += OnTenantChanged;
     }
 
-    private bool _initialized;
+    private TaskCompletionSource<bool> _mapReadySource = new();
 
     private bool _showError;
     private string? _errorMessage;
@@ -72,7 +72,7 @@
             {
                 await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
                 await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
-                _initialized = true;
+                _mapReadySource.SetResult(true);
             }
             catch (JSException jsex)
             {
@@ -101,6 +101,9 @@
 
     private async void OnCustomersChanged()
     {
+        // Execution will PAUSE here until SetResult(true) is called above
+        await _mapReadySource.Task;
+
         customers = CustomerState.Customers.Select(c => new CustomerMarker
         {
             Label = c.Name,
@@ -113,8 +116,9 @@
 
     private async void OnRoutesChanged()
     {
-        if (!_initialized)
-            return;
+        // Execution will PAUSE here until SetResult(true) is called above
+        await _mapReadySource.Task;
+
         var routes = RouteState.MapRoutes;
         await JS.InvokeVoidAsync("plannerMap.updateRoutes", routes);
     }
