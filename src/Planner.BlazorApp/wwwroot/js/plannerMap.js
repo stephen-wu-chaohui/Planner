@@ -2,6 +2,9 @@
 let mapsResolver;
 const googleMapsPromise = new Promise((resolve) => { mapsResolver = resolve; });
 
+// Configuration constants
+const INFOWINDOW_AUTO_CLOSE_DELAY = 2000; // milliseconds
+
 window.mapInteropInit = () => {
     console.log("Google Maps API loaded.");
     if (mapsResolver) {
@@ -74,6 +77,11 @@ window.plannerMap = window.plannerMap || {
 
                     // Fix: use the actual map instance (previously used undefined variable `map`)
                     infowindow.open(me.map);
+
+                    // Close the infowindow after a short delay to prevent UI obstruction
+                    setTimeout(() => {
+                        infowindow.close();
+                    }, INFOWINDOW_AUTO_CLOSE_DELAY);
 
                     const components = response.results[0].address_components;
                     region = components.find(c =>
