@@ -114,37 +114,15 @@ public sealed class JwtTokenStore : IJwtTokenStore
     }
 
     // Legacy synchronous methods for backward compatibility
+    // Note: These methods only update in-memory state for thread-safety in Blazor Server.
+    // Storage persistence only happens through async methods.
     public void Set(string token)
     {
         AccessToken = token;
-        // Fire and forget for storage persistence
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await _protectedStorage.SetAsync(TokenStorageKey, token);
-            }
-            catch
-            {
-                // Silently fail - token is available in memory
-            }
-        });
     }
 
     public void Clear()
     {
         AccessToken = null;
-        // Fire and forget for storage cleanup
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await _protectedStorage.DeleteAsync(TokenStorageKey);
-            }
-            catch
-            {
-                // Silently fail - token is cleared from memory
-            }
-        });
     }
 }
