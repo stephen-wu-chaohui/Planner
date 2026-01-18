@@ -75,6 +75,11 @@ window.plannerMap = window.plannerMap || {
                     // Fix: use the actual map instance (previously used undefined variable `map`)
                     infowindow.open(me.map);
 
+                    // Close the infowindow after a short delay to prevent UI obstruction
+                    setTimeout(() => {
+                        infowindow.close();
+                    }, 2000);
+
                     const components = response.results[0].address_components;
                     region = components.find(c =>
                         c.types.includes("locality")

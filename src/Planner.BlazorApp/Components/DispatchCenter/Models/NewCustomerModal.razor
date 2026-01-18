@@ -80,7 +80,11 @@
         }
 
         isVisible = false;
+        StateHasChanged();
     }
 
-    private void Close() => isVisible = false;
+    private void Close() {
+        isVisible = false;
+        StateHasChanged();
+    }
 }
