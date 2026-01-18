@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
+namespace Planner.BlazorApp.Components.WelcomeWizard;
+
 public sealed class WizardService : IDisposable {
     private readonly NavigationManager _nav;
 

@@ -1,24 +1,22 @@
 ﻿@page "/dispatch-center"
 @rendermode InteractiveServer
 
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
 @using Planner.BlazorApp.Auth
 @using Planner.BlazorApp.Components.DispatchCenter
-@using Planner.BlazorApp.State
-@using Planner.BlazorApp.State.Interfaces
-@using Planner.BlazorApp.WelcomeWizard
-@using Planner.BlazorApp.PlannerEntitiesModal
+@using Planner.BlazorApp.Components.DispatchCenter.Models
+@using Planner.BlazorApp.Components.WelcomeWizard
 @using Planner.BlazorApp.FormModels
 @using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State
+@using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.API
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
 
 @inject ICustomerState CustomerState
-@inject WizardService Wizard
 @inject IJwtTokenStore TokenStore
 @inject ITenantState TenantState
 @inject NavigationManager Nav
-
-@namespace Planner.BlazorApp.DispatchCenter
+@inject WizardService Wizard
 
 <div class="planner-view d-flex flex-column flex-fill">
     <!-- Top toolbar -->
