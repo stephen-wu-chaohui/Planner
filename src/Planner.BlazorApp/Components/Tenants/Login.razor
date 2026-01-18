@@ -86,7 +86,7 @@
             }
 
             var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
-            TokenStore.Set(result!.AccessToken);
+            await TokenStore.SetAsync(result!.AccessToken);
 
             Nav.NavigateTo("/dispatch-center");
         } catch (Exception ex) {
@@ -96,8 +96,8 @@
         }
     }
 
-    private void DoLogout() {
-        TokenStore.Clear();
+    private async Task DoLogout() {
+        await TokenStore.ClearAsync();
         Nav.NavigateTo("/login", forceLoad: true);
     }
 

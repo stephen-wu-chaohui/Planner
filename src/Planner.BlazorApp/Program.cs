@@ -15,7 +15,8 @@ builder.Configuration
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options => options.DetailedErrors = true);
 
-// JWT in-memory store
+// JWT token persistence
+builder.Services.AddScoped<IProtectedStorage, ProtectedStorageWrapper>();
 builder.Services.AddScoped<IJwtTokenStore, JwtTokenStore>();
 
 // API client (keep named client for BaseAddress; no auth handler)

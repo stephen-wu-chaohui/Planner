@@ -5,6 +5,11 @@ public interface IJwtTokenStore {
     bool IsAuthenticated { get; }
     bool IsExpired();
 
+    Task InitializeAsync();
+    Task SetAsync(string token);
+    Task ClearAsync();
+
+    // Legacy synchronous methods for backward compatibility
     void Set(string token);
     void Clear();
 }
