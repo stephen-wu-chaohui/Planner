@@ -68,6 +68,8 @@
             RequiresRefrigeration = false,
             DefaultJobType = 1 // Assuming delivery
         };
+        // Mark as dirty so it gets saved
+        newCustomer.IsDirty = true;
         isVisible = true;
         StateHasChanged();
     }
