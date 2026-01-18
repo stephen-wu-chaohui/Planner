@@ -2,6 +2,22 @@
 
 namespace Planner.BlazorApp.Auth;
 
+/// <summary>
+/// Manages JWT token storage with persistence across browser sessions.
+/// 
+/// Security features:
+/// - Uses ProtectedLocalStorage for encrypted browser storage (OWASP compliant)
+/// - Tokens are encrypted before storing in browser local storage
+/// - Token expiration is validated before each API call
+/// - Tokens are automatically cleared on 401 Unauthorized responses
+/// - Logout properly clears tokens from both memory and storage
+/// 
+/// Token lifecycle:
+/// 1. InitializeAsync() loads token from storage on app startup
+/// 2. SetAsync() stores new token after successful login
+/// 3. IsExpired() checks token expiration before API calls
+/// 4. ClearAsync() removes token on logout or expiration
+/// </summary>
 public sealed class JwtTokenStore : IJwtTokenStore
 {
     private const string TokenStorageKey = "planner_jwt_token";
