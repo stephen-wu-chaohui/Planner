@@ -1,5 +1,6 @@
 ﻿using Planner.BlazorApp.Auth;
 using Planner.BlazorApp.Components;
+using Planner.BlazorApp.Components.WelcomeWizard;
 using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State;
 using Planner.BlazorApp.State.Interfaces;

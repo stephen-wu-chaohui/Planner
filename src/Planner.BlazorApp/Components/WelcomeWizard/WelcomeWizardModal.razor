@@ -1,7 +1,7 @@
-﻿@inherits ComponentBase
+﻿@using Planner.BlazorApp.Components.WelcomeWizard
+@inherits ComponentBase
 @inject WizardService Wizard
 
-@namespace Planner.BlazorApp.WelcomeWizard
 
 <div class="wizard-backdrop" style="visibility: @(Wizard.IsOpen ? "visible" : "hidden")">
     @if (CurrentStep is not null) {

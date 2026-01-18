@@ -1,7 +1,8 @@
-﻿public static class WelcomeWizardDefinition {
+﻿namespace Planner.BlazorApp.Components.WelcomeWizard;
+
+public static class WelcomeWizardDefinition {
     public static IReadOnlyList<WizardStep> Steps { get; } =
-        new List<WizardStep>
-        {
+        [
             new(
                 Title: "Welcome to Planner Dispatch Center",
                 ImageUrl: "images/wizard/welcome_to_planner_dispatch_center.png",
@@ -33,5 +34,5 @@
                     "Once routes are ready, dispatch them to drivers and monitor execution. " +
                     "Planner keeps everything visible so you stay in control."
             )
-        };
+        ];
 }
