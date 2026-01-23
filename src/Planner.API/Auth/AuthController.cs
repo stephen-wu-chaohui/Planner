@@ -44,8 +44,8 @@ public sealed class AuthController(PlannerDbContext db,IJwtTokenGenerator tokenG
         
         Response.Cookies.Append("planner-auth", token, cookieOptions);
 
-        // 5. Return response (token can be used for initial setup if needed)
-        return Ok(user.ToLoginResponse(tokenGenerator));
+        // 5. Return response with the same token stored in the cookie
+        return Ok(new LoginResponse(token));
     }
 
     [Authorize]

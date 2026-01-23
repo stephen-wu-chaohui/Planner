@@ -47,7 +47,6 @@ public sealed class AuthenticationEndToEndTests : IDisposable {
         _tokenGenerator = new JwtTokenGenerator(jwtOptions);
 
         // Seed test data
-        _testTenantId = Guid.NewGuid();
         SeedTestData();
     }
 
@@ -60,7 +59,7 @@ public sealed class AuthenticationEndToEndTests : IDisposable {
         var user = new User {
             Id = 1,
             Email = "test.user@example.com",
-            PasswordHash = "password123", // Demo: plain-text for testing
+            PasswordHash = "password123", // UNSAFE: Plain-text for testing only - use proper hashing in production
             Role = "Admin",
             TenantId = _testTenantId
         };
