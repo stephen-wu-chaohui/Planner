@@ -15,16 +15,22 @@ builder.Configuration
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options => options.DetailedErrors = true);
 
-// JWT in-memory store
+// JWT in-memory store (kept for compatibility during transition, but cookies are primary)
 builder.Services.AddScoped<IJwtTokenStore, JwtTokenStore>();
 
-// API client (keep named client for BaseAddress; no auth handler)
+// API client (keep named client for BaseAddress)
 builder.Services.AddHttpClient("PlannerApi", client =>
 {
     client.BaseAddress = new Uri(
         builder.Configuration["Api:BaseUrl"]
         ?? throw new InvalidOperationException("Api:BaseUrl not configured")
     );
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    // Enable cookies for cross-origin requests (BFF pattern)
+    UseCookies = true,
+    CookieContainer = new System.Net.CookieContainer()
 });
 
 builder.Services.AddServerSideBlazor()
