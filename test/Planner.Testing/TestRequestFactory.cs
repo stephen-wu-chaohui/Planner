@@ -62,6 +62,14 @@ public static class TestRequestFactory {
             ))
             .ToList();
 
+        // ---- Build Matrices -----------------------------------------
+        var settings = FastSettings();
+        var allLocations = new List<LocationInput> { depotLocation }
+            .Concat(jobs.Select(j => j.Location))
+            .ToList();
+        
+        var (distanceMatrix, travelTimeMatrix) = Planner.Contracts.Optimization.Helpers.MatrixBuilder.BuildMatrices(allLocations, settings);
+
         // ---- Request -------------------------------------------------
         return new OptimizeRouteRequest(
             TenantId: tenantId,
@@ -69,7 +77,9 @@ public static class TestRequestFactory {
             RequestedAt: DateTime.UtcNow,
             Vehicles: vehicles,
             Jobs: jobs,
-            Settings: FastSettings(),
+            DistanceMatrix: distanceMatrix,
+            TravelTimeMatrix: travelTimeMatrix,
+            Settings: settings,
             OvertimeMultiplier: 2.0
         );
     }

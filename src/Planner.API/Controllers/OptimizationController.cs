@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.API.Services;
 using Planner.Application;
 using Planner.Domain;
 using Planner.Infrastructure.Persistence;
@@ -17,7 +18,8 @@ namespace Planner.API.Controllers;
 public class OptimizationController(
     IMessageBus bus,
     PlannerDbContext db,
-    ITenantContext tenant) : ControllerBase {
+    ITenantContext tenant,
+    IMatrixCalculationService matrixService) : ControllerBase {
     /// <summary>
     /// Accept a route optimization request and dispatch it to the optimization worker.
     /// </summary>
@@ -47,15 +49,32 @@ public class OptimizationController(
                 .ThenInclude(d => d.Location)
             .ToListAsync();
 
+        var settings = new OptimizationSettings(
+            SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
+        );
+
+        // Build location list in the same order as solver expects: depots first, then jobs
+        var depotLocations = vehicles
+            .SelectMany(v => new[] { v.StartDepot.Location, v.EndDepot.Location })
+            .GroupBy(l => l.Id)
+            .Select(g => ToLocationInput(g.First()))
+            .ToList();
+
+        var jobLocations = jobs.Select(j => ToLocationInput(j.Location)).ToList();
+        var allLocations = depotLocations.Concat(jobLocations).ToList();
+
+        // Build matrices
+        var (distanceMatrix, travelTimeMatrix) = Planner.Contracts.Optimization.Helpers.MatrixBuilder.BuildMatrices(allLocations, settings);
+
         return new OptimizeRouteRequest(
             tenant.TenantId,
             OptimizationRunId: Guid.NewGuid(),
             RequestedAt: DateTime.UtcNow,
             Jobs: jobs.Select(ToJobInput).ToList(),
             Vehicles: vehicles.Select(ToVehicleInput).ToList(),
-            Settings: new OptimizationSettings(
-                SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
-            )
+            DistanceMatrix: distanceMatrix,
+            TravelTimeMatrix: travelTimeMatrix,
+            Settings: settings
         );
     }
 

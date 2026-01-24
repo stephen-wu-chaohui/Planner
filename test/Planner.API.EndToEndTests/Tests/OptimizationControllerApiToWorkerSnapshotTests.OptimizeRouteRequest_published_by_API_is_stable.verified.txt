@@ -1,0 +1,36 @@
+﻿{
+  TenantId: Guid_1,
+  OptimizationRunId: Guid_2,
+  Jobs: [
+    {
+      JobId: 1,
+      JobType: 1,
+      Name: Delivery 1,
+      ServiceTimeMinutes: 15,
+      DueTime: 1440,
+      PalletDemand: 2,
+      WeightDemand: 200,
+      RequiresRefrigeration: false,
+      Location: {
+        LocationId: 2,
+        Latitude: -31.96,
+        Longitude: 115.87
+      }
+    }
+  ],
+  Vehicles: [
+    {
+      VehicleId: 1,
+      Name: Truck 01,
+      ShiftLimitMinutes: 480,
+      StartLocationId: 1,
+      EndLocationId: 1,
+      SpeedFactor: 1.0,
+      CostPerMinute: 1.0,
+      CostPerKm: 1.5,
+      BaseFee: 20.0,
+      MaxPallets: 10,
+      MaxWeight: 1000
+    }
+  ]
+}

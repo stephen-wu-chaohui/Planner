@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Controllers;
+using Planner.API.Services;
 using Planner.Infrastructure.Persistence;
 using Planner.Application;
 using System;
@@ -27,6 +28,9 @@ public sealed class TestApiFactory : IDisposable {
 
         // --- Optimization ---
         services.AddOptimization();
+
+        // --- Matrix Calculation Service ---
+        services.AddScoped<IMatrixCalculationService, MatrixCalculationService>();
 
         // --- Controller ---
         services.AddScoped<OptimizationController>();

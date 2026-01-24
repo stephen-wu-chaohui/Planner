@@ -10,7 +10,7 @@ namespace Planner.Optimization;
 public sealed class VehicleRoutingProblem : IRouteOptimizer {
     // Internal record for solver-specific node data
     internal sealed record SolverLocation(
-        int NodeIndex, long LocationId, bool IsDepot, double Latitude, double Longitude,
+        int NodeIndex, long LocationId, bool IsDepot,
         long ReadyTime, long DueTime, long ServiceTimeMinutes,
         long PalletDemand, long WeightDemand, long RefrigeratedDemand,
         JobInput? Job
@@ -20,8 +20,14 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         var settings = request.Settings ?? new OptimizationSettings();
 
         // 1. Validation
-        ValidateInput(request);
-        if (request.Vehicles.Count == 0) return CreateEmptyResponse(request);
+        try {
+            ValidateInput(request);
+        } catch (SolverInputInvalidException ex) {
+            return CreateEmptyResponse(request, $"Invalid input: {ex.Message}");
+        }
+        
+        if (request.Vehicles.Count == 0) 
+            return CreateEmptyResponse(request, "No vehicles provided.");
 
         // 2. Initialize Context
         var depots = request.Vehicles
@@ -36,9 +42,34 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
             TimeScale: 1, DistanceScale: 1
         );
 
-        // 3. Prepare Matrices & Solver Data
+        // 3. Prepare Solver Data - use precomputed matrices from request
         var solverLocs = BuildSolverLocations(context, settings);
-        var (distMatrix, travelMatrix) = BuildMatrices(context, solverLocs, settings);
+        var distMatrix = request.DistanceMatrix;
+        var travelMatrix = request.TravelTimeMatrix;
+
+        // Validate matrix dimensions
+        if (distMatrix.Length != solverLocs.Count || travelMatrix.Length != solverLocs.Count)
+        {
+            return CreateEmptyResponse(request, 
+                $"Matrix dimension mismatch: expected {solverLocs.Count}x{solverLocs.Count}, " +
+                $"but got DistanceMatrix {distMatrix.Length}x{(distMatrix.Length > 0 ? distMatrix[0].Length : 0)} " +
+                $"and TravelTimeMatrix {travelMatrix.Length}x{(travelMatrix.Length > 0 ? travelMatrix[0].Length : 0)}");
+        }
+
+        // Validate all inner arrays have correct length
+        for (int i = 0; i < distMatrix.Length; i++)
+        {
+            if (distMatrix[i].Length != solverLocs.Count)
+            {
+                return CreateEmptyResponse(request,
+                    $"DistanceMatrix row {i} has length {distMatrix[i].Length}, expected {solverLocs.Count}");
+            }
+            if (travelMatrix[i].Length != solverLocs.Count)
+            {
+                return CreateEmptyResponse(request,
+                    $"TravelTimeMatrix row {i} has length {travelMatrix[i].Length}, expected {solverLocs.Count}");
+            }
+        }
 
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
@@ -65,7 +96,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         // 6. Build Response
         return solution is null
-            ? CreateEmptyResponse(request)
+            ? CreateEmptyResponse(request, "Optimization failed to find a solution. This could be due to capacity constraints, time windows, or infeasibility.")
             : MapResults(context, routing, manager, solution, solverLocs, distMatrix, travelMatrix);
     }
 
@@ -101,45 +132,14 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
             .Select(g => g.First());
 
         foreach (var d in depotLocs)
-            list.Add(new(node++, d.LocationId, true, d.Latitude, d.Longitude,
+            list.Add(new(node++, d.LocationId, true,
                 0, settings.HorizonMinutes, 0, 0, 0, 0, null));
 
         foreach (var j in ctx.Jobs)
-            list.Add(new(node++, j.Location.LocationId, false, j.Location.Latitude, j.Location.Longitude,
+            list.Add(new(node++, j.Location.LocationId, false,
                 j.ReadyTime, j.DueTime, j.ServiceTimeMinutes, j.PalletDemand, j.WeightDemand, j.RequiresRefrigeration ? 1 : 0, j));
 
         return list;
-    }
-
-    private static (long[][] dist, long[][] travel)
-        BuildMatrices(VrpContext ctx, List<SolverLocation> locs, OptimizationSettings settings) {
-        int n = locs.Count;
-
-        var dist = new long[n][];
-        var travel = new long[n][];
-
-        for (int i = 0; i < n; i++) {
-            dist[i] = new long[n];
-            travel[i] = new long[n];
-
-            for (int j = 0; j < n; j++) {
-                if (i == j) continue;
-
-                // Compute in double
-                double km =
-                    settings.KmDegreeConstant *
-                    (Math.Abs(locs[i].Latitude - locs[j].Latitude)
-                   + Math.Abs(locs[i].Longitude - locs[j].Longitude));
-
-                double minutes = km * settings.TravelTimeMultiplier;
-
-                // Scale ONCE, store as long
-                dist[i][j] = (long)Math.Round(km * ctx.DistanceScale);
-                travel[i][j] = (long)Math.Round(minutes * ctx.TimeScale);
-            }
-        }
-
-        return (dist, travel);
     }
 
     private static void ConfigureDimensions(RoutingModel rt, RoutingIndexManager mgr, VrpContext ctx, List<SolverLocation> locs, long[][] dists, long[][] travels, OptimizationSettings settings) {
@@ -228,7 +228,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         return new OptimizeRouteResponse(ctx.Request.TenantId, ctx.Request.OptimizationRunId, DateTime.UtcNow, routes, grandTotal);
     }
 
-    private static OptimizeRouteResponse CreateEmptyResponse(OptimizeRouteRequest req) => new(req.TenantId, req.OptimizationRunId, DateTime.UtcNow, Array.Empty<RouteResult>(), 0);
+    private static OptimizeRouteResponse CreateEmptyResponse(OptimizeRouteRequest req, string? errorMessage = null) 
+        => new(req.TenantId, req.OptimizationRunId, DateTime.UtcNow, Array.Empty<RouteResult>(), 0, errorMessage);
 
     private static void ApplyPickupDeliveryPairs(RoutingModel rt, RoutingIndexManager mgr, List<SolverLocation> locs) {
         // Implementation remains similar but uses the modular SolverLocation record

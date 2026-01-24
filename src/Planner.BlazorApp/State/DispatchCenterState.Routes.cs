@@ -22,9 +22,20 @@ public partial class DispatchCenterState : IRouteState
 
     private void OnOptimizationCompleted(RoutingResultDto evt)
     {
-        _routes = evt.Routes.ToList();
-        BuildMapRoutes();
-        OnRoutesChanged?.Invoke();
+        if (!string.IsNullOrEmpty(evt.ErrorMessage))
+        {
+            LastErrorMessage = evt.ErrorMessage;
+            _routes = [];
+            _mapRoutes = [];
+            NotifyStatus();
+        }
+        else
+        {
+            LastErrorMessage = null;
+            _routes = evt.Routes.ToList();
+            BuildMapRoutes();
+            OnRoutesChanged?.Invoke();
+        }
     }
 
     private void BuildMapRoutes()
@@ -37,10 +48,10 @@ public partial class DispatchCenterState : IRouteState
             RouteName = route.VehicleName,
             Color = ColourHelper.ColourFromString(route.VehicleName, 0.95, 0.25) ?? "#FF0000",
             Points = route.Stops.Select(stop => {
-                if (!jobMap.ContainsKey(stop.JobId)) {
+                if (!jobMap.TryGetValue(stop.JobId, out JobDto? job)) {
                     throw new KeyNotFoundException($"Job ID {stop.JobId} not found in job map.");
                 }
-                var job = jobMap[stop.JobId];
+
                 return new CustomerMarker {
                     Lat = job.Location.Latitude,
                     Lng = job.Location.Longitude,

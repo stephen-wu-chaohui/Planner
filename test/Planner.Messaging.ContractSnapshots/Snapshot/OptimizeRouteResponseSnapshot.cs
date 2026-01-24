@@ -36,7 +36,8 @@ public static class OptimizeRouteResponseSnapshot {
                     TotalCost = Math.Round(r.TotalCost, 2)
                 }),
 
-            TotalCost = Math.Round(resp.TotalCost, 2)
+            TotalCost = Math.Round(resp.TotalCost, 2),
+            resp.ErrorMessage
         };
     }
 }

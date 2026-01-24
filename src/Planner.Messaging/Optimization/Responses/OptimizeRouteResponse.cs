@@ -8,10 +8,12 @@
 /// <param name="CompletedAt">UTC timestamp when optimization completed.</param>
 /// <param name="Routes">Generated routes.</param>
 /// <param name="TotalCost">Total cost associated with the optimization.</param>
+/// <param name="ErrorMessage">Error message explaining any optimization failure or incomplete results. Null on success.</param>
 public sealed record OptimizeRouteResponse(
     Guid TenantId,
     Guid OptimizationRunId,
     DateTime CompletedAt,
     IReadOnlyList<RouteResult> Routes,
-    double TotalCost
+    double TotalCost,
+    string? ErrorMessage = null
 );

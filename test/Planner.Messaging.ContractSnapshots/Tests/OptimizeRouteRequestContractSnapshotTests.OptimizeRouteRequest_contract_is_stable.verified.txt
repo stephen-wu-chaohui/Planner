@@ -1,0 +1,52 @@
+﻿{
+  TenantId: Guid_1,
+  OptimizationRunId: Guid_2,
+  Jobs: [
+    {
+      JobId: 11,
+      JobType: 1,
+      Name: Job-1,
+      DueTime: 720,
+      ServiceTimeMinutes: 10,
+      PalletDemand: 1,
+      WeightDemand: 10,
+      RequiresRefrigeration: false,
+      Location: {
+        LocationId: 2001,
+        Latitude: -31.949,
+        Longitude: 115.859
+      }
+    },
+    {
+      JobId: 12,
+      JobType: 1,
+      Name: Job-2,
+      DueTime: 720,
+      ServiceTimeMinutes: 10,
+      PalletDemand: 1,
+      WeightDemand: 10,
+      RequiresRefrigeration: false,
+      Location: {
+        LocationId: 2002,
+        Latitude: -31.948,
+        Longitude: 115.8625
+      }
+    }
+  ],
+  Vehicles: [
+    {
+      VehicleId: 1,
+      Name: Van-1,
+      StartLocationId: 1001,
+      EndLocationId: 1001,
+      ShiftLimitMinutes: 480,
+      SpeedFactor: 1.0,
+      CostPerMinute: 1.0,
+      CostPerKm: 1.0,
+      MaxPallets: 10,
+      MaxWeight: 1000
+    }
+  ],
+  HasDistanceMatrix: false,
+  HasTravelTimeMatrix: false
+}

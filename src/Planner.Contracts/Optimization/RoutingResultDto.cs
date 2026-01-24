@@ -14,4 +14,6 @@ public sealed record RoutingResultDto(
     DateTime CompletedAt,
     IReadOnlyList<RouteDto> Routes,
     double TotalCost
-);
+) {
+    public readonly string? ErrorMessage;
+}

@@ -21,7 +21,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         };
 
     [Fact]
-    public void Job_and_depot_location_id_collision_should_throw() {
+    public void Job_and_depot_location_id_collision_should_return_error() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
@@ -42,16 +42,15 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         });
 
         // Act
-        Action act = () => _sut.Optimize(request);
+        var response = _sut.Optimize(request);
 
         // Assert
-        act.Should()
-           .Throw<SolverInputInvalidException>()
-           .WithMessage("*Job/Depot LocationId collision*");
+        response.ErrorMessage.Should().NotBeNullOrEmpty();
+        response.ErrorMessage.Should().Contain("Job/Depot LocationId collision");
     }
 
     [Fact]
-    public void Vehicle_with_missing_start_depot_should_throw() {
+    public void Vehicle_with_missing_start_depot_should_return_error() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
@@ -69,16 +68,15 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         });
 
         // Act
-        Action act = () => _sut.Optimize(request);
+        var response = _sut.Optimize(request);
 
         // Assert
-        act.Should()
-           .Throw<SolverInputInvalidException>()
-           .WithMessage("*references missing DepotId*");
+        response.ErrorMessage.Should().NotBeNullOrEmpty();
+        response.ErrorMessage.Should().Contain("references missing DepotId");
     }
 
     [Fact]
-    public void Vehicle_with_missing_end_depot_should_throw() {
+    public void Vehicle_with_missing_end_depot_should_return_error() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
@@ -96,12 +94,11 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         });
 
         // Act
-        Action act = () => _sut.Optimize(request);
+        var response = _sut.Optimize(request);
 
         // Assert
-        act.Should()
-           .Throw<SolverInputInvalidException>()
-           .WithMessage("*references missing DepotId*");
+        response.ErrorMessage.Should().NotBeNullOrEmpty();
+        response.ErrorMessage.Should().Contain("references missing DepotId");
     }
 
 }

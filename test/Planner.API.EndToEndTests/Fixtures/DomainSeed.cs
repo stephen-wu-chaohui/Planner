@@ -40,8 +40,8 @@ public static class DomainSeed {
             SpeedFactor = 1.0
         };
 
-        // 4. Create a Job with a Location
-        var jobLocation = new Location {
+        // 4. Create a Customer Location
+        var customerLocation = new Location {
             Id = 2,
             // TenantId = tenantId,
             Address = "Customer A",
@@ -49,11 +49,22 @@ public static class DomainSeed {
             Longitude = 115.87
         };
 
+        // 5. Create a Customer (Required by OptimizationController logic)
+        var customer = new Customer {
+            CustomerId = 1,
+            TenantId = tenantId,
+            Name = "Customer A",
+            Location = customerLocation,
+            DefaultServiceMinutes = 15
+        };
+
+        // 6. Create a Job linked to the Customer
         var job = new Job {
             Id = 1,
             TenantId = tenantId,
+            CustomerId = customer.CustomerId,
             Name = "Delivery 1",
-            Location = jobLocation, // Matches .Include(j => j.Location)
+            Location = customerLocation, // Matches .Include(j => j.Location)
             JobType = JobType.Delivery,
             ServiceTimeMinutes = 15,
             ReadyTime = 0,
@@ -62,17 +73,9 @@ public static class DomainSeed {
             WeightDemand = 200
         };
 
-        var customer = new Customer {
-            CustomerId = 1,
-            TenantId = tenantId,
-            Name = "Customer A",
-            Location = jobLocation, // Matches .Include(j => j.Location)
-            DefaultServiceMinutes = 15,
-            RequiresRefrigeration = false,
-        };
-
-        db.Locations.AddRange(depotLocation, jobLocation);
+        db.Locations.AddRange(depotLocation, customerLocation);
         db.Depots.Add(depot);
+        db.Customers.Add(customer);
         db.Vehicles.Add(vehicle);
         db.Jobs.Add(job);
         db.Customers.Add(customer);
