@@ -44,7 +44,15 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         // 3. Prepare Matrices & Solver Data
         var solverLocs = BuildSolverLocations(context, settings);
-        var (distMatrix, travelMatrix) = BuildMatrices(context, solverLocs, settings);
+        
+        // Use pre-computed matrices if available, otherwise compute them
+        long[][] distMatrix, travelMatrix;
+        if (request.DistanceMatrix is not null && request.TravelTimeMatrix is not null) {
+            distMatrix = request.DistanceMatrix;
+            travelMatrix = request.TravelTimeMatrix;
+        } else {
+            (distMatrix, travelMatrix) = BuildMatrices(context, solverLocs, settings);
+        }
 
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
