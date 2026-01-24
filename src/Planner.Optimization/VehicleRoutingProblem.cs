@@ -1,6 +1,5 @@
 ﻿using Google.OrTools.ConstraintSolver;
 using Google.Protobuf.WellKnownTypes;
-using Planner.Contracts.Optimization;
 using Planner.Messaging.Optimization;
 using Planner.Messaging.Optimization.Requests;
 using Planner.Messaging.Optimization.Responses;
@@ -213,8 +212,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
                 if (!locs[from].IsDepot && locs[from].Job is not null) {
                     var j = locs[from].Job;
-                    stops.Add(new(j.JobId, j.JobType, j.Name, sol.Value(dimT.CumulVar(idx)), sol.Value(dimT.CumulVar(idx)) + locs[from].ServiceTimeMinutes,
-                        sol.Value(dimP.CumulVar(idx)), sol.Value(dimW.CumulVar(idx)), sol.Value(dimR.CumulVar(idx)), j.Location));
+                    stops.Add(new(j.JobId, sol.Value(dimT.CumulVar(idx)), sol.Value(dimT.CumulVar(idx)) + locs[from].ServiceTimeMinutes,
+                        sol.Value(dimP.CumulVar(idx)), sol.Value(dimW.CumulVar(idx)), sol.Value(dimR.CumulVar(idx))));
                 }
                 tTime += travels[from][to] + locs[from].ServiceTimeMinutes;
                 tDist += dists[from][to];

@@ -6,12 +6,9 @@ namespace Planner.Messaging.Optimization;
 /// </summary>
 public sealed record TaskAssignment(
     long JobId,
-    int JobType,
-    string Name,
     double ArrivalTime,
     double DepartureTime,
     long PalletLoad,
     long WeightLoad,
-    long RefrigeratedLoad,
-    LocationInput Location
+    long RefrigeratedLoad
 );
