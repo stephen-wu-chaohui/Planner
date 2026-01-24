@@ -49,6 +49,15 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         var distMatrix = request.DistanceMatrix;
         var travelMatrix = request.TravelTimeMatrix;
 
+        // Validate matrix dimensions
+        if (distMatrix.Length != solverLocs.Count || travelMatrix.Length != solverLocs.Count)
+        {
+            return CreateEmptyResponse(request, 
+                $"Matrix dimension mismatch: expected {solverLocs.Count}x{solverLocs.Count}, " +
+                $"but got DistanceMatrix {distMatrix.Length}x{(distMatrix.Length > 0 ? distMatrix[0].Length : 0)} " +
+                $"and TravelTimeMatrix {travelMatrix.Length}x{(travelMatrix.Length > 0 ? travelMatrix[0].Length : 0)}");
+        }
+
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
             .Select(v => depotMap.NodeIndexOf(v.StartLocation.LocationId))

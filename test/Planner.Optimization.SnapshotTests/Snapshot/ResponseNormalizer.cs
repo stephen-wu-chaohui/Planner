@@ -9,6 +9,7 @@ public static class ResponseNormalizer {
         new {
             resp.TenantId,
             resp.OptimizationRunId,
+            resp.ErrorMessage,
             Routes = resp.Routes.Select(r => new {
                 r.VehicleId,
                 r.Used,
