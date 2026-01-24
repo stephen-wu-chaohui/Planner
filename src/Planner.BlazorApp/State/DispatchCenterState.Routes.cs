@@ -22,9 +22,20 @@ public partial class DispatchCenterState : IRouteState
 
     private void OnOptimizationCompleted(OptimizeRouteResponse evt)
     {
-        _routes = evt.Routes.ToList();
-        BuildMapRoutes();
-        OnRoutesChanged?.Invoke();
+        if (!string.IsNullOrEmpty(evt.ErrorMessage))
+        {
+            LastErrorMessage = evt.ErrorMessage;
+            _routes = [];
+            _mapRoutes = [];
+            NotifyStatus();
+        }
+        else
+        {
+            LastErrorMessage = null;
+            _routes = evt.Routes.ToList();
+            BuildMapRoutes();
+            OnRoutesChanged?.Invoke();
+        }
     }
 
     private void BuildMapRoutes()

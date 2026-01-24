@@ -22,8 +22,14 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         var settings = request.Settings ?? new OptimizationSettings();
 
         // 1. Validation
-        ValidateInput(request);
-        if (request.Vehicles.Count == 0) return CreateEmptyResponse(request);
+        try {
+            ValidateInput(request);
+        } catch (SolverInputInvalidException ex) {
+            return CreateEmptyResponse(request, $"Invalid input: {ex.Message}");
+        }
+        
+        if (request.Vehicles.Count == 0) 
+            return CreateEmptyResponse(request, "No vehicles provided.");
 
         // 2. Initialize Context
         var depots = request.Vehicles
@@ -38,9 +44,10 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
             TimeScale: 1, DistanceScale: 1
         );
 
-        // 3. Prepare Matrices & Solver Data
+        // 3. Prepare Solver Data - use precomputed matrices from request
         var solverLocs = BuildSolverLocations(context, settings);
-        var (distMatrix, travelMatrix) = BuildMatrices(context, solverLocs, settings);
+        var distMatrix = request.DistanceMatrix;
+        var travelMatrix = request.TravelTimeMatrix;
 
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
@@ -67,7 +74,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         // 6. Build Response
         return solution is null
-            ? CreateEmptyResponse(request)
+            ? CreateEmptyResponse(request, "Optimization failed to find a solution. This could be due to capacity constraints, time windows, or infeasibility.")
             : MapResults(context, routing, manager, solution, solverLocs, distMatrix, travelMatrix);
     }
 
@@ -111,37 +118,6 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
                 j.ReadyTime, j.DueTime, j.ServiceTimeMinutes, j.PalletDemand, j.WeightDemand, j.RequiresRefrigeration ? 1 : 0, j));
 
         return list;
-    }
-
-    private static (long[][] dist, long[][] travel)
-        BuildMatrices(VrpContext ctx, List<SolverLocation> locs, OptimizationSettings settings) {
-        int n = locs.Count;
-
-        var dist = new long[n][];
-        var travel = new long[n][];
-
-        for (int i = 0; i < n; i++) {
-            dist[i] = new long[n];
-            travel[i] = new long[n];
-
-            for (int j = 0; j < n; j++) {
-                if (i == j) continue;
-
-                // Compute in double
-                double km =
-                    settings.KmDegreeConstant *
-                    (Math.Abs(locs[i].Latitude - locs[j].Latitude)
-                   + Math.Abs(locs[i].Longitude - locs[j].Longitude));
-
-                double minutes = km * settings.TravelTimeMultiplier;
-
-                // Scale ONCE, store as long
-                dist[i][j] = (long)Math.Round(km * ctx.DistanceScale);
-                travel[i][j] = (long)Math.Round(minutes * ctx.TimeScale);
-            }
-        }
-
-        return (dist, travel);
     }
 
     private static void ConfigureDimensions(RoutingModel rt, RoutingIndexManager mgr, VrpContext ctx, List<SolverLocation> locs, long[][] dists, long[][] travels, OptimizationSettings settings) {
@@ -230,7 +206,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         return new OptimizeRouteResponse(ctx.Request.TenantId, ctx.Request.OptimizationRunId, DateTime.UtcNow, routes, grandTotal);
     }
 
-    private static OptimizeRouteResponse CreateEmptyResponse(OptimizeRouteRequest req) => new(req.TenantId, req.OptimizationRunId, DateTime.UtcNow, Array.Empty<RouteResult>(), 0);
+    private static OptimizeRouteResponse CreateEmptyResponse(OptimizeRouteRequest req, string? errorMessage = null) 
+        => new(req.TenantId, req.OptimizationRunId, DateTime.UtcNow, Array.Empty<RouteResult>(), 0, errorMessage);
 
     private static void ApplyPickupDeliveryPairs(RoutingModel rt, RoutingIndexManager mgr, List<SolverLocation> locs) {
         // Implementation remains similar but uses the modular SolverLocation record

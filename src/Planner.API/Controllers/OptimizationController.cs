@@ -47,15 +47,32 @@ public class OptimizationController(
                 .ThenInclude(d => d.Location)
             .ToListAsync();
 
+        var settings = new OptimizationSettings(
+            SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
+        );
+
+        // Build location list in the same order as solver expects: depots first, then jobs
+        var depotLocations = vehicles
+            .SelectMany(v => new[] { v.StartDepot.Location, v.EndDepot.Location })
+            .GroupBy(l => l.Id)
+            .Select(g => ToLocationInput(g.First()))
+            .ToList();
+
+        var jobLocations = jobs.Select(j => ToLocationInput(j.Location)).ToList();
+        var allLocations = depotLocations.Concat(jobLocations).ToList();
+
+        // Build matrices
+        var (distanceMatrix, travelTimeMatrix) = Helpers.MatrixBuilder.BuildMatrices(allLocations, settings);
+
         return new OptimizeRouteRequest(
             tenant.TenantId,
             OptimizationRunId: Guid.NewGuid(),
             RequestedAt: DateTime.UtcNow,
             Jobs: jobs.Select(ToJobInput).ToList(),
             Vehicles: vehicles.Select(ToVehicleInput).ToList(),
-            Settings: new OptimizationSettings(
-                SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
-            )
+            DistanceMatrix: distanceMatrix,
+            TravelTimeMatrix: travelTimeMatrix,
+            Settings: settings
         );
     }
 
