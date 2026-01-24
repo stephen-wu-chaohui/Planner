@@ -58,6 +58,21 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
                 $"and TravelTimeMatrix {travelMatrix.Length}x{(travelMatrix.Length > 0 ? travelMatrix[0].Length : 0)}");
         }
 
+        // Validate all inner arrays have correct length
+        for (int i = 0; i < distMatrix.Length; i++)
+        {
+            if (distMatrix[i].Length != solverLocs.Count)
+            {
+                return CreateEmptyResponse(request,
+                    $"DistanceMatrix row {i} has length {distMatrix[i].Length}, expected {solverLocs.Count}");
+            }
+            if (travelMatrix[i].Length != solverLocs.Count)
+            {
+                return CreateEmptyResponse(request,
+                    $"TravelTimeMatrix row {i} has length {travelMatrix[i].Length}, expected {solverLocs.Count}");
+            }
+        }
+
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
             .Select(v => depotMap.NodeIndexOf(v.StartLocation.LocationId))

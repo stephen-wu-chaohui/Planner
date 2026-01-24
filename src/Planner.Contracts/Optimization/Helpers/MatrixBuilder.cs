@@ -1,7 +1,7 @@
 using Planner.Contracts.Optimization.Inputs;
 using Planner.Contracts.Optimization.Requests;
 
-namespace Planner.API.Helpers;
+namespace Planner.Contracts.Optimization.Helpers;
 
 /// <summary>
 /// Helper class to build distance and travel time matrices from locations.

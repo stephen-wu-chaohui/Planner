@@ -62,7 +62,7 @@ public class OptimizationController(
         var allLocations = depotLocations.Concat(jobLocations).ToList();
 
         // Build matrices
-        var (distanceMatrix, travelTimeMatrix) = Helpers.MatrixBuilder.BuildMatrices(allLocations, settings);
+        var (distanceMatrix, travelTimeMatrix) = Planner.Contracts.Optimization.Helpers.MatrixBuilder.BuildMatrices(allLocations, settings);
 
         return new OptimizeRouteRequest(
             tenant.TenantId,

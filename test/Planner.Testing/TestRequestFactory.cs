@@ -67,7 +67,7 @@ public static class TestRequestFactory {
             .Concat(jobs.Select(j => j.Location))
             .ToList();
         
-        var (distanceMatrix, travelTimeMatrix) = BuildMatrices(allLocations, settings);
+        var (distanceMatrix, travelTimeMatrix) = Planner.Contracts.Optimization.Helpers.MatrixBuilder.BuildMatrices(allLocations, settings);
 
         // ---- Request -------------------------------------------------
         return new OptimizeRouteRequest(
@@ -81,42 +81,6 @@ public static class TestRequestFactory {
             Settings: settings,
             OvertimeMultiplier: 2.0
         );
-    }
-
-    private static (long[][] DistanceMatrix, long[][] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<LocationInput> locations,
-        OptimizationSettings settings)
-    {
-        int n = locations.Count;
-        var distMatrix = new long[n][];
-        var travelMatrix = new long[n][];
-
-        for (int i = 0; i < n; i++)
-        {
-            distMatrix[i] = new long[n];
-            travelMatrix[i] = new long[n];
-
-            for (int j = 0; j < n; j++)
-            {
-                if (i == j)
-                {
-                    distMatrix[i][j] = 0;
-                    travelMatrix[i][j] = 0;
-                    continue;
-                }
-
-                double km = settings.KmDegreeConstant *
-                    (Math.Abs(locations[i].Latitude - locations[j].Latitude) +
-                     Math.Abs(locations[i].Longitude - locations[j].Longitude));
-
-                double minutes = km * settings.TravelTimeMultiplier;
-
-                distMatrix[i][j] = (long)Math.Round(km);
-                travelMatrix[i][j] = (long)Math.Round(minutes);
-            }
-        }
-
-        return (distMatrix, travelMatrix);
     }
 
     public static ClaimsPrincipal CreateAdminUser() {

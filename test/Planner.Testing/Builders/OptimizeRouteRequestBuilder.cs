@@ -52,7 +52,7 @@ public sealed class OptimizeRouteRequestBuilder {
             .ToList();
         
         var allLocations = depotLocations.Concat(_jobs.Select(j => j.Location)).ToList();
-        var (distanceMatrix, travelTimeMatrix) = BuildMatrices(allLocations, _optimizationSettings);
+        var (distanceMatrix, travelTimeMatrix) = Planner.Contracts.Optimization.Helpers.MatrixBuilder.BuildMatrices(allLocations, _optimizationSettings);
 
         return new(
             _tenantId,
@@ -65,41 +65,5 @@ public sealed class OptimizeRouteRequestBuilder {
             _overtimeMultiplier,
             _optimizationSettings
         );
-    }
-
-    private static (long[][] DistanceMatrix, long[][] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<LocationInput> locations,
-        OptimizationSettings settings)
-    {
-        int n = locations.Count;
-        var distMatrix = new long[n][];
-        var travelMatrix = new long[n][];
-
-        for (int i = 0; i < n; i++)
-        {
-            distMatrix[i] = new long[n];
-            travelMatrix[i] = new long[n];
-
-            for (int j = 0; j < n; j++)
-            {
-                if (i == j)
-                {
-                    distMatrix[i][j] = 0;
-                    travelMatrix[i][j] = 0;
-                    continue;
-                }
-
-                double km = settings.KmDegreeConstant *
-                    (Math.Abs(locations[i].Latitude - locations[j].Latitude) +
-                     Math.Abs(locations[i].Longitude - locations[j].Longitude));
-
-                double minutes = km * settings.TravelTimeMultiplier;
-
-                distMatrix[i][j] = (long)Math.Round(km);
-                travelMatrix[i][j] = (long)Math.Round(minutes);
-            }
-        }
-
-        return (distMatrix, travelMatrix);
     }
 }
