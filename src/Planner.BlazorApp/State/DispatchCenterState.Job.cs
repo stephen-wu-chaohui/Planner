@@ -10,6 +10,11 @@ public partial class DispatchCenterState : IJobState {
 
     public event Action OnJobsChanged = delegate { };
 
+    public JobDto GetJobById(long jobId) {
+        return _jobs.FirstOrDefault(j => j.Id == jobId)
+            ?? throw new KeyNotFoundException($"Job with ID {jobId} not found.");
+    }
+
     public async Task SaveChangesAsync(IEnumerable<JobFormModel> models) {
         var dirtyModels = models.Where(m => m.IsDirty || m.PendingDeletion).ToList();
         if (dirtyModels.Count == 0) return;

@@ -29,19 +29,11 @@ static public class OptimizeRouteResponseToDto {
     public static TaskAssignmentDto ToDto(this TaskAssignment stop) {
         return new TaskAssignmentDto(
             stop.JobId,
-            stop.JobType,
-            stop.Name,
             stop.ArrivalTime,
             stop.DepartureTime,
             stop.PalletLoad,
             stop.WeightLoad,
-            stop.RefrigeratedLoad,
-            new LocationDto(
-                stop.Location.LocationId,
-                stop.Location.Address,
-                stop.Location.Latitude,
-                stop.Location.Longitude
-            )
+            stop.RefrigeratedLoad
         );
     }
 }

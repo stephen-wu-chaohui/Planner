@@ -7,12 +7,9 @@ namespace Planner.Contracts.Optimization;
 /// </summary>
 public sealed record TaskAssignmentDto(
     long JobId,
-    int JobType,
-    string Name,
     double ArrivalTime,
     double DepartureTime,
     long PalletLoad,
     long WeightLoad,
-    long RefrigeratedLoad,
-    LocationDto Location
+    long RefrigeratedLoad
 );

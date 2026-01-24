@@ -55,10 +55,11 @@
                                             <tbody>
                                                 @for (int i = 0; i < r.Stops.Count; i++) {
                                                     var s = r.Stops[i];
+                                                    var job = JobState.GetJobById(s.JobId);
                                                     <tr>
                                                         <td>@(i + 1)</td>
-                                                        <td>@s.Name</td>
-                                                        <td>@s.JobType</td>
+                                                        <td>@job.Name</td>
+                                                        <td>@job.JobType</td>
                                                         <td>@Readble(s.ArrivalTime)</td>
                                                         <td>@Readble(s.DepartureTime)</td>
                                                         <td>@s.PalletLoad</td>
