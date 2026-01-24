@@ -10,15 +10,12 @@
       PalletDemand: 2,
       WeightDemand: 200,
       RequiresRefrigeration: false,
-      Location: {
-        LocationId: 2
-      }
+      Location: 2
     }
   ],
   Vehicles: [
     {
       VehicleId: 1,
-      Name: Truck 01,
       ShiftLimitMinutes: 480,
       StartLocationId: 1,
       EndLocationId: 1,

@@ -4,23 +4,16 @@
   Jobs: [
     {
       JobId: 11,
-      RequiresRefrigeration: false,
-      Location: {
-        LocationId: 2001
-      }
+      RequiresRefrigeration: false
     },
     {
       JobId: 12,
-      RequiresRefrigeration: false,
-      Location: {
-        LocationId: 2002
-      }
+      RequiresRefrigeration: false
     }
   ],
   Vehicles: [
     {
       VehicleId: 1,
-      Name: Van-1,
       ShiftLimitMinutes: 480,
       SpeedFactor: 1.0
     }

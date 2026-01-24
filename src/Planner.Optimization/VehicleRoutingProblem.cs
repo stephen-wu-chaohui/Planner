@@ -39,7 +39,6 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         var context = new VrpContext(
             request, request.Jobs, request.Vehicles,
-            [.. depots, .. request.Jobs.Select(j => j.Location)],
             TimeScale: 1, DistanceScale: 1
         );
 
