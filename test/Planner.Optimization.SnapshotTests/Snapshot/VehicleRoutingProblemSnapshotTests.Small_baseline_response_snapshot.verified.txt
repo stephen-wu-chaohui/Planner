@@ -1,0 +1,5 @@
+﻿{
+  TenantId: Guid_1,
+  OptimizationRunId: Guid_2,
+  ErrorMessage: No feasible solution found. Check vehicle capacities, time windows, and job constraints.
+}
