@@ -1,6 +1,7 @@
 ﻿using Planner.Application.Messaging;
-using Planner.Contracts.Optimization.Responses;
 using Planner.Messaging;
+using Planner.Messaging.Messaging;
+using Planner.Messaging.Optimization.Responses;
 
 namespace Planner.API.BackgroundServices;
 
@@ -16,8 +17,8 @@ public sealed class OptimizeRouteResultConsumer(
             async resp => {
                 try {
                     await hub.PublishAsync(
-                        MessageRoutes.Response,
-                        resp);
+                        "RoutingResultDto",
+                        resp.ToDto());
                 } catch (Exception ex) {
                     logger.LogError(ex,
                         "[OptimizeRouteResultConsumer] Error forwarding optimization result (RunId={RunId})",

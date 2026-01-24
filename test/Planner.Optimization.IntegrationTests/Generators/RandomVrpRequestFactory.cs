@@ -1,4 +1,4 @@
-﻿using Planner.Contracts.Optimization.Requests;
+﻿using Planner.Messaging.Optimization;
 using Planner.Testing;
 using Planner.Testing.Builders;
 using System;

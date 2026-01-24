@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Planner.Contracts.Optimization.Abstractions;
 
-namespace Planner.Optimization.DependencyInjection;
+namespace Planner.Optimization;
 
 public static class ServiceRegistration {
     /// <summary>

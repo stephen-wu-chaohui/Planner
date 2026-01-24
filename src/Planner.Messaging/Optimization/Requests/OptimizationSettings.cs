@@ -1,4 +1,4 @@
-﻿namespace Planner.Contracts.Optimization.Requests;
+﻿namespace Planner.Messaging.Optimization.Requests;
 
 // Carrying the previously hardcoded "magic numbers"
 public record OptimizationSettings(

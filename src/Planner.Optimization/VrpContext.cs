@@ -1,5 +1,5 @@
-﻿using Planner.Contracts.Optimization.Inputs;
-using Planner.Contracts.Optimization.Requests;
+﻿
+using Planner.Messaging.Optimization;
 
 internal sealed record VrpContext(
     OptimizeRouteRequest Request,

@@ -3,14 +3,15 @@ using Microsoft.AspNetCore.Mvc;
 using Planner.API.Controllers;
 using Planner.API.EndToEndTests.Fixtures;
 using Planner.Application;
-using Planner.Contracts.Optimization.Requests;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging;
+using Planner.Messaging.Messaging;
+using Planner.Messaging.Optimization;
 using Planner.Testing;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Planner.API.EndToEndTests.Tests;
+namespace Planner.API.EndToEndTests;
 
 public sealed class OptimizationControllerEndToEndTests {
     [Fact]

@@ -1,11 +1,11 @@
 ﻿using Planner.BlazorApp.FormModels;
-using Planner.Contracts.Optimization.Outputs;
+using Planner.Contracts.Optimization;
 
 namespace Planner.BlazorApp.State.Interfaces;
 
 public interface IRouteState : IDispatchStateProcessing
 {
-    IReadOnlyList<RouteResult> Routes { get; }
+    IReadOnlyList<RouteDto> Routes { get; }
     IReadOnlyList<MapRoute> MapRoutes { get; }
     event Action OnRoutesChanged;
     event Action<int> StartWait;

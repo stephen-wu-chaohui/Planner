@@ -1,0 +1,47 @@
+﻿using Planner.Contracts.API;
+using Planner.Contracts.Optimization;
+using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Responses;
+
+namespace Planner.API.BackgroundServices;
+
+static public class OptimizeRouteResponseToDto {
+    public static RoutingResultDto ToDto(this OptimizeRouteResponse resp) {
+        return new RoutingResultDto(
+            resp.TenantId,
+            resp.OptimizationRunId,
+            resp.CompletedAt,
+            resp.Routes.Select(r => r.ToDto()).ToList(),
+            resp.TotalCost);
+    }
+
+    public static RouteDto ToDto(this RouteResult route) {
+        return new RouteDto(
+            route.VehicleId,
+            route.VehicleName,
+            route.Used,
+            route.Stops.Select(s => s.ToDto()).ToList(),
+            route.TotalMinutes,
+            route.TotalDistanceKm,
+            route.TotalCost);
+    }
+
+    public static TaskAssignmentDto ToDto(this TaskAssignment stop) {
+        return new TaskAssignmentDto(
+            stop.JobId,
+            stop.JobType,
+            stop.Name,
+            stop.ArrivalTime,
+            stop.DepartureTime,
+            stop.PalletLoad,
+            stop.WeightLoad,
+            stop.RefrigeratedLoad,
+            new LocationDto(
+                stop.Location.LocationId,
+                stop.Location.Address,
+                stop.Location.Latitude,
+                stop.Location.Longitude
+            )
+        );
+    }
+}

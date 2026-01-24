@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Planner.Contracts\Planner.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Planner.Messaging\Planner.Messaging.csproj" />
   </ItemGroup>
   
   <ItemGroup>

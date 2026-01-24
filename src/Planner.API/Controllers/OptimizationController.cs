@@ -2,11 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Application;
-using Planner.Contracts.Optimization.Inputs;
-using Planner.Contracts.Optimization.Requests;
 using Planner.Domain;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging;
+using Planner.Messaging.Messaging;
+using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Requests;
 
 namespace Planner.API.Controllers;
 
@@ -28,7 +29,6 @@ public class OptimizationController(
             return BadRequest("No jobs or vehicles available for optimization.");
 
         await bus.PublishAsync(MessageRoutes.Request, request);
-
         return Ok(request.Settings);
     }
 

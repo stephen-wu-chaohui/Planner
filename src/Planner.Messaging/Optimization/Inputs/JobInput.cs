@@ -1,4 +1,4 @@
-﻿namespace Planner.Contracts.Optimization.Inputs;
+﻿namespace Planner.Messaging.Optimization;
 
 /// <summary>
 /// Solver-facing job definition.

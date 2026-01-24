@@ -1,6 +1,6 @@
-﻿using Planner.Contracts.Optimization.Inputs;
+﻿using Planner.Messaging.Optimization.Requests;
 
-namespace Planner.Contracts.Optimization.Requests;
+namespace Planner.Messaging.Optimization;
 
 /// <summary>
 /// Represents a request to optimize vehicle routes.

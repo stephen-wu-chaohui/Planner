@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging;
+﻿namespace Planner.Messaging.Messaging;
 
 public interface IMessageBus {
     Task PublishAsync<T>(string queueName, T message);

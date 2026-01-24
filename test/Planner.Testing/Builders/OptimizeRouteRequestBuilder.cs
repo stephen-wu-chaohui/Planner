@@ -1,4 +1,6 @@
-﻿using Planner.Contracts.Optimization.Requests;
+﻿
+using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Requests;
 
 namespace Planner.Testing.Builders;
 

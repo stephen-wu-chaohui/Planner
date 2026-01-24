@@ -1,16 +1,14 @@
 ﻿using Planner.BlazorApp.FormModels;
 using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State.Interfaces;
-using Planner.Contracts.Optimization.Outputs;
-using Planner.Contracts.Optimization.Requests;
-using Planner.Contracts.Optimization.Responses;
+using Planner.Contracts.Optimization;
 
 namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState : IRouteState
 {
-    private IReadOnlyList<RouteResult> _routes = [];
-    IReadOnlyList<RouteResult> IRouteState.Routes => _routes;
+    private IReadOnlyList<RouteDto> _routes = [];
+    IReadOnlyList<RouteDto> IRouteState.Routes => _routes;
 
     private IReadOnlyList<MapRoute> _mapRoutes = [];
 
@@ -20,7 +18,7 @@ public partial class DispatchCenterState : IRouteState
 
     IReadOnlyList<MapRoute> IRouteState.MapRoutes => _mapRoutes;
 
-    private void OnOptimizationCompleted(OptimizeRouteResponse evt)
+    private void OnOptimizationCompleted(RoutingResultDto evt)
     {
         _routes = evt.Routes.ToList();
         BuildMapRoutes();
@@ -48,7 +46,7 @@ public partial class DispatchCenterState : IRouteState
 
     public async Task SolveVrpAsync() {
         const string endpoint = "api/vrp/solve";
-        var settings = await api.GetFromJsonAsync<OptimizationSettings>(endpoint);
+        var settings = await api.GetFromJsonAsync<RouteSettings>(endpoint);
 
         if (settings?.SearchTimeLimitSeconds > 0) {
             int waitMinutes = (settings.SearchTimeLimitSeconds + 59) / 60;

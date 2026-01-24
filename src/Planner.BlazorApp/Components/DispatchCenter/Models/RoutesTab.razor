@@ -1,7 +1,7 @@
 ﻿@using Planner.BlazorApp.Components.DispatchCenter
 @using Planner.BlazorApp.Services
 @using Planner.BlazorApp.State.Interfaces
-@using Planner.Contracts.Optimization.Outputs
+@using Planner.Contracts.Optimization
 
 @inject IJobState JobState
 @inject IVehicleState VehicleState
@@ -86,7 +86,7 @@
 
     [Parameter] public int TickSeconds { get; set; } = 1;
 
-    private IReadOnlyList<RouteResult>? Routes;
+    private IReadOnlyList<RouteDto>? Routes;
 
     private System.Threading.Timer? _progressTimer;
     private bool _isBuilding;

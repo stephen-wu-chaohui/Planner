@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using Planner.Contracts.Optimization.Abstractions;
-using Planner.Contracts.Optimization.Requests;
 using Planner.Messaging;
+using Planner.Messaging.Messaging;
+using Planner.Messaging.Optimization;
 
 namespace Planner.Optimization.Worker.Handlers;
 

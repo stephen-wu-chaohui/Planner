@@ -1,5 +1,6 @@
 ﻿namespace Planner.Testing.Fixtures;
 
+using Planner.Messaging.Optimization;
 using Planner.Testing.Builders;
 
 public static class VrpBaseline {

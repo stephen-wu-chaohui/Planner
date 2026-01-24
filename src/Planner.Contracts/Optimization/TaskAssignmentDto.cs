@@ -1,11 +1,11 @@
-﻿using Planner.Contracts.Optimization.Inputs;
+﻿using Planner.Contracts.API;
 
-namespace Planner.Contracts.Optimization.Outputs;
+namespace Planner.Contracts.Optimization;
 
 /// <summary>
 /// Describes one stop in an optimized vehicle route.
 /// </summary>
-public sealed record TaskAssignment(
+public sealed record TaskAssignmentDto(
     long JobId,
     int JobType,
     string Name,
@@ -14,5 +14,5 @@ public sealed record TaskAssignment(
     long PalletLoad,
     long WeightLoad,
     long RefrigeratedLoad,
-    LocationInput Location
+    LocationDto Location
 );

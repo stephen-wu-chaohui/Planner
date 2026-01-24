@@ -1,4 +1,4 @@
-﻿using Planner.Contracts.Optimization.Requests;
+﻿global using Planner.Messaging.Optimization;
 using System.Linq;
 
 namespace Planner.Messaging.ContractSnapshots.Snapshot;

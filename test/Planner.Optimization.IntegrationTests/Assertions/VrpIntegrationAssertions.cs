@@ -1,6 +1,6 @@
 ﻿using FluentAssertions;
-using Planner.Contracts.Optimization.Requests;
-using Planner.Contracts.Optimization.Responses;
+using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Responses;
 using System;
 using System.Linq;
 

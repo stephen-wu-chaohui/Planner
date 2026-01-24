@@ -1,4 +1,6 @@
-﻿namespace Planner.Testing.Builders;
+﻿using Planner.Messaging.Optimization;
+
+namespace Planner.Testing.Builders;
 
 public sealed class JobInputBuilder {
     private int _jobId = TestIds.Job1;

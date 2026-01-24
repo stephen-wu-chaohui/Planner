@@ -1,4 +1,4 @@
-﻿namespace Planner.Contracts.Optimization.Inputs;
+﻿namespace Planner.Messaging.Optimization;
 
 /// <summary>
 /// Immutable vehicle definition used for route optimization.

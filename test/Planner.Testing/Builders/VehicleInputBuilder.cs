@@ -1,4 +1,6 @@
-﻿namespace Planner.Testing.Builders;
+﻿using Planner.Messaging.Optimization;
+
+namespace Planner.Testing.Builders;
 
 public sealed class VehicleInputBuilder {
     private int _vehicleId = TestIds.Vehicle1;

@@ -1,4 +1,6 @@
-﻿namespace Planner.Testing.Builders;
+﻿using Planner.Messaging.Optimization;
+
+namespace Planner.Testing.Builders;
 
 // Depots are derived from vehicle StartLocation/EndLocation in the solver.
 // This builder remains for backwards compatibility in tests.

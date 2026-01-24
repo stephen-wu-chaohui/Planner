@@ -1,4 +1,4 @@
-﻿using Planner.Contracts.Optimization.Responses;
+﻿using Planner.Messaging.Optimization.Responses;
 using System;
 using System.Linq;
 

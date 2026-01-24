@@ -1,4 +1,4 @@
-﻿namespace Planner.Contracts.Optimization.Inputs;
+﻿namespace Planner.Messaging.Optimization;
 
 /// <summary>
 /// Represents a depot / starting location for route optimization.

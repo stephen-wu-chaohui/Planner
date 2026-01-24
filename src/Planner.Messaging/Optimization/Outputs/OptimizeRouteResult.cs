@@ -1,4 +1,4 @@
-﻿namespace Planner.Contracts.Optimization.Outputs;
+﻿namespace Planner.Messaging.Optimization;
 
 public sealed record OptimizeRouteResult(
     Guid TenantId,

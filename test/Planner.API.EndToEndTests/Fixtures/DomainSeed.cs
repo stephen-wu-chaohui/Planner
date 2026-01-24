@@ -62,10 +62,20 @@ public static class DomainSeed {
             WeightDemand = 200
         };
 
+        var customer = new Customer {
+            CustomerId = 1,
+            TenantId = tenantId,
+            Name = "Customer A",
+            Location = jobLocation, // Matches .Include(j => j.Location)
+            DefaultServiceMinutes = 15,
+            RequiresRefrigeration = false,
+        };
+
         db.Locations.AddRange(depotLocation, jobLocation);
         db.Depots.Add(depot);
         db.Vehicles.Add(vehicle);
         db.Jobs.Add(job);
+        db.Customers.Add(customer);
 
         db.SaveChanges(); // Important: Persist before controller query
     }
