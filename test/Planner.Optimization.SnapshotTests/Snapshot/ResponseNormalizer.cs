@@ -20,6 +20,7 @@ public static class ResponseNormalizer {
                 TotalMinutes = Math.Round(r.TotalMinutes, 2),
                 TotalDistanceKm = Math.Round(r.TotalDistanceKm, 3),
                 TotalCost = Math.Round(r.TotalCost, 2)
-            })
+            }),
+            resp.ErrorMessage
         };
 }

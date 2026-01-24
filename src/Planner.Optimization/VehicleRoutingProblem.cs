@@ -22,11 +22,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         var settings = request.Settings ?? new OptimizationSettings();
 
         // 1. Validation
-        try {
-            ValidateInput(request);
-        } catch (SolverInputInvalidException ex) {
-            return CreateEmptyResponse(request, $"Invalid input: {ex.Message}");
-        }
+        ValidateInput(request);
         if (request.Vehicles.Count == 0) return CreateEmptyResponse(request, "No vehicles available for optimization.");
 
         // 2. Initialize Context
