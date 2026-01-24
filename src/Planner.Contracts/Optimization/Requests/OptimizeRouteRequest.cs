@@ -23,5 +23,5 @@ public sealed record OptimizeRouteRequest(
     long[][] DistanceMatrix,
     long[][] TravelTimeMatrix,
     double OvertimeMultiplier = 2.0,
-    OptimizationSettings? Settings = null
+    OptimizationSettings? Settings = null,
 );

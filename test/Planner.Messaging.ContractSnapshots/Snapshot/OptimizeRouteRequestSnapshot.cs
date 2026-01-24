@@ -43,7 +43,11 @@ public static class OptimizeRouteRequestSnapshot {
                     v.MaxPallets,
                     v.MaxWeight,
                     v.RefrigeratedCapacity
-                })
+                }),
+            
+            // Note: DistanceMatrix and TravelTimeMatrix are large arrays, so we only show if they're present
+            HasDistanceMatrix = req.DistanceMatrix != null,
+            HasTravelTimeMatrix = req.TravelTimeMatrix != null
         };
     }
 }

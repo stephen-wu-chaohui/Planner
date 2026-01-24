@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.API.Services;
 using Planner.Application;
 using Planner.Contracts.Optimization.Inputs;
 using Planner.Contracts.Optimization.Requests;
@@ -16,7 +17,8 @@ namespace Planner.API.Controllers;
 public class OptimizationController(
     IMessageBus bus,
     PlannerDbContext db,
-    ITenantContext tenant) : ControllerBase {
+    ITenantContext tenant,
+    IMatrixCalculationService matrixService) : ControllerBase {
     /// <summary>
     /// Accept a route optimization request and dispatch it to the optimization worker.
     /// </summary>
