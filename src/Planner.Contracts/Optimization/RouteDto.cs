@@ -6,8 +6,6 @@
 /// </summary>
 public sealed record RouteDto(
     long VehicleId,
-    string VehicleName,
-    bool Used,
     IReadOnlyList<TaskAssignmentDto> Stops,
     double TotalMinutes,
     double TotalDistanceKm,

@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
+using Planner.API.Services;
+using Planner.Domain;
+using System.Linq;
 using System.Security.Claims;
 
 namespace Planner.Testing;
@@ -16,67 +18,69 @@ public static class TestRequestFactory {
 
         // ---- Depots --------------------------------------------------
         // Depots are derived from vehicle StartLocation/EndLocation.
-        var depotLocation = new LocationInput(
-            LocationId: 1,
-            Latitude: -31.95,
-            Longitude: 115.86,
-            Address: "Depot"
-        );
+        var depotLocation = new Location {
+            Id = 1,
+            Address = "Perth",
+            Latitude = -31.9505,
+            Longitude = 115.8605
+        };
 
         // ---- Vehicles ------------------------------------------------
         var vehicles = Enumerable.Range(1, vehicleCount)
-            .Select(i => new VehicleInput(
-                VehicleId: i,
-                Name: $"Vehicle {i}",
-                StartLocation: depotLocation,
-                EndLocation: depotLocation,
-                MaxPallets: 10,
-                MaxWeight: 1_000,
-                RefrigeratedCapacity: 5,
-                SpeedFactor: 1.0,
-                ShiftLimitMinutes: 8 * 60,
-                CostPerMinute: 1.0,
-                CostPerKm: 1.0,
-                BaseFee: 10.0
-            ))
+            .Select(i => new Vehicle {
+                Id = i,
+                TenantId = tenantId,
+                Name = $"Vehicle {i}",
+                DepotStartId = depotLocation.Id,
+                DepotEndId = depotLocation.Id,
+                StartDepot = new Depot { Location = depotLocation },
+                EndDepot = new Depot { Location = depotLocation },
+                MaxPallets = 10,
+                MaxWeight = 1_000,
+                RefrigeratedCapacity = 5,
+                SpeedFactor = 1.0,
+                ShiftLimitMinutes = 8 * 60,
+                BaseFee = 10.0
+            })
             .ToList();
 
         // ---- Jobs ----------------------------------------------------
         var jobs = Enumerable.Range(1, jobCount)
-            .Select(i => new JobInput(
-                JobId: i,
-                JobType: 1, // JobType.Delivery,
-                Name: $"Job {i}",
-                Location: new LocationInput(
-                    LocationId: 100 + i,
-                    Latitude: -31.95 + i * 0.01,
-                    Longitude: 115.86 + i * 0.01,
-                    Address: $"Job {i}"
-                ),
-                ReadyTime: 0,
-                DueTime: 24 * 60,
-                ServiceTimeMinutes: 10,
-                PalletDemand: 1,
-                WeightDemand: 100,
-                RequiresRefrigeration: false
-            ))
+            .Select(i => new Job { 
+                Id = i,
+                TenantId = tenantId,
+                Name = $"Job {i}",
+                JobType = JobType.Delivery,
+                Location = new Location { 
+                    Id = 100 + i,
+                    Address = $"Customer {i} Address",
+                    Latitude = -31.9505 + (i * 0.01),
+                    Longitude = 115.8605 + (i * 0.01)
+                },
+                ReadyTime = 0,
+                DueTime = 24 * 60,
+                ServiceTimeMinutes = 10,
+                PalletDemand = 1,
+                WeightDemand = 100,
+                RequiresRefrigeration = false
+            })
             .ToList();
 
         // ---- Build Matrices -----------------------------------------
         var settings = FastSettings();
-        var allLocations = new List<LocationInput> { depotLocation }
+        var allLocations = new[] { depotLocation }
             .Concat(jobs.Select(j => j.Location))
             .ToList();
         
-        var (distanceMatrix, travelTimeMatrix) = Planner.Contracts.Optimization.Helpers.MatrixBuilder.BuildMatrices(allLocations, settings);
+        var (distanceMatrix, travelTimeMatrix) = MatrixBuilder.BuildMatrices(allLocations, settings);
 
         // ---- Request -------------------------------------------------
         return new OptimizeRouteRequest(
             TenantId: tenantId,
             OptimizationRunId: runId,
             RequestedAt: DateTime.UtcNow,
-            Vehicles: vehicles,
-            Jobs: jobs,
+            Vehicles: vehicles.Select(ToInput.ToVehicleInput).ToList(),
+            Jobs: jobs.Select(ToInput.ToJobInput).ToList(),
             DistanceMatrix: distanceMatrix,
             TravelTimeMatrix: travelTimeMatrix,
             Settings: settings,

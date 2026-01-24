@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging.Optimization;
+﻿namespace Planner.Messaging.Optimization.Inputs;
 
 /// <summary>
 /// Solver-facing job definition.
@@ -7,10 +7,9 @@
 public sealed record JobInput(
     long JobId,                 // Internal reference (stable within request)
     int JobType,               // 0: Depot, 1: Delivery, 2: Pickup
-    string Name,
 
     // Solver-friendly location reference
-    LocationInput Location,
+    long Location,
 
     // Service constraints
     long ServiceTimeMinutes,

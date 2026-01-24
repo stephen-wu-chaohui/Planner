@@ -14,7 +14,6 @@ public static class OptimizeRouteResponseSnapshot {
                 .OrderBy(r => r.VehicleId)
                 .Select(r => new {
                     r.VehicleId,
-                    r.VehicleName,
                     r.Used,
 
                     Stops = r.Stops
@@ -22,8 +21,6 @@ public static class OptimizeRouteResponseSnapshot {
                         .ThenBy(s => s.JobId)
                         .Select(s => new {
                             s.JobId,
-                            s.JobType,
-                            s.Name,
                             ArrivalTime = Math.Round(s.ArrivalTime, 2),
                             DepartureTime = Math.Round(s.DepartureTime, 2),
                             s.PalletLoad,

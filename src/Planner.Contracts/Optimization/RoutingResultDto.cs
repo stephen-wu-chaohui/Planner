@@ -13,7 +13,6 @@ public sealed record RoutingResultDto(
     Guid OptimizationRunId,
     DateTime CompletedAt,
     IReadOnlyList<RouteDto> Routes,
-    double TotalCost
-) {
-    public readonly string? ErrorMessage;
-}
+    double TotalCost,
+    string? ErrorMessage = null
+);

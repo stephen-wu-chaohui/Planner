@@ -29,8 +29,8 @@
                     </thead>
                     <tbody>
                         @foreach (var r in Routes) {
-                            <tr class="vehicle-row @(!r.Used ? "text-muted" : "")">
-                                <td><strong>@r.VehicleName</strong></td>
+                            <tr class="vehicle-row @(!r.Stops.Any() ? "text-muted" : "")">
+                                <td><strong>@r.VehicleId</strong></td>
                                 <td>@r.Stops.Count</td>
                                 <td>@($"{r.TotalDistanceKm:F1}")</td>
                                 <td>@($"{r.TotalMinutes:F0}")</td>

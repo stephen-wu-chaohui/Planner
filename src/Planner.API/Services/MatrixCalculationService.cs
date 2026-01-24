@@ -1,4 +1,5 @@
 ﻿
+using Planner.Domain;
 using Planner.Messaging.Optimization;
 using Planner.Messaging.Optimization.Requests;
 
@@ -17,7 +18,7 @@ public interface IMatrixCalculationService {
     /// <param name="distanceScale">Scale factor for distance values.</param>
     /// <returns>Tuple containing distance matrix and travel time matrix.</returns>
     (long[][] DistanceMatrix, long[][] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<LocationInput> locations,
+        IReadOnlyList<Location> locations,
         OptimizationSettings settings,
         long timeScale = 1,
         long distanceScale = 1);
@@ -25,7 +26,7 @@ public interface IMatrixCalculationService {
 
 public sealed class MatrixCalculationService : IMatrixCalculationService {
     public (long[][] DistanceMatrix, long[][] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<LocationInput> locations,
+        IReadOnlyList<Location> locations,
         OptimizationSettings settings,
         long timeScale = 1,
         long distanceScale = 1) {

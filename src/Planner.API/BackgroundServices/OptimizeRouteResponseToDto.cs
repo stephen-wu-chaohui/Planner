@@ -18,8 +18,6 @@ static public class OptimizeRouteResponseToDto {
     public static RouteDto ToDto(this RouteResult route) {
         return new RouteDto(
             route.VehicleId,
-            route.VehicleName,
-            route.Used,
             route.Stops.Select(s => s.ToDto()).ToList(),
             route.TotalMinutes,
             route.TotalDistanceKm,

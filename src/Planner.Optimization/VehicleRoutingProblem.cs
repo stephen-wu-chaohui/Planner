@@ -1,6 +1,7 @@
 ﻿using Google.OrTools.ConstraintSolver;
 using Google.Protobuf.WellKnownTypes;
 using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Inputs;
 using Planner.Messaging.Optimization.Requests;
 using Planner.Messaging.Optimization.Responses;
 using System.Diagnostics;
@@ -32,7 +33,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         // 2. Initialize Context
         var depots = request.Vehicles
             .SelectMany(v => new[] { v.StartLocation, v.EndLocation })
-            .GroupBy(l => l.LocationId)
+            .GroupBy(l => l)
             .Select(g => g.First())
             .ToList();
 
@@ -73,11 +74,11 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
-            .Select(v => depotMap.NodeIndexOf(v.StartLocation.LocationId))
+            .Select(v => depotMap.NodeIndexOf(v.StartLocation))
             .ToArray();
 
         int[] ends = context.Vehicles
-            .Select(v => depotMap.NodeIndexOf(v.EndLocation.LocationId))
+            .Select(v => depotMap.NodeIndexOf(v.EndLocation))
             .ToArray();
 
         // 4. Model Setup
@@ -108,16 +109,16 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         // To keep validation meaningful, treat the first vehicle's start/end as the canonical depot set
         // and ensure all vehicles reference only those depots.
         var depotIds = new HashSet<long> {
-            request.Vehicles[0].StartLocation.LocationId,
-            request.Vehicles[0].EndLocation.LocationId
+            request.Vehicles[0].StartLocation,
+            request.Vehicles[0].EndLocation
         };
 
-        var jobLocIds = request.Jobs.Select(j => j.Location.LocationId).ToHashSet();
+        var jobLocIds = request.Jobs.Select(j => j.Location).ToHashSet();
         if (jobLocIds.Overlaps(depotIds))
             throw new SolverInputInvalidException("Job/Depot LocationId collision.");
 
         foreach (var v in request.Vehicles) {
-            if (!depotIds.Contains(v.StartLocation.LocationId) || !depotIds.Contains(v.EndLocation.LocationId))
+            if (!depotIds.Contains(v.StartLocation) || !depotIds.Contains(v.EndLocation))
                 throw new SolverInputInvalidException($"Vehicle {v.VehicleId} references missing DepotId.");
         }
     }
@@ -128,15 +129,15 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         var depotLocs = ctx.Vehicles
             .SelectMany(v => new[] { v.StartLocation, v.EndLocation })
-            .GroupBy(l => l.LocationId)
+            .GroupBy(l => l)
             .Select(g => g.First());
 
         foreach (var d in depotLocs)
-            list.Add(new(node++, d.LocationId, true,
+            list.Add(new(node++, d, true,
                 0, settings.HorizonMinutes, 0, 0, 0, 0, null));
 
         foreach (var j in ctx.Jobs)
-            list.Add(new(node++, j.Location.LocationId, false,
+            list.Add(new(node++, j.Location, false,
                 j.ReadyTime, j.DueTime, j.ServiceTimeMinutes, j.PalletDemand, j.WeightDemand, j.RequiresRefrigeration ? 1 : 0, j));
 
         return list;
@@ -197,7 +198,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         for (int v = 0; v < ctx.Vehicles.Count; v++) {
             var veh = ctx.Vehicles[v];
             if (!rt.IsVehicleUsed(sol, v)) {
-                routes.Add(new RouteResult(veh.VehicleId, veh.Name, false, Array.Empty<TaskAssignment>(), 0, 0, 0));
+                routes.Add(new RouteResult(veh.VehicleId, false, Array.Empty<TaskAssignment>(), 0, 0, 0));
                 continue;
             }
 
@@ -222,7 +223,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
             double cost = veh.BaseFee + (tTime * veh.CostPerMinute) + (tDist * veh.CostPerKm);
             grandTotal += cost;
-            routes.Add(new RouteResult(veh.VehicleId, veh.Name, true, stops, tTime, tDist, cost));
+            routes.Add(new RouteResult(veh.VehicleId, true, stops, tTime, tDist, cost));
         }
 
         return new OptimizeRouteResponse(ctx.Request.TenantId, ctx.Request.OptimizationRunId, DateTime.UtcNow, routes, grandTotal);
@@ -272,8 +273,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         foreach (var v in vehicles) {
             Console.WriteLine(
                 $"{v.VehicleId,5} | " +
-                $"{v.StartLocation.LocationId,10} → {depots.NodeIndexOf(v.StartLocation.LocationId),4} | " +
-                $"{v.EndLocation.LocationId,10} → {depots.NodeIndexOf(v.EndLocation.LocationId),4}"
+                $"{v.StartLocation,10} → {depots.NodeIndexOf(v.StartLocation),4} | " +
+                $"{v.EndLocation,10} → {depots.NodeIndexOf(v.EndLocation),4}"
             );
         }
     }

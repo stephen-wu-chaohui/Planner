@@ -159,7 +159,7 @@ static void ValidateRequiredConfiguration(IConfiguration config)
         .Where(k => string.IsNullOrWhiteSpace(config[k]))
         .ToList();
 
-    if (missing.Any())
+    if (missing.Count != 0)
     {
         throw new InvalidOperationException(
             $"Missing required configuration values: {string.Join(", ", missing)}"

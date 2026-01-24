@@ -1,8 +1,7 @@
-﻿
-using Planner.Messaging.Optimization;
+﻿using Planner.Domain;
 using Planner.Messaging.Optimization.Requests;
 
-namespace Planner.Contracts.Optimization.Helpers;
+namespace Planner.API.Services;
 
 /// <summary>
 /// Helper class to build distance and travel time matrices from locations.
@@ -16,7 +15,7 @@ public static class MatrixBuilder
     /// <param name="settings">Optimization settings containing distance/time calculation parameters.</param>
     /// <returns>Tuple of (DistanceMatrix, TravelTimeMatrix).</returns>
     public static (long[][] DistanceMatrix, long[][] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<LocationInput> locations,
+        IReadOnlyList<Location> locations,
         OptimizationSettings settings)
     {
         int n = locations.Count;

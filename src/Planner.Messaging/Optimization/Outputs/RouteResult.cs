@@ -6,7 +6,6 @@
 /// </summary>
 public sealed record RouteResult(
     long VehicleId,
-    string VehicleName,
     bool Used,
     IReadOnlyList<TaskAssignment> Stops,
     double TotalMinutes,

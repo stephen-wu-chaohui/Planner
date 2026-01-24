@@ -1,4 +1,5 @@
-﻿using Planner.Messaging.Optimization.Requests;
+﻿using Planner.Messaging.Optimization.Inputs;
+using Planner.Messaging.Optimization.Requests;
 
 namespace Planner.Messaging.Optimization;
 

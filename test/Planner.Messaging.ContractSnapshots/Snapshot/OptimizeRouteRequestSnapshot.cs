@@ -14,27 +14,20 @@ public static class OptimizeRouteRequestSnapshot {
                 .Select(j => new {
                     j.JobId,
                     j.JobType,
-                    j.Name,
                     j.ReadyTime,
                     j.DueTime,
                     j.ServiceTimeMinutes,
                     j.PalletDemand,
                     j.WeightDemand,
                     j.RequiresRefrigeration,
-                    Location = new {
-                        j.Location.LocationId,
-                        j.Location.Latitude,
-                        j.Location.Longitude
-                    }
                 }),
 
             Vehicles = req.Vehicles
                 .OrderBy(v => v.VehicleId)
                 .Select(v => new {
                     v.VehicleId,
-                    v.Name,
-                    StartLocationId = v.StartLocation.LocationId,
-                    EndLocationId = v.EndLocation.LocationId,
+                    StartLocationId = v.StartLocation,
+                    EndLocationId = v.EndLocation,
                     v.ShiftLimitMinutes,
                     v.SpeedFactor,
                     v.CostPerMinute,

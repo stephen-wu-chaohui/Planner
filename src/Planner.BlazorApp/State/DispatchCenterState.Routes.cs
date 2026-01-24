@@ -42,30 +42,33 @@ public partial class DispatchCenterState : IRouteState
     {
         // 1. Create a lookup map for O(1) access
         var jobMap = _jobs.ToDictionary(job => job.Id, job => job);
+        var vehicleMap = _vehicles.ToDictionary(vehicle => vehicle.Id, vehicle => vehicle);
 
-        _mapRoutes = _routes.Select(route => new MapRoute
-        {
-            RouteName = route.VehicleName,
-            Color = ColourHelper.ColourFromString(route.VehicleName, 0.95, 0.25) ?? "#FF0000",
-            Points = route.Stops.Select(stop => {
-                if (!jobMap.TryGetValue(stop.JobId, out JobDto? job)) {
-                    throw new KeyNotFoundException($"Job ID {stop.JobId} not found in job map.");
-                }
+        _mapRoutes = _routes.Select(route => {
+            var vehicle = vehicleMap[route.VehicleId];
+            return new MapRoute {
+                RouteName = vehicle.Name,
+                Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
+                Points = route.Stops.Select(stop => {
+                    if (!jobMap.TryGetValue(stop.JobId, out JobDto? job)) {
+                        throw new KeyNotFoundException($"Job ID {stop.JobId} not found in job map.");
+                    }
 
-                return new CustomerMarker {
-                    Lat = job.Location.Latitude,
-                    Lng = job.Location.Longitude,
-                    RouteName = route.VehicleName,
-                    Arrival = stop.ArrivalTime / 60.0,
-                    Departure = stop.DepartureTime / 60.0,
-                    PalletLoad = stop.PalletLoad,
-                    WeightLoad = stop.WeightLoad,
-                    RefrigeratedLoad = stop.RefrigeratedLoad,
-                    Color = ColourHelper.ColourFromString(route.VehicleName, 0.95, 0.25) ?? "#FF0000",
-                    Label = job.Name,
-                    JobType = job.JobType.ToString()
-                };
-            }).ToList()
+                    return new CustomerMarker {
+                        Lat = job.Location.Latitude,
+                        Lng = job.Location.Longitude,
+                        RouteName = vehicle.Name,
+                        Arrival = stop.ArrivalTime / 60.0,
+                        Departure = stop.DepartureTime / 60.0,
+                        PalletLoad = stop.PalletLoad,
+                        WeightLoad = stop.WeightLoad,
+                        RefrigeratedLoad = stop.RefrigeratedLoad,
+                        Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
+                        Label = job.Name,
+                        JobType = job.JobType.ToString()
+                    };
+                }).ToList()
+            };
         }).ToList();
     }
 

@@ -1,4 +1,5 @@
-﻿using Planner.Messaging.Optimization;
+﻿using Planner.Domain;
+using Planner.Messaging.Optimization;
 using Planner.Testing;
 using Planner.Testing.Builders;
 using System;
@@ -18,12 +19,17 @@ public static class RandomVrpRequestFactory {
         var depotLocations = Enumerable.Range(1, depotCount)
             .Select(i => {
                 var locId = 1000 + i;
-                return LocationInputBuilder.Create()
-                    .WithId(locId)
-                    .WithLatLng(
-                        -31.95 + rand.NextDouble() * 0.05,
-                        115.86 + rand.NextDouble() * 0.05)
-                    .Build();
+                return new Depot {
+                    Id = 9000 + i,
+                    TenantId = TestIds.TenantId,
+                    Name = $"Depot {i}",
+                    LocationId = locId,
+                    Location = new Location {
+                        Id = locId,
+                        Latitude = -31.95 + rand.NextDouble() * 0.05,
+                        Longitude = 115.86 + rand.NextDouble() * 0.05
+                    }
+                };
             })
             .ToList();
 
@@ -33,21 +39,20 @@ public static class RandomVrpRequestFactory {
                 var jobId = 10 + i;
                 var locId = 2000 + i;
 
-                return JobInputBuilder.Create()
-                    .WithJobId(jobId)
-                    .WithLocation(
-                        LocationInputBuilder.Create()
-                            .WithId(locId)
-                            .WithLatLng(
-                                -31.95 + rand.NextDouble() * 0.05,
-                                115.86 + rand.NextDouble() * 0.05)
-                            .Build())
-                    .WithService(rand.Next(5, 20))
-                    .WithTimeWindow(0, 720)
-                    .WithDemand(
-                        pallets: rand.Next(0, 3),
-                        weight: rand.Next(0, 50))
-                    .Build();
+                return new Job {
+                    Id = 9000 + i,
+                    TenantId = TestIds.TenantId,
+                    Name = $"Depot {i}",
+                    Location = new Location {
+                        Id = locId,
+                        Latitude = -31.95 + rand.NextDouble() * 0.05,
+                        Longitude = 115.86 + rand.NextDouble() * 0.05
+                    },
+                    LocationId = locId,
+                    ServiceTimeMinutes = 0,
+                    PalletDemand = 0,
+                    WeightDemand = 0
+                };
             })
             .ToList();
 
@@ -56,16 +61,22 @@ public static class RandomVrpRequestFactory {
             .Select(i => {
                 var depot = depotLocations[rand.Next(depotLocations.Count)];
 
-                return VehicleInputBuilder.Create()
-                    .WithVehicleId(i)
-                    .WithDepot(depot.LocationId, depot.LocationId)
-                    .WithCapacity(
-                        pallets: 10,
-                        weight: 500)
-                    .WithCosts(
-                        perMin: 1.0,
-                        perKm: 1.0)
-                    .Build();
+                return new Vehicle {
+                    Id = i,
+                    TenantId = TestIds.TenantId,
+                    Name = $"Vehicle {i}",
+                    SpeedFactor = 1.0,
+                    ShiftLimitMinutes = 720,
+                    DepotStartId = depot.LocationId,
+                    DepotEndId = depot.LocationId,
+                    DriverRatePerHour = 20.0,
+                    MaintenanceRatePerHour = 10.0,
+                    FuelRatePerKm = 0.5,
+                    BaseFee = 50.0,
+                    MaxPallets = 10,
+                    MaxWeight = 500,
+                    RefrigeratedCapacity = 0
+                };
             })
             .ToList();
 

@@ -2,5 +2,5 @@
   TenantId: Guid_1,
   OptimizationRunId: Guid_2,
   Routes: [],
-  ErrorMessage: No feasible solution found. Check vehicle capacities, time windows, and job constraints.
+  ErrorMessage: Matrix dimension mismatch: expected 3x3, but got DistanceMatrix 4x4 and TravelTimeMatrix 4x4
 }

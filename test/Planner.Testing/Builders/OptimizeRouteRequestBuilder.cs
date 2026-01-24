@@ -1,4 +1,6 @@
 ﻿
+using Planner.API.Services;
+using Planner.Domain;
 using Planner.Messaging.Optimization;
 using Planner.Messaging.Optimization.Requests;
 
@@ -11,12 +13,12 @@ public sealed class OptimizeRouteRequestBuilder {
 
     private double _overtimeMultiplier = 2.0;
 
-    private OptimizationSettings _optimizationSettings = new OptimizationSettings {
+    private OptimizationSettings _optimizationSettings = new() {
         SearchTimeLimitSeconds = 5
     };
 
-    private readonly List<JobInput> _jobs = new();
-    private readonly List<VehicleInput> _vehicles = new();
+    private readonly List<Job> _jobs = new();
+    private readonly List<Vehicle> _vehicles = new();
 
     public static OptimizeRouteRequestBuilder Create() => new();
 
@@ -39,29 +41,28 @@ public sealed class OptimizeRouteRequestBuilder {
 
     public OptimizeRouteRequestBuilder WithOvertimeMultiplier(double value) { _overtimeMultiplier = value; return this; }
 
-    public OptimizeRouteRequestBuilder AddJob(JobInput job) { _jobs.Add(job); return this; }
-    public OptimizeRouteRequestBuilder AddVehicle(VehicleInput vehicle) { _vehicles.Add(vehicle); return this; }
+    public OptimizeRouteRequestBuilder AddJob(Job job) { _jobs.Add(job); return this; }
+    public OptimizeRouteRequestBuilder AddVehicle(Vehicle vehicle) { _vehicles.Add(vehicle); return this; }
 
-    public OptimizeRouteRequestBuilder WithJobs(IEnumerable<JobInput> jobs) { _jobs.Clear(); _jobs.AddRange(jobs); return this; }
-    public OptimizeRouteRequestBuilder WithVehicles(IEnumerable<VehicleInput> vehicles) { _vehicles.Clear(); _vehicles.AddRange(vehicles); return this; }
-
+    public OptimizeRouteRequestBuilder WithJobs(IEnumerable<Job> jobs) { _jobs.Clear(); _jobs.AddRange(jobs); return this; }
+    public OptimizeRouteRequestBuilder WithVehicles(IEnumerable<Vehicle> vehicles) { _vehicles.Clear(); _vehicles.AddRange(vehicles); return this; }
     public OptimizeRouteRequest Build() {
         // Build matrices from locations
         var depotLocations = _vehicles
-            .SelectMany(v => new[] { v.StartLocation, v.EndLocation })
-            .GroupBy(l => l.LocationId)
+            .SelectMany(v => new[] { v.StartDepot!.Location, v.EndDepot!.Location })
+            .GroupBy(l => l.Id)
             .Select(g => g.First())
             .ToList();
         
         var allLocations = depotLocations.Concat(_jobs.Select(j => j.Location)).ToList();
-        var (distanceMatrix, travelTimeMatrix) = Planner.Contracts.Optimization.Helpers.MatrixBuilder.BuildMatrices(allLocations, _optimizationSettings);
+        var (distanceMatrix, travelTimeMatrix) = MatrixBuilder.BuildMatrices(allLocations, _optimizationSettings);
 
         return new(
             _tenantId,
             _runId,
             _requestedAt,
-            _vehicles.ToList(),
-            _jobs.ToList(),
+            _vehicles.Select(ToInput.ToVehicleInput).ToList(),
+            _jobs.Select(ToInput.ToJobInput).ToList(),
             distanceMatrix,
             travelTimeMatrix,
             _overtimeMultiplier,

@@ -5,16 +5,13 @@
     {
       JobId: 1,
       JobType: 1,
-      Name: Delivery 1,
       ServiceTimeMinutes: 15,
       DueTime: 1440,
       PalletDemand: 2,
       WeightDemand: 200,
       RequiresRefrigeration: false,
       Location: {
-        LocationId: 2,
-        Latitude: -31.96,
-        Longitude: 115.87
+        LocationId: 2
       }
     }
   ],

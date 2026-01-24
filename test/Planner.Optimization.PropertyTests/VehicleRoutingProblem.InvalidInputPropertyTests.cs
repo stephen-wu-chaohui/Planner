@@ -2,11 +2,10 @@
 using Planner.Messaging.Optimization;
 using Planner.Messaging.Optimization.Requests;
 using Planner.Testing;
-using System;
 using System.Linq;
 using Xunit;
 
-namespace Planner.Optimization.InvalidInputTests;
+namespace Planner.Optimization.PropertyTests;
 
 public sealed class VehicleRoutingProblemInvalidInputTests {
 
@@ -25,14 +24,10 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
-        var depotLocId = request.Vehicles[0].StartLocation.LocationId;
+        var depotLocId = request.Vehicles[0].StartLocation;
         var job = request.Jobs[0];
 
-        var collidingJob = job with {
-            Location = job.Location with {
-                LocationId = depotLocId
-            }
-        };
+        var collidingJob = job;
 
         request = WithFastSettings(request with {
             Jobs = request.Jobs
@@ -57,7 +52,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         var vehicle = request.Vehicles[0];
 
         var invalidVehicle = vehicle with {
-            StartLocation = vehicle.StartLocation with { LocationId = 999999 } // not in depots
+            StartLocation = 999999 // not in depots
         };
 
         request = WithFastSettings(request with {
@@ -83,7 +78,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         var vehicle = request.Vehicles[0];
 
         var invalidVehicle = vehicle with {
-            EndLocation = vehicle.EndLocation with { LocationId = 888888 } // not in depots
+            EndLocation = vehicle.EndLocation // not in depots
         };
 
         request = WithFastSettings(request with {
