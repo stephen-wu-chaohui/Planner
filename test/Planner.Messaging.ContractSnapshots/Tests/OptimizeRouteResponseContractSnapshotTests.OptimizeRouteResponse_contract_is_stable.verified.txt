@@ -1,0 +1,6 @@
+﻿{
+  TenantId: Guid_1,
+  OptimizationRunId: Guid_2,
+  Routes: [],
+  ErrorMessage: No feasible solution found. Check vehicle capacities, time windows, and job constraints.
+}

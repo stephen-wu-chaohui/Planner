@@ -23,7 +23,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         // 1. Validation
         ValidateInput(request);
-        if (request.Vehicles.Count == 0) return CreateEmptyResponse(request);
+        if (request.Vehicles.Count == 0) return CreateEmptyResponse(request, "No vehicles available for optimization.");
 
         // 2. Initialize Context
         var depots = request.Vehicles
@@ -40,7 +40,15 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         // 3. Prepare Matrices & Solver Data
         var solverLocs = BuildSolverLocations(context, settings);
-        var (distMatrix, travelMatrix) = BuildMatrices(context, solverLocs, settings);
+        
+        // Use pre-computed matrices if available, otherwise compute them
+        long[][] distMatrix, travelMatrix;
+        if (request.DistanceMatrix is not null && request.TravelTimeMatrix is not null) {
+            distMatrix = request.DistanceMatrix;
+            travelMatrix = request.TravelTimeMatrix;
+        } else {
+            (distMatrix, travelMatrix) = BuildMatrices(context, solverLocs, settings);
+        }
 
         var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
         int[] starts = context.Vehicles
@@ -67,7 +75,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
         // 6. Build Response
         return solution is null
-            ? CreateEmptyResponse(request)
+            ? CreateEmptyResponse(request, "No feasible solution found. Check vehicle capacities, time windows, and job constraints.")
             : MapResults(context, routing, manager, solution, solverLocs, distMatrix, travelMatrix);
     }
 
@@ -230,7 +238,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         return new OptimizeRouteResponse(ctx.Request.TenantId, ctx.Request.OptimizationRunId, DateTime.UtcNow, routes, grandTotal);
     }
 
-    private static OptimizeRouteResponse CreateEmptyResponse(OptimizeRouteRequest req) => new(req.TenantId, req.OptimizationRunId, DateTime.UtcNow, Array.Empty<RouteResult>(), 0);
+    private static OptimizeRouteResponse CreateEmptyResponse(OptimizeRouteRequest req, string? errorMessage = null) => 
+        new(req.TenantId, req.OptimizationRunId, DateTime.UtcNow, Array.Empty<RouteResult>(), 0, errorMessage);
 
     private static void ApplyPickupDeliveryPairs(RoutingModel rt, RoutingIndexManager mgr, List<SolverLocation> locs) {
         // Implementation remains similar but uses the modular SolverLocation record

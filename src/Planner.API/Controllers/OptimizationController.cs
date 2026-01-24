@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.API.Services;
 using Planner.Application;
 using Planner.Contracts.Optimization.Inputs;
 using Planner.Contracts.Optimization.Requests;
@@ -16,7 +17,8 @@ namespace Planner.API.Controllers;
 public class OptimizationController(
     IMessageBus bus,
     PlannerDbContext db,
-    ITenantContext tenant) : ControllerBase {
+    ITenantContext tenant,
+    IMatrixCalculationService matrixService) : ControllerBase {
     /// <summary>
     /// Accept a route optimization request and dispatch it to the optimization worker.
     /// </summary>
@@ -47,15 +49,38 @@ public class OptimizationController(
                 .ThenInclude(d => d.Location)
             .ToListAsync();
 
+        var settings = new OptimizationSettings(
+            SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
+        );
+
+        // Build location list in the same order as the worker expects: depots first, then jobs
+        var depotLocations = vehicles
+            .SelectMany(v => new[] { v.StartDepot.Location, v.EndDepot.Location })
+            .GroupBy(l => l.Id)
+            .Select(g => g.First())
+            .Select(ToLocationInput)
+            .ToList();
+
+        var jobLocations = jobs.Select(j => ToLocationInput(j.Location)).ToList();
+        var allLocations = depotLocations.Concat(jobLocations).ToList();
+
+        // Calculate matrices
+        var (distanceMatrix, travelTimeMatrix) = matrixService.BuildMatrices(
+            allLocations,
+            settings,
+            timeScale: 1,
+            distanceScale: 1
+        );
+
         return new OptimizeRouteRequest(
             tenant.TenantId,
             OptimizationRunId: Guid.NewGuid(),
             RequestedAt: DateTime.UtcNow,
             Jobs: jobs.Select(ToJobInput).ToList(),
             Vehicles: vehicles.Select(ToVehicleInput).ToList(),
-            Settings: new OptimizationSettings(
-                SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
-            )
+            Settings: settings,
+            DistanceMatrix: distanceMatrix,
+            TravelTimeMatrix: travelTimeMatrix
         );
     }
 

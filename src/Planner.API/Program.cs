@@ -44,6 +44,9 @@ builder.Logging.AddConsole();
 // Controllers (API only)
 builder.Services.AddControllers();
 
+// API Services
+builder.Services.AddScoped<Planner.API.Services.IMatrixCalculationService, Planner.API.Services.MatrixCalculationService>();
+
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
 // Auth
