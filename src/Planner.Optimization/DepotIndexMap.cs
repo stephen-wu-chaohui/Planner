@@ -1,4 +1,6 @@
-﻿namespace Planner.Optimization;
+﻿using Planner.Messaging.Optimization.Inputs;
+
+namespace Planner.Optimization;
 
 internal sealed class DepotIndexMap {
     private readonly Dictionary<long, int> _byLocationId;
@@ -25,18 +27,19 @@ internal sealed class DepotIndexMap {
     }
 
     public static DepotIndexMap FromSolverLocations(
-        IReadOnlyList<VehicleRoutingProblem.SolverLocation> locs
+        IReadOnlyList<StopInput> locs
     ) {
         var map = new Dictionary<long, int>();
         var locIds = new List<long>();
         var nodeIds = new List<int>();
 
-        foreach (var l in locs) {
+        for (int nodeIndex = 0; nodeIndex < locs.Count; nodeIndex++) {
+            var l = locs[nodeIndex];
             // if (!l.IsDepot) continue;
 
-            map.Add(l.LocationId, l.NodeIndex);
+            map.Add(l.LocationId, nodeIndex);
             locIds.Add(l.LocationId);
-            nodeIds.Add(l.NodeIndex);
+            nodeIds.Add(nodeIndex);
         }
 
         return new DepotIndexMap(locIds, nodeIds, map);

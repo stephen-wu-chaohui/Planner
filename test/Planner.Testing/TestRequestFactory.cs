@@ -54,6 +54,7 @@ public static class TestRequestFactory {
                 TenantId = tenantId,
                 Name = $"Job {i}",
                 JobType = JobType.Delivery,
+                LocationId = 100 + i,
                 Location = new Location { 
                     Id = 100 + i,
                     Address = $"Customer {i} Address",
@@ -77,13 +78,25 @@ public static class TestRequestFactory {
         
         var (distanceMatrix, travelTimeMatrix) = _matrixCalculationService.BuildMatrices(allLocations, settings);
 
+        var stops = allLocations.Select(loc => {
+            var job = jobs.FirstOrDefault(j => j.LocationId == loc.Id);
+            if (job != null) {
+                return ToInput.FromJob(job);
+            }
+            var depotLoc = depotLocation;
+            if (depotLoc != null) {
+                return ToInput.FromDepotLocation(depotLoc.Id);
+            }
+            return ToInput.FromDepotLocation(1); // Fallback, should not happen
+        }).ToArray();
+
         // ---- Request -------------------------------------------------
         return new OptimizeRouteRequest(
             TenantId: tenantId,
             OptimizationRunId: runId,
             RequestedAt: DateTime.UtcNow,
             Vehicles: vehicles.Select(ToInput.FromVehicle).ToArray(),
-            Stops: jobs.Select(ToInput.FromJob).ToArray(),
+            Stops: stops,
             DistanceMatrix: distanceMatrix,
             TravelTimeMatrix: travelTimeMatrix,
             Settings: settings

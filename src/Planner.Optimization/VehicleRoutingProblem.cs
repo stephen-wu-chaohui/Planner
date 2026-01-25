@@ -7,16 +7,10 @@ using System.Diagnostics;
 namespace Planner.Optimization;
 
 public sealed class VehicleRoutingProblem : IRouteOptimizer {
-    // Internal record for solver-specific node data
-    internal sealed record SolverLocation(
-        int NodeIndex, long LocationId, bool IsDepot,
-        long ReadyTime, long DueTime, long ServiceTimeMinutes,
-        long PalletDemand, long WeightDemand, long RefrigeratedDemand,
-        StopInput? Job
-    );
 
     public OptimizeRouteResponse Optimize(OptimizeRouteRequest request) {
         var settings = request.Settings ?? new OptimizationSettings();
+        double DistanceScale = settings.DistanceScale;
 
         // 1. Validation
         try {
@@ -29,25 +23,20 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
             return CreateEmptyResponse(request, "No vehicles provided.");
 
         // 2. Initialize Context
-        var depots = request.Vehicles
-            .SelectMany(v => new[] { v.StartDepotLocationId, v.EndDepotLocationId })
-            .GroupBy(l => l)
-            .Select(g => g.First())
-            .ToList();
-
-        double DistanceScale = request.Settings?.DistanceScale ?? 1.0;
-
-        // 3. Prepare Solver Data - use precomputed matrices from request
-        var solverLocs = BuildSolverLocations(request.Stops);
+        var vehicles = request.Vehicles;
         var stops = request.Stops;
         var distMatrix = request.DistanceMatrix;
         var travelMatrix = request.TravelTimeMatrix;
+        var depots = request.Vehicles
+            .SelectMany(v => new[] { v.StartDepotLocationId, v.EndDepotLocationId })
+            .Distinct()
+            .ToList();
 
         // Validate matrix dimensions
-        if (distMatrix.Length != solverLocs.Count || travelMatrix.Length != solverLocs.Count)
+        if (distMatrix.Length != stops.Length || travelMatrix.Length != stops.Length)
         {
             return CreateEmptyResponse(request, 
-                $"Matrix dimension mismatch: expected {solverLocs.Count}x{solverLocs.Count}, " +
+                $"Matrix dimension mismatch: expected {stops.Length}x{stops.Length}, " +
                 $"but got DistanceMatrix {distMatrix.Length}x{(distMatrix.Length > 0 ? distMatrix[0].Length : 0)} " +
                 $"and TravelTimeMatrix {travelMatrix.Length}x{(travelMatrix.Length > 0 ? travelMatrix[0].Length : 0)}");
         }
@@ -55,19 +44,19 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         // Validate all inner arrays have correct length
         for (int i = 0; i < distMatrix.Length; i++)
         {
-            if (distMatrix[i].Length != solverLocs.Count)
+            if (distMatrix[i].Length != stops.Length)
             {
                 return CreateEmptyResponse(request,
-                    $"DistanceMatrix row {i} has length {distMatrix[i].Length}, expected {solverLocs.Count}");
+                    $"DistanceMatrix row {i} has length {distMatrix[i].Length}, expected {stops.Length}");
             }
-            if (travelMatrix[i].Length != solverLocs.Count)
+            if (travelMatrix[i].Length != stops.Length)
             {
                 return CreateEmptyResponse(request,
-                    $"TravelTimeMatrix row {i} has length {travelMatrix[i].Length}, expected {solverLocs.Count}");
+                    $"TravelTimeMatrix row {i} has length {travelMatrix[i].Length}, expected {stops.Length}");
             }
         }
 
-        var depotMap = DepotIndexMap.FromSolverLocations(solverLocs);
+        var depotMap = DepotIndexMap.FromSolverLocations(stops);
         int[] starts = request.Vehicles
             .Select(v => depotMap.NodeIndexOf(v.StartDepotLocationId))
             .ToArray();
@@ -77,15 +66,15 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
             .ToArray();
 
         // 4. Model Setup
-        var manager = new RoutingIndexManager(solverLocs.Count, request.Vehicles.Length, starts, ends);
+        var manager = new RoutingIndexManager(stops.Length, request.Vehicles.Length, starts, ends);
         var routing = new RoutingModel(manager);
 
-        ConfigureDimensions(routing, manager, request, solverLocs, distMatrix, travelMatrix, settings);
+        ConfigureDimensions(routing, manager, request);
 
-        ApplyPickupDeliveryPairs(routing, manager, solverLocs);
+        ApplyPickupDeliveryPairs(routing, manager, stops);
 
-        DumpSolverNodes(solverLocs);
-        DumpVehicleDepotBindings(request.Vehicles, depotMap);
+        DumpSolverNodes(stops);
+        DumpVehicleDepotBindings(vehicles, depotMap);
 
         // 5. Solve
         var solution = Solve(routing, settings);
@@ -93,7 +82,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         // 6. Build Response
         return solution is null
             ? CreateEmptyResponse(request, "Optimization failed to find a solution. This could be due to capacity constraints, time windows, or infeasibility.")
-            : MapResults(request, routing, manager, solution, solverLocs, distMatrix, travelMatrix);
+            : MapResults(request, routing, manager, solution, stops, distMatrix, travelMatrix);
     }
 
     private static void ValidateInput(OptimizeRouteRequest request) {
@@ -118,24 +107,17 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         }
     }
 
-    private static List<SolverLocation> BuildSolverLocations(StopInput[] stops) {
-        var list = new List<SolverLocation>();
-
-        for (int i = 0; i < stops.Length; i++) {
-            var j = stops[i];
-            list.Add(new(i, j.LocationId, j.LocationType == 0,
-                j.ReadyTime, j.DueTime, j.ServiceTimeMinutes, j.PalletDemand, j.WeightDemand, j.RequiresRefrigeration ? 1 : 0, j));
-        }
-        return list;
-    }
-
-    private static void ConfigureDimensions(RoutingModel rt, RoutingIndexManager mgr, OptimizeRouteRequest request, List<SolverLocation> locs, long[][] dists, long[][] travels, OptimizationSettings settings) {
+    private static void ConfigureDimensions(RoutingModel rt, RoutingIndexManager mgr, OptimizeRouteRequest request) {
         var overtimeMult = request.Settings?.OvertimeMultiplier ?? 2.0;
+        var locs = request.Stops;
+        var dists = request.DistanceMatrix;
+        var travels = request.TravelTimeMatrix;
+        var settings = request.Settings;
 
         // Capacity Dimensions
         AddCapacity(rt, mgr, locs, "Pallets", request.Vehicles.Select(v => v.MaxPallets), l => l.PalletDemand);
         AddCapacity(rt, mgr, locs, "Weight", request.Vehicles.Select(v => v.MaxWeight), l => l.WeightDemand);
-        AddCapacity(rt, mgr, locs, "Refrig", request.Vehicles.Select(v => v.RefrigeratedCapacity), l => l.RefrigeratedDemand);
+        AddCapacity(rt, mgr, locs, "Refrig", request.Vehicles.Select(v => v.RefrigeratedCapacity), l => l.RequiresRefrigeration ? 1 : 0);
 
         // Time Dimension
         int[] timeCbs = [.. request.Vehicles.Select(v => rt.RegisterTransitCallback((long from, long to) => {
@@ -146,7 +128,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         rt.AddDimensionWithVehicleTransits(timeCbs, settings.MaxSlackMinutes, settings.HorizonMinutes, true, "Time");
         var timeDim = rt.GetMutableDimension("Time");
 
-        for (int i = 0; i < locs.Count; i++)
+        for (int i = 0; i < locs.Length; i++)
             timeDim.CumulVar(mgr.NodeToIndex(i)).SetRange(locs[i].ReadyTime, locs[i].DueTime > 0? locs[i].DueTime : settings.HorizonMinutes);
 
         double DistanceScale = request.Settings?.DistanceScale ?? 1.0;
@@ -163,7 +145,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         }
     }
 
-    private static void AddCapacity(RoutingModel rt, RoutingIndexManager mgr, List<SolverLocation> locs, string name, IEnumerable<long> caps, Func<SolverLocation, long> demand) {
+    private static void AddCapacity(RoutingModel rt, RoutingIndexManager mgr, StopInput [] locs, string name, IEnumerable<long> caps, Func<StopInput, long> demand) {
         int cb = rt.RegisterUnaryTransitCallback(idx => demand(locs[mgr.IndexToNode(idx)]));
         rt.AddDimensionWithVehicleCapacity(cb, 0, [.. caps], true, name);
     }
@@ -176,7 +158,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         return rt.SolveWithParameters(p);
     }
 
-    private static OptimizeRouteResponse MapResults(OptimizeRouteRequest request, RoutingModel rt, RoutingIndexManager mgr, Assignment sol, List<SolverLocation> locs, long[][] dists, long[][] travels) {
+    private static OptimizeRouteResponse MapResults(OptimizeRouteRequest request, RoutingModel rt, RoutingIndexManager mgr, Assignment sol, StopInput [] locs, long[][] dists, long[][] travels) {
         var routes = new List<RouteResult>();
         double grandTotal = 0;
         var (dimT, dimP, dimW, dimR) = (rt.GetMutableDimension("Time"), rt.GetMutableDimension("Pallets"), rt.GetMutableDimension("Weight"), rt.GetMutableDimension("Refrig"));
@@ -197,9 +179,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
                 long nextIdx = sol.Value(rt.NextVar(idx));
                 int to = mgr.IndexToNode(nextIdx);
 
-                if (!locs[from].IsDepot && locs[from].Job is not null) {
-                    var j = locs[from].Job;
-                    stops.Add(new(j.LocationId, sol.Value(dimT.CumulVar(idx)), sol.Value(dimT.CumulVar(idx)) + locs[from].ServiceTimeMinutes,
+                if (locs[from].LocationType != 0) {
+                    stops.Add(new(locs[from].LocationId, sol.Value(dimT.CumulVar(idx)), sol.Value(dimT.CumulVar(idx)) + locs[from].ServiceTimeMinutes,
                         sol.Value(dimP.CumulVar(idx)), sol.Value(dimW.CumulVar(idx)), sol.Value(dimR.CumulVar(idx))));
                 }
                 tTime += travels[from][to] + locs[from].ServiceTimeMinutes;
@@ -218,30 +199,27 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
     private static OptimizeRouteResponse CreateEmptyResponse(OptimizeRouteRequest req, string? errorMessage = null) 
         => new(req.TenantId, req.OptimizationRunId, DateTime.UtcNow, Array.Empty<RouteResult>(), 0, errorMessage);
 
-    private static void ApplyPickupDeliveryPairs(RoutingModel rt, RoutingIndexManager mgr, List<SolverLocation> locs) {
+    private static void ApplyPickupDeliveryPairs(RoutingModel rt, RoutingIndexManager mgr, StopInput [] locs) {
         // Implementation remains similar but uses the modular SolverLocation record
     }
 
-
-
     [Conditional("DEBUG")]
-    private static void DumpSolverNodes(
-        IReadOnlyList<SolverLocation> locs
-    ) {
+    private static void DumpSolverNodes(StopInput[] locs) {
         Console.WriteLine("=== VRP Solver Nodes ===");
         Console.WriteLine("Idx | LocationId | Type   | Ready | Due | Service | Pal | Wgt | Ref");
 
-        foreach (var l in locs) {
+        for (int i = 0; i < locs.Length; i++) {
+            var l = locs[i];
             Console.WriteLine(
-                $"{l.NodeIndex,3} | " +
+                $"{i,3} | " +
                 $"{l.LocationId,10} | " +
-                $"{(l.IsDepot ? "Depot" : "Job  "),6} | " +
+                $"{(l.LocationType == 0 ? "Depot" : "Job  "),6} | " +
                 $"{l.ReadyTime,5} | " +
                 $"{l.DueTime,5} | " +
                 $"{l.ServiceTimeMinutes,7} | " +
                 $"{l.PalletDemand,3} | " +
                 $"{l.WeightDemand,3} | " +
-                $"{l.RefrigeratedDemand,3}"
+                $"{(l.RequiresRefrigeration ? 1 : 0),3}"
             );
         }
 

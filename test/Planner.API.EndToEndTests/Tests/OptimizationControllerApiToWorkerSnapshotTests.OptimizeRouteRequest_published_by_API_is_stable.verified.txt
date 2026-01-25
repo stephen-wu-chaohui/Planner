@@ -1,16 +1,19 @@
 ﻿{
   TenantId: Guid_1,
   OptimizationRunId: Guid_2,
-  Jobs: [
+  Stops: [
     {
-      JobId: 1,
-      JobType: 1,
+      LocationId: 1,
+      RequiresRefrigeration: false
+    },
+    {
+      LocationId: 2,
+      LocationType: 1,
       ServiceTimeMinutes: 15,
       DueTime: 1440,
       PalletDemand: 2,
       WeightDemand: 200,
-      RequiresRefrigeration: false,
-      Location: 2
+      RequiresRefrigeration: false
     }
   ],
   Vehicles: [

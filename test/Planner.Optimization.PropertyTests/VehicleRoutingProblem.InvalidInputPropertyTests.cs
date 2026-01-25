@@ -67,7 +67,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
 
         // Assert
         response.ErrorMessage.Should().NotBeNullOrEmpty();
-        response.ErrorMessage.Should().Contain("references missing DepotId");
+        response.ErrorMessage.Should().Contain("Depot LocationId not in stops.");
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
 
         // Assert
         response.ErrorMessage.Should().NotBeNullOrEmpty();
-        response.ErrorMessage.Should().Contain("references missing DepotId");
+        response.ErrorMessage.Should().Contain("Depot LocationId not in stops");
     }
 
 }
