@@ -1,4 +1,4 @@
-﻿using Planner.Messaging.Optimization.Responses;
+﻿using Planner.Messaging.Optimization.Outputs;
 using System;
 using System.Linq;
 
@@ -14,13 +14,11 @@ public static class OptimizeRouteResponseSnapshot {
                 .OrderBy(r => r.VehicleId)
                 .Select(r => new {
                     r.VehicleId,
-                    r.Used,
-
                     Stops = r.Stops
                         .OrderBy(s => s.ArrivalTime)
-                        .ThenBy(s => s.JobId)
+                        .ThenBy(s => s.LocationId)
                         .Select(s => new {
-                            s.JobId,
+                            s.LocationId,
                             ArrivalTime = Math.Round(s.ArrivalTime, 2),
                             DepartureTime = Math.Round(s.DepartureTime, 2),
                             s.PalletLoad,

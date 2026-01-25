@@ -1,8 +1,8 @@
-﻿using Planner.Messaging.Optimization.Responses;
+﻿using Planner.Messaging.Optimization.Outputs;
 using System;
 using System.Linq;
 
-namespace Planner.Optimization.SnapshotTests;
+namespace Planner.Optimization.SnapshotTests.Snapshot;
 
 public static class ResponseNormalizer {
     public static object Normalize(OptimizeRouteResponse resp) =>
@@ -12,9 +12,8 @@ public static class ResponseNormalizer {
             resp.ErrorMessage,
             Routes = resp.Routes.Select(r => new {
                 r.VehicleId,
-                r.Used,
                 Stops = r.Stops.Select(s => new {
-                    s.JobId,
+                    s.LocationId,
                     s.ArrivalTime,
                     s.DepartureTime
                 }),

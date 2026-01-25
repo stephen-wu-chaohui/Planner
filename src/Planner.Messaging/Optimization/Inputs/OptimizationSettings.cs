@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging.Optimization.Requests;
+﻿namespace Planner.Messaging.Optimization.Inputs; 
 
 // Carrying the previously hardcoded "magic numbers"
 public record OptimizationSettings(
@@ -6,6 +6,7 @@ public record OptimizationSettings(
     long HorizonMinutes = 480,
     double KmDegreeConstant = 111.32,
     double TravelTimeMultiplier = 5,
+    double OvertimeMultiplier = 2.0,
     int SearchTimeLimitSeconds = 100);
 
 // Update to OptimizeRouteRequest to include Settings

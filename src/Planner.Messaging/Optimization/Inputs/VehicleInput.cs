@@ -1,6 +1,4 @@
-﻿using Planner.Messaging.Optimization.Inputs;
-
-namespace Planner.Messaging.Optimization;
+﻿namespace Planner.Messaging.Optimization.Inputs;
 
 /// <summary>
 /// Immutable vehicle definition used for route optimization.
@@ -8,11 +6,11 @@ namespace Planner.Messaging.Optimization;
 /// </summary>
 public sealed record VehicleInput(
     long VehicleId,
+    long StartDepotLocationId,  // index to input stops for depots
+    long EndDepotLocationId,    // index to input stops for depots
 
     // Availability
     long ShiftLimitMinutes,
-    long StartLocation,
-    long EndLocation,
 
     // Performance
     double SpeedFactor,

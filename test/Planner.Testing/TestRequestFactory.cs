@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Planner.API.Services;
 using Planner.Domain;
+using Planner.Messaging.Optimization.Inputs;
 using System.Linq;
 using System.Security.Claims;
 
@@ -13,7 +14,9 @@ public static class TestRequestFactory {
         int vehicleCount = 2,
         int jobCount = 4
     ) {
+        var _matrixCalculationService = new MatrixCalculationService();
         var tenantId = Guid.NewGuid();
+
         var runId = Guid.NewGuid();
 
         // ---- Depots --------------------------------------------------
@@ -44,7 +47,7 @@ public static class TestRequestFactory {
             })
             .ToList();
 
-        // ---- Jobs ----------------------------------------------------
+        // ---- Stops ----------------------------------------------------
         var jobs = Enumerable.Range(1, jobCount)
             .Select(i => new Job { 
                 Id = i,
@@ -72,19 +75,18 @@ public static class TestRequestFactory {
             .Concat(jobs.Select(j => j.Location))
             .ToList();
         
-        var (distanceMatrix, travelTimeMatrix) = MatrixBuilder.BuildMatrices(allLocations, settings);
+        var (distanceMatrix, travelTimeMatrix) = _matrixCalculationService.BuildMatrices(allLocations, settings);
 
         // ---- Request -------------------------------------------------
         return new OptimizeRouteRequest(
             TenantId: tenantId,
             OptimizationRunId: runId,
             RequestedAt: DateTime.UtcNow,
-            Vehicles: vehicles.Select(ToInput.ToVehicleInput).ToList(),
-            Jobs: jobs.Select(ToInput.ToJobInput).ToList(),
+            Vehicles: vehicles.Select(ToInput.FromVehicle).ToArray(),
+            Stops: jobs.Select(ToInput.FromJob).ToArray(),
             DistanceMatrix: distanceMatrix,
             TravelTimeMatrix: travelTimeMatrix,
-            Settings: settings,
-            OvertimeMultiplier: 2.0
+            Settings: settings
         );
     }
 
@@ -106,6 +108,7 @@ public static class TestRequestFactory {
 
     public static OptimizationSettings FastSettings() =>
         new() {
-            SearchTimeLimitSeconds = 5
+            SearchTimeLimitSeconds = 5,
+            OvertimeMultiplier = 2.0,
         };
 }

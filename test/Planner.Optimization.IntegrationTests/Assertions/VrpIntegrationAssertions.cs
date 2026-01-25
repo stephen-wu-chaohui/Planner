@@ -1,6 +1,6 @@
 ﻿using FluentAssertions;
-using Planner.Messaging.Optimization;
-using Planner.Messaging.Optimization.Responses;
+using Planner.Messaging.Optimization.Inputs;
+using Planner.Messaging.Optimization.Outputs;
 using System;
 using System.Linq;
 
@@ -12,7 +12,7 @@ public static class VrpIntegrationAssertions {
         OptimizeRouteRequest req) {
         var vehicles = req.Vehicles.ToDictionary(v => v.VehicleId);
 
-        foreach (var route in resp.Routes.Where(r => r.Used)) {
+        foreach (var route in resp.Routes.Where(r => r.Stops.Any())) {
             var vehicle = vehicles[route.VehicleId];
 
             long maxPallets = 0;
@@ -34,11 +34,11 @@ public static class VrpIntegrationAssertions {
     public static void ShouldRespectTimeWindows(
         this OptimizeRouteResponse resp,
         OptimizeRouteRequest req) {
-        var jobs = req.Jobs.ToDictionary(j => j.JobId);
+        var jobs = req.Stops.ToDictionary(j => j.LocationId);
 
-        foreach (var route in resp.Routes.Where(r => r.Used)) {
+        foreach (var route in resp.Routes.Where(r => r.Stops.Any())) {
             foreach (var stop in route.Stops) {
-                var job = jobs[stop.JobId];
+                var job = jobs[stop.LocationId];
 
                 stop.ArrivalTime.Should().BeGreaterThanOrEqualTo(job.ReadyTime);
                 stop.ArrivalTime.Should().BeLessThanOrEqualTo(job.DueTime);
@@ -51,9 +51,9 @@ public static class VrpIntegrationAssertions {
     public static void ShouldNotAssignJobsMoreThanOnce(
         this OptimizeRouteResponse resp) {
         var jobIds = resp.Routes
-            .Where(r => r.Used)
+            .Where(r => r.Stops.Any())
             .SelectMany(r => r.Stops)
-            .Select(s => s.JobId)
+            .Select(s => s.LocationId)
             .ToList();
 
         jobIds.Should().OnlyHaveUniqueItems();
@@ -62,7 +62,7 @@ public static class VrpIntegrationAssertions {
     public static void ShouldRespectVehicleUsageConsistency(
         this OptimizeRouteResponse resp) {
         foreach (var route in resp.Routes) {
-            if (!route.Used) {
+            if (!route.Stops.Any()) {
                 route.Stops.Should().BeEmpty();
                 route.TotalMinutes.Should().Be(0);
                 route.TotalDistanceKm.Should().Be(0);

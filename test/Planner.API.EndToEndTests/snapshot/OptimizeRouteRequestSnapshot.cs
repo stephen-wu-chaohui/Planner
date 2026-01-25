@@ -1,4 +1,4 @@
-﻿using Planner.Messaging.Optimization;
+﻿using Planner.Messaging.Optimization.Inputs;
 using System;
 using System.Linq;
 
@@ -10,18 +10,17 @@ public static class OptimizeRouteRequestSnapshot {
             req.TenantId,
             req.OptimizationRunId,
 
-            Jobs = req.Jobs
-                .OrderBy(j => j.JobId)
+            Stops = req.Stops
+                .OrderBy(j => j.LocationId)
                 .Select(j => new {
-                    j.JobId,
-                    j.JobType,
+                    j.LocationId,
+                    j.LocationType,
                     j.ServiceTimeMinutes,
                     j.ReadyTime,
                     j.DueTime,
                     j.PalletDemand,
                     j.WeightDemand,
                     j.RequiresRefrigeration,
-                    j.Location
                 }),
 
             Vehicles = req.Vehicles
@@ -29,8 +28,8 @@ public static class OptimizeRouteRequestSnapshot {
                 .Select(v => new {
                     v.VehicleId,
                     v.ShiftLimitMinutes,
-                    StartLocationId = v.StartLocation,
-                    EndLocationId = v.EndLocation,
+                    StartLocationId = v.StartDepotLocationId,
+                    EndLocationId = v.EndDepotLocationId,
                     v.SpeedFactor,
                     CostPerMinute = Math.Round(v.CostPerMinute, 4),
                     CostPerKm = Math.Round(v.CostPerKm, 4),

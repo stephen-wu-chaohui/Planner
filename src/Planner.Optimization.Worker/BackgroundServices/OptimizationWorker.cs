@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Planner.Messaging.Optimization;
 using Planner.Messaging;
 using Planner.Optimization.Worker.Handlers;
 using Planner.Messaging.RabbitMQ;
 using Planner.Messaging.Messaging;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.Optimization.Worker.BackgroundServices;
 

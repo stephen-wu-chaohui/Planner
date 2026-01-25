@@ -1,6 +1,5 @@
-﻿
-using Planner.Messaging.Optimization;
-using Planner.Messaging.Optimization.Responses;
+﻿using Planner.Messaging.Optimization.Inputs;
+using Planner.Messaging.Optimization.Outputs;
 
 namespace Planner.Optimization;
 

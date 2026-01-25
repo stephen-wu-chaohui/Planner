@@ -1,27 +1,39 @@
 ﻿using Planner.Domain;
-using Planner.Messaging.Optimization;
 using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.Services;
 
 public static class ToInput
 {
-
-    public static JobInput ToJobInput(Job job) {
-        return new JobInput(
-            JobId: job.Id,
-            JobType: ToContractJobType(job.JobType),
-            Location: ToLocationInput(job.Location),
+    public static StopInput FromJob(Job job) {
+        return new StopInput(
+            LocationId: ToLocationId(job.Location),
+            LocationType: ToContractJobType(job.JobType),
             ServiceTimeMinutes: job.ServiceTimeMinutes,
             ReadyTime: job.ReadyTime,
             DueTime: job.DueTime,
             PalletDemand: job.PalletDemand,
             WeightDemand: job.WeightDemand,
-            RequiresRefrigeration: job.RequiresRefrigeration
+            RequiresRefrigeration: job.RequiresRefrigeration,
+            ExtraIdForJob: job.Id
         );
     }
 
-    public static VehicleInput ToVehicleInput(Vehicle vehicle) {
+    public static StopInput FromDepotLocation(long DepotLocationId) {
+        return new StopInput(
+            LocationId: DepotLocationId,
+            LocationType: 0, // Depot
+            ServiceTimeMinutes: 0,
+            ReadyTime: 0,
+            DueTime: 0,
+            PalletDemand: 0,
+            WeightDemand: 0,
+            RequiresRefrigeration: false,
+            ExtraIdForJob: null
+        );
+    }
+
+    public static VehicleInput FromVehicle(Vehicle vehicle) {
         var costPerMinute = (vehicle.DriverRatePerHour + vehicle.MaintenanceRatePerHour) / 60.0;
 
         if (vehicle.StartDepot?.Location is null)
@@ -32,8 +44,8 @@ public static class ToInput
         return new VehicleInput(
             VehicleId: vehicle.Id,
             ShiftLimitMinutes: vehicle.ShiftLimitMinutes,
-            StartLocation: vehicle.DepotStartId,
-            EndLocation: vehicle.DepotEndId,
+            StartDepotLocationId: vehicle.StartDepot.Location.Id,
+            EndDepotLocationId: vehicle.EndDepot.Location.Id,
             SpeedFactor: vehicle.SpeedFactor,
             CostPerMinute: costPerMinute,
             CostPerKm: vehicle.FuelRatePerKm,
@@ -44,7 +56,7 @@ public static class ToInput
         );
     }
 
-    public static long ToLocationInput(Location location) {
+    public static long ToLocationId(Location location) {
         return location.Id;
     }
 

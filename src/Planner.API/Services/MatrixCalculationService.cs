@@ -1,7 +1,7 @@
 ﻿
 using Planner.Domain;
 using Planner.Messaging.Optimization;
-using Planner.Messaging.Optimization.Requests;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.Services;
 

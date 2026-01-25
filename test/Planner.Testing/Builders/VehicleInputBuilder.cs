@@ -37,8 +37,8 @@ public sealed class VehicleInputBuilder {
     public VehicleInput Build() => new(
         VehicleId: _vehicleId,
         ShiftLimitMinutes: _shiftLimitMinutes,
-        StartLocation: _depotStartId,
-        EndLocation: _depotEndId,
+        StartDepotLocationId: _depotStartId,
+        EndDepotLocationId: _depotEndId,
         SpeedFactor: _speedFactor,
         CostPerMinute: _costPerMinute,
         CostPerKm: _costPerKm,

@@ -1,7 +1,7 @@
 ﻿using Planner.Application.Messaging;
 using Planner.Messaging;
 using Planner.Messaging.Messaging;
-using Planner.Messaging.Optimization.Responses;
+using Planner.Messaging.Optimization.Outputs;
 
 namespace Planner.API.BackgroundServices;
 

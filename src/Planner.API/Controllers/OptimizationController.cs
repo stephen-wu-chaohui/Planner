@@ -7,9 +7,7 @@ using Planner.Domain;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging;
 using Planner.Messaging.Messaging;
-using Planner.Messaging.Optimization;
-using Planner.Messaging.Optimization.Requests;
-using Planner.API.Services;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.Controllers;
 
@@ -28,11 +26,11 @@ public class OptimizationController(
     public async Task<IActionResult> Solve() {
         var request = await BuildRequestFromDomainAsync();
 
-        if (request.Jobs.Count == 0 || request.Vehicles.Count == 0)
+        if (request.Stops.Length == 0 || request.Vehicles.Length == 0)
             return BadRequest("No jobs or vehicles available for optimization.");
 
         await bus.PublishAsync(MessageRoutes.Request, request);
-        return Ok(request.Settings);
+        return Ok();
     }
 
     private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync() {
@@ -65,18 +63,34 @@ public class OptimizationController(
         var allLocations = depotLocations.Concat(jobLocations).ToList();
 
         // Build matrices
-        var (distanceMatrix, travelTimeMatrix) = MatrixBuilder.BuildMatrices(allLocations, settings);
+        var (distanceMatrix, travelTimeMatrix) = matrixService.BuildMatrices(allLocations, settings);
 
-        return new OptimizeRouteRequest(
-            tenant.TenantId,
+        var stops = allLocations.Select(loc => {
+            var job = jobs.FirstOrDefault(j => j.LocationId == loc.Id);
+            if (job != null) {
+                return ToInput.FromJob(job);
+            }
+            var depotLoc = depotLocations.FirstOrDefault(depot => depot.Id == loc.Id);
+            if (depotLoc != null) {
+                return ToInput.FromDepotLocation(depotLoc.Id);
+            }
+            return ToInput.FromDepotLocation(1); // Fallback, should not happen
+        }).ToArray();
+
+        var vs = vehicles.Select(ToInput.FromVehicle).ToArray();
+
+        var request =  new OptimizeRouteRequest(
+            TenantId: tenant.TenantId,
             OptimizationRunId: Guid.NewGuid(),
             RequestedAt: DateTime.UtcNow,
-            Jobs: jobs.Select(ToInput.ToJobInput).ToList(),
-            Vehicles: vehicles.Select(ToInput.ToVehicleInput).ToList(),
+            Stops: stops,
+            Vehicles: vs,
             DistanceMatrix: distanceMatrix,
             TravelTimeMatrix: travelTimeMatrix,
             Settings: settings
         );
+
+        return request;
     }
 
     private void EnsureJobsForAllCustomers() {
@@ -104,7 +118,7 @@ public class OptimizationController(
             RequiresRefrigeration = false
         }).ToList();
 
-        // 2. Add the entire collection to the Jobs DbSet
+        // 2. Add the entire collection to the Stops DbSet
         db.Jobs.AddRange(newJobs);
 
         // 3. Save changes to the database

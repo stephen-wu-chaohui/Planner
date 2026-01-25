@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging.Optimization.Responses;
+﻿namespace Planner.Messaging.Optimization.Outputs;
 
 /// <summary>
 /// Represents the response from a route optimization request.

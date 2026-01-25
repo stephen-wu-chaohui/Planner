@@ -1,7 +1,6 @@
 ﻿using Planner.Contracts.API;
 using Planner.Contracts.Optimization;
-using Planner.Messaging.Optimization;
-using Planner.Messaging.Optimization.Responses;
+using Planner.Messaging.Optimization.Outputs;
 
 namespace Planner.API.BackgroundServices;
 
@@ -26,7 +25,7 @@ static public class OptimizeRouteResponseToDto {
 
     public static TaskAssignmentDto ToDto(this TaskAssignment stop) {
         return new TaskAssignmentDto(
-            stop.JobId,
+            stop.LocationId,
             stop.ArrivalTime,
             stop.DepartureTime,
             stop.PalletLoad,

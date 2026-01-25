@@ -3,7 +3,6 @@ using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State.Interfaces;
 using Planner.Contracts.API;
 using Planner.Contracts.Optimization;
-using System.Collections.Generic;
 
 namespace Planner.BlazorApp.State;
 
@@ -41,7 +40,7 @@ public partial class DispatchCenterState : IRouteState
     private void BuildMapRoutes()
     {
         // 1. Create a lookup map for O(1) access
-        var jobMap = _jobs.ToDictionary(job => job.Id, job => job);
+        var jobMap = _jobs.ToDictionary(job => job.Location.Id, job => job);
         var vehicleMap = _vehicles.ToDictionary(vehicle => vehicle.Id, vehicle => vehicle);
 
         _mapRoutes = _routes.Select(route => {
@@ -50,23 +49,38 @@ public partial class DispatchCenterState : IRouteState
                 RouteName = vehicle.Name,
                 Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
                 Points = route.Stops.Select(stop => {
-                    if (!jobMap.TryGetValue(stop.JobId, out JobDto? job)) {
-                        throw new KeyNotFoundException($"Job ID {stop.JobId} not found in job map.");
+                    if (TenantInfo != null && stop.LocationId == TenantInfo.MainDepot.Location.Id) {
+                        // Depot stop
+                        return new CustomerMarker {
+                            Lat = 0, // Depots can be handled differently if needed
+                            Lng = 0,
+                            RouteName = vehicle.Name,
+                            Arrival = stop.ArrivalTime / 60.0,
+                            Departure = stop.DepartureTime / 60.0,
+                            PalletLoad = stop.PalletLoad,
+                            WeightLoad = stop.WeightLoad,
+                            RefrigeratedLoad = stop.RefrigeratedLoad,
+                            Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
+                            Label = "Depot",
+                            JobType = "Depot"
+                        };
+                    } else if (jobMap.TryGetValue(stop.LocationId, out var job)) {
+                        return new CustomerMarker {
+                            Lat = job.Location.Latitude,
+                            Lng = job.Location.Longitude,
+                            RouteName = vehicle.Name,
+                            Arrival = stop.ArrivalTime / 60.0,
+                            Departure = stop.DepartureTime / 60.0,
+                            PalletLoad = stop.PalletLoad,
+                            WeightLoad = stop.WeightLoad,
+                            RefrigeratedLoad = stop.RefrigeratedLoad,
+                            Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
+                            Label = job.Name,
+                            JobType = job.JobType.ToString()
+                        };
+                    } else {
+                        throw new KeyNotFoundException($"Job with LocationId {stop.LocationId} not found.");
                     }
-
-                    return new CustomerMarker {
-                        Lat = job.Location.Latitude,
-                        Lng = job.Location.Longitude,
-                        RouteName = vehicle.Name,
-                        Arrival = stop.ArrivalTime / 60.0,
-                        Departure = stop.DepartureTime / 60.0,
-                        PalletLoad = stop.PalletLoad,
-                        WeightLoad = stop.WeightLoad,
-                        RefrigeratedLoad = stop.RefrigeratedLoad,
-                        Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
-                        Label = job.Name,
-                        JobType = job.JobType.ToString()
-                    };
                 }).ToList()
             };
         }).ToList();
@@ -74,12 +88,15 @@ public partial class DispatchCenterState : IRouteState
 
     public async Task SolveVrpAsync() {
         const string endpoint = "api/vrp/solve";
-        var settings = await api.GetFromJsonAsync<RouteSettings>(endpoint);
+        await api.GetAsync(endpoint);
 
-        if (settings?.SearchTimeLimitSeconds > 0) {
-            int waitMinutes = (settings.SearchTimeLimitSeconds + 59) / 60;
-            StartWait?.Invoke(waitMinutes);
-        }
+
+        //var settings = await api.GetFromJsonAsync<RouteSettings>(endpoint);
+
+        //if (settings?.SearchTimeLimitSeconds > 0) {
+        //    int waitMinutes = (settings.SearchTimeLimitSeconds + 59) / 60;
+        //    StartWait?.Invoke(waitMinutes);
+        //}
 
         await api.GetFromJsonAsync<List<JobDto>>("/api/jobs");
     }

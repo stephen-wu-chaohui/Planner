@@ -4,12 +4,9 @@
 /// Solver-facing job definition.
 /// Immutable, serializable, and safe to share across API, Worker, and UI.
 /// </summary>
-public sealed record JobInput(
-    long JobId,                 // Internal reference (stable within request)
-    int JobType,               // 0: Depot, 1: Delivery, 2: Pickup
-
-    // Solver-friendly location reference
-    long Location,
+public sealed record StopInput(
+    long LocationId,                // Internal reference (stable within request)
+    int LocationType,               // 0: Depot, 1: Delivery, 2: Pickup
 
     // Service constraints
     long ServiceTimeMinutes,
@@ -21,5 +18,8 @@ public sealed record JobInput(
     long WeightDemand,
 
     // Special constraints
-    bool RequiresRefrigeration
+    bool RequiresRefrigeration,
+
+    // Extra data used by UI but not solver
+    long ? ExtraIdForJob = null
 );

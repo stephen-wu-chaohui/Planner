@@ -1,5 +1,5 @@
 ﻿using Planner.Domain;
-using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Inputs;
 using Planner.Testing;
 using Planner.Testing.Builders;
 using System;

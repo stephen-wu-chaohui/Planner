@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 using VerifyXunit;
-using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.EndToEndTests.Tests;
 

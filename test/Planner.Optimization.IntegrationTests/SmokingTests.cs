@@ -18,7 +18,7 @@ public sealed class SmokingTests {
         // Assert
         response.TenantId.Should().Be(request.TenantId);
         response.OptimizationRunId.Should().Be(request.OptimizationRunId);
-        response.Routes.Should().HaveCount(request.Vehicles.Count);
+        response.Routes.Should().HaveCount(request.Vehicles.Length);
 
         foreach (var route in response.Routes) {
             route.TotalMinutes.Should().BeGreaterThanOrEqualTo(0);
@@ -26,7 +26,7 @@ public sealed class SmokingTests {
             route.TotalCost.Should().BeGreaterThanOrEqualTo(0);
 
             foreach (var task in route.Stops) {
-                request.Jobs.Should().Contain(j => j.JobId == task.JobId);
+                request.Stops.Should().Contain(j => j.LocationId == task.LocationId);
             }
         }
     }

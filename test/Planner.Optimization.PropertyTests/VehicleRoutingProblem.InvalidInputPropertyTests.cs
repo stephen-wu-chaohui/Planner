@@ -1,7 +1,7 @@
 ﻿using FluentAssertions;
-using Planner.Messaging.Optimization;
-using Planner.Messaging.Optimization.Requests;
+using Planner.Messaging.Optimization.Inputs;
 using Planner.Testing;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -24,16 +24,16 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
-        var depotLocId = request.Vehicles[0].StartLocation;
-        var job = request.Jobs[0];
+        var depotLocId = request.Vehicles[0].StartDepotLocationId;
+        var job = request.Stops[0];
 
         var collidingJob = job;
 
         request = WithFastSettings(request with {
-            Jobs = request.Jobs
+            Stops = request.Stops
                 .Skip(1)
                 .Append(collidingJob)
-                .ToList()
+                .ToArray()
         });
 
         // Act
@@ -41,7 +41,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
 
         // Assert
         response.ErrorMessage.Should().NotBeNullOrEmpty();
-        response.ErrorMessage.Should().Contain("Job/Depot LocationId collision");
+        response.ErrorMessage.Should().Contain("Depot LocationId not in stops.");
     }
 
     [Fact]
@@ -52,14 +52,14 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         var vehicle = request.Vehicles[0];
 
         var invalidVehicle = vehicle with {
-            StartLocation = 999999 // not in depots
+            StartDepotLocationId = 999999 // not in depots
         };
 
         request = WithFastSettings(request with {
             Vehicles = request.Vehicles
                 .Skip(1)
                 .Append(invalidVehicle)
-                .ToList()
+                .ToArray()
         });
 
         // Act
@@ -78,14 +78,14 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         var vehicle = request.Vehicles[0];
 
         var invalidVehicle = vehicle with {
-            EndLocation = vehicle.EndLocation // not in depots
+            EndDepotLocationId = vehicle.EndDepotLocationId // not in depots
         };
 
         request = WithFastSettings(request with {
             Vehicles = request.Vehicles
                 .Skip(1)
                 .Append(invalidVehicle)
-                .ToList()
+                .ToArray()
         });
 
         // Act

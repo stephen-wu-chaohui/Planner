@@ -1,7 +1,7 @@
 ﻿namespace Planner.Testing.Fixtures;
 
 using Planner.Domain;
-using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Inputs;
 using Planner.Testing.Builders;
 
 public static class VrpBaseline {
@@ -14,7 +14,10 @@ public static class VrpBaseline {
             .WithVehicles([ new Vehicle { Id = TestIds.Vehicle1, Name = "Van-1", 
                 StartDepot = new Depot { Location = new Location { Id = TestIds.Depot1Loc } }, 
                 EndDepot = new Depot { Location = new Location { Id = TestIds.Depot2Loc } } } ])
-            .WithOvertimeMultiplier(2.0)
+            .WithOptimizationSettings(new OptimizationSettings {
+                SearchTimeLimitSeconds = 10,
+                OvertimeMultiplier = 2.0
+            })
             .Build();
     }
 }

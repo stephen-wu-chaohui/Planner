@@ -1,8 +1,7 @@
 ﻿
 using Planner.API.Services;
 using Planner.Domain;
-using Planner.Messaging.Optimization;
-using Planner.Messaging.Optimization.Requests;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.Testing.Builders;
 
@@ -10,8 +9,7 @@ public sealed class OptimizeRouteRequestBuilder {
     private Guid _tenantId = TestIds.TenantId;
     private Guid _runId = TestIds.RunId;
     private DateTime _requestedAt = DateTime.UtcNow;
-
-    private double _overtimeMultiplier = 2.0;
+    private readonly MatrixCalculationService _matrixCalculationService = new();
 
     private OptimizationSettings _optimizationSettings = new() {
         SearchTimeLimitSeconds = 5
@@ -28,18 +26,9 @@ public sealed class OptimizeRouteRequestBuilder {
         _optimizationSettings = settings ?? throw new ArgumentNullException(nameof(settings));
         return this;
     }
-
-    public OptimizeRouteRequestBuilder WithSearchTimeLimitSeconds(int seconds) {
-        _optimizationSettings = _optimizationSettings with {
-            SearchTimeLimitSeconds = seconds
-        };
-        return this;
-    }
     public OptimizeRouteRequestBuilder WithTenant(Guid tenantId) { _tenantId = tenantId; return this; }
     public OptimizeRouteRequestBuilder WithRunId(Guid runId) { _runId = runId; return this; }
     public OptimizeRouteRequestBuilder WithRequestedAt(DateTime utc) { _requestedAt = utc; return this; }
-
-    public OptimizeRouteRequestBuilder WithOvertimeMultiplier(double value) { _overtimeMultiplier = value; return this; }
 
     public OptimizeRouteRequestBuilder AddJob(Job job) { _jobs.Add(job); return this; }
     public OptimizeRouteRequestBuilder AddVehicle(Vehicle vehicle) { _vehicles.Add(vehicle); return this; }
@@ -55,17 +44,16 @@ public sealed class OptimizeRouteRequestBuilder {
             .ToList();
         
         var allLocations = depotLocations.Concat(_jobs.Select(j => j.Location)).ToList();
-        var (distanceMatrix, travelTimeMatrix) = MatrixBuilder.BuildMatrices(allLocations, _optimizationSettings);
+        var (distanceMatrix, travelTimeMatrix) = _matrixCalculationService.BuildMatrices(allLocations, _optimizationSettings);
 
-        return new(
+        return new (
             _tenantId,
             _runId,
             _requestedAt,
-            _vehicles.Select(ToInput.ToVehicleInput).ToList(),
-            _jobs.Select(ToInput.ToJobInput).ToList(),
+            _vehicles.Select(ToInput.FromVehicle).ToArray(),
+            depotLocations.Select(d => ToInput.FromDepotLocation(d.Id)).Concat(_jobs.Select(ToInput.FromJob)).ToArray(),
             distanceMatrix,
             travelTimeMatrix,
-            _overtimeMultiplier,
             _optimizationSettings
         );
     }

@@ -1,4 +1,4 @@
-﻿using Planner.Messaging.Optimization;
+﻿using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.Optimization.Worker.Handlers;
 

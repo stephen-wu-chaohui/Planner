@@ -4,7 +4,7 @@ namespace Planner.Testing.Builders;
 
 public sealed class JobInputBuilder {
     private int _jobId = TestIds.Job1;
-    private int _jobType = 1; // match contract expectations (your controller maps domain enum -> int)
+    private int _locationType = 1; // match contract expectations (your controller maps domain enum -> int)
     private string _name = "Test Job";
     private long _location = LocationInputBuilder.Create().WithId(TestIds.Job1Loc).Build();
 
@@ -19,7 +19,7 @@ public sealed class JobInputBuilder {
     public static JobInputBuilder Create() => new();
 
     public JobInputBuilder WithJobId(int id) { _jobId = id; return this; }
-    public JobInputBuilder WithJobType(int jobType) { _jobType = jobType; return this; }
+    public JobInputBuilder WithJobType(int jobType) { _locationType = jobType; return this; }
     public JobInputBuilder WithName(string name) { _name = name; return this; }
     public JobInputBuilder WithLocation(long location) { _location = location; return this; }
 
@@ -29,15 +29,15 @@ public sealed class JobInputBuilder {
     public JobInputBuilder WithDemand(long pallets, long weight) { _palletDemand = pallets; _weightDemand = weight; return this; }
     public JobInputBuilder RequiresRefrigeration(bool value = true) { _requiresRefrigeration = value; return this; }
 
-    public JobInput Build() => new(
-        JobId: _jobId,
-        JobType: _jobType,
-        Location: _location,
+    public StopInput Build() => new(
+        LocationId: _location,
+        LocationType: _locationType,
         ServiceTimeMinutes: _serviceTimeMinutes,
         ReadyTime: _readyTime,
         DueTime: _dueTime,
         PalletDemand: _palletDemand,
         WeightDemand: _weightDemand,
-        RequiresRefrigeration: _requiresRefrigeration
+        RequiresRefrigeration: _requiresRefrigeration,
+        ExtraIdForJob: _jobId
     );
 }

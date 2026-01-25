@@ -32,7 +32,7 @@ internal sealed class DepotIndexMap {
         var nodeIds = new List<int>();
 
         foreach (var l in locs) {
-            if (!l.IsDepot) continue;
+            // if (!l.IsDepot) continue;
 
             map.Add(l.LocationId, l.NodeIndex);
             locIds.Add(l.LocationId);
