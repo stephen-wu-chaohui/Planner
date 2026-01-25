@@ -1,4 +1,6 @@
-﻿namespace Planner.Testing.Builders;
+﻿using Planner.Messaging.Optimization.Inputs;
+
+namespace Planner.Testing.Builders;
 
 public sealed class LocationInputBuilder {
     private long _locationId = 1;
@@ -12,10 +14,5 @@ public sealed class LocationInputBuilder {
     public LocationInputBuilder WithAddress(string address) { _address = address; return this; }
     public LocationInputBuilder WithLatLng(double lat, double lng) { _lat = lat; _lng = lng; return this; }
 
-    public LocationInput Build() => new(
-        LocationId: _locationId,
-        Address: _address,
-        Latitude: _lat,
-        Longitude: _lng
-    );
+    public long Build() => _locationId;
 }

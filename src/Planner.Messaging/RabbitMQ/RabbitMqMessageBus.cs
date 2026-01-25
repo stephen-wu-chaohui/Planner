@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Planner.Messaging.Messaging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;

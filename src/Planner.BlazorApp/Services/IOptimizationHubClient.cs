@@ -1,10 +1,11 @@
-﻿namespace Planner.BlazorApp.Services;
+﻿using Planner.Contracts.Optimization;
 
-using Planner.Contracts.Optimization.Responses;
+namespace Planner.BlazorApp.Services;
+
 
 public interface IOptimizationHubClient : IAsyncDisposable {
     Task ConnectAsync(Guid? optimizationRunId = null);
     Task DisconnectAsync();
 
-    event Action<OptimizeRouteResponse> OptimizationCompleted;
+    event Action<RoutingResultDto> OptimizationCompleted;
 }

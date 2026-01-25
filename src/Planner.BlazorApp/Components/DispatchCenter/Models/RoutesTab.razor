@@ -1,7 +1,7 @@
 ﻿@using Planner.BlazorApp.Components.DispatchCenter
 @using Planner.BlazorApp.Services
 @using Planner.BlazorApp.State.Interfaces
-@using Planner.Contracts.Optimization.Outputs
+@using Planner.Contracts.Optimization
 
 @inject IJobState JobState
 @inject IVehicleState VehicleState
@@ -29,8 +29,8 @@
                     </thead>
                     <tbody>
                         @foreach (var r in Routes) {
-                            <tr class="vehicle-row @(!r.Used ? "text-muted" : "")">
-                                <td><strong>@r.VehicleName</strong></td>
+                            <tr class="vehicle-row @(!r.Stops.Any() ? "text-muted" : "")">
+                                <td><strong>@r.VehicleId</strong></td>
                                 <td>@r.Stops.Count</td>
                                 <td>@($"{r.TotalDistanceKm:F1}")</td>
                                 <td>@($"{r.TotalMinutes:F0}")</td>
@@ -57,8 +57,8 @@
                                                     var s = r.Stops[i];
                                                     <tr>
                                                         <td>@(i + 1)</td>
-                                                        <td>@s.Name</td>
-                                                        <td>@s.JobType</td>
+                                                        <td>@s.LocationId</td>
+                                                        <td>JobType</td>
                                                         <td>@Readble(s.ArrivalTime)</td>
                                                         <td>@Readble(s.DepartureTime)</td>
                                                         <td>@s.PalletLoad</td>
@@ -86,7 +86,7 @@
 
     [Parameter] public int TickSeconds { get; set; } = 1;
 
-    private IReadOnlyList<RouteResult>? Routes;
+    private IReadOnlyList<RouteDto>? Routes;
 
     private System.Threading.Timer? _progressTimer;
     private bool _isBuilding;

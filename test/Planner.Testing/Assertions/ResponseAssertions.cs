@@ -1,4 +1,7 @@
-﻿namespace Planner.Testing.Assertions;
+﻿using Planner.Messaging.Optimization.Inputs;
+using Planner.Messaging.Optimization.Outputs;
+
+namespace Planner.Testing.Assertions;
 
 public static class ResponseAssertions {
     public static void ShouldBeValidBasicShape(this OptimizeRouteResponse resp, OptimizeRouteRequest req) {
@@ -11,9 +14,9 @@ public static class ResponseAssertions {
 
     public static void ShouldHaveNoDuplicateAssignedJobs(this OptimizeRouteResponse resp) {
         var assignedJobIds = resp.Routes
-            .Where(r => r.Used)
+            .Where(r => r.Stops.Any())
             .SelectMany(r => r.Stops)
-            .Select(s => s.JobId)
+            .Select(s => s.LocationId)
             .ToList();
 
         assignedJobIds.Should().OnlyHaveUniqueItems();

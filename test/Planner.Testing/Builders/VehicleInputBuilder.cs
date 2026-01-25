@@ -1,8 +1,10 @@
-﻿namespace Planner.Testing.Builders;
+﻿using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Inputs;
+
+namespace Planner.Testing.Builders;
 
 public sealed class VehicleInputBuilder {
     private int _vehicleId = TestIds.Vehicle1;
-    private string _name = "Vehicle-1";
 
     private long _shiftLimitMinutes = 480;
     private long _depotStartId = TestIds.Depot1Loc;
@@ -20,11 +22,8 @@ public sealed class VehicleInputBuilder {
     public static VehicleInputBuilder Create() => new();
 
     public VehicleInputBuilder WithVehicleId(int id) { _vehicleId = id; return this; }
-    public VehicleInputBuilder WithName(string name) { _name = name; return this; }
-
     public VehicleInputBuilder WithDepot(long startId, long endId) { _depotStartId = startId; _depotEndId = endId; return this; }
     public VehicleInputBuilder WithShiftLimit(long minutes) { _shiftLimitMinutes = minutes; return this; }
-
     public VehicleInputBuilder WithCosts(double perMin, double perKm, double baseFee = 0) {
         _costPerMinute = perMin; _costPerKm = perKm; _baseFee = baseFee; return this;
     }
@@ -37,20 +36,9 @@ public sealed class VehicleInputBuilder {
 
     public VehicleInput Build() => new(
         VehicleId: _vehicleId,
-        Name: _name,
         ShiftLimitMinutes: _shiftLimitMinutes,
-        StartLocation: new LocationInput(
-            LocationId: _depotStartId,
-            Address: "DepotStart",
-            Latitude: 0,
-            Longitude: 0
-        ),
-        EndLocation: new LocationInput(
-            LocationId: _depotEndId,
-            Address: "DepotEnd",
-            Latitude: 0,
-            Longitude: 0
-        ),
+        StartDepotLocationId: _depotStartId,
+        EndDepotLocationId: _depotEndId,
         SpeedFactor: _speedFactor,
         CostPerMinute: _costPerMinute,
         CostPerKm: _costPerKm,

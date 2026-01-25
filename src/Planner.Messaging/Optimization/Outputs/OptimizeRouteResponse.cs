@@ -1,6 +1,4 @@
-﻿using Planner.Contracts.Optimization.Outputs;
-
-namespace Planner.Contracts.Optimization.Responses;
+﻿namespace Planner.Messaging.Optimization.Outputs;
 
 /// <summary>
 /// Represents the response from a route optimization request.
@@ -10,7 +8,7 @@ namespace Planner.Contracts.Optimization.Responses;
 /// <param name="CompletedAt">UTC timestamp when optimization completed.</param>
 /// <param name="Routes">Generated routes.</param>
 /// <param name="TotalCost">Total cost associated with the optimization.</param>
-/// <param name="ErrorMessage">Optional error message if optimization failed. Null indicates success.</param>
+/// <param name="ErrorMessage">Error message explaining any optimization failure or incomplete results. Null on success.</param>
 public sealed record OptimizeRouteResponse(
     Guid TenantId,
     Guid OptimizationRunId,

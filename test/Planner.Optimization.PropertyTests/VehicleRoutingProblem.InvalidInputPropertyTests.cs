@@ -1,12 +1,11 @@
 ﻿using FluentAssertions;
-using Planner.Contracts.Optimization.Requests;
-using Planner.Optimization;
+using Planner.Messaging.Optimization.Inputs;
 using Planner.Testing;
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
-namespace Planner.Optimization.InvalidInputTests;
+namespace Planner.Optimization.PropertyTests;
 
 public sealed class VehicleRoutingProblemInvalidInputTests {
 
@@ -21,87 +20,81 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         };
 
     [Fact]
-    public void Job_and_depot_location_id_collision_should_throw() {
+    public void Job_and_depot_location_id_should_list() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
-        var depotLocId = request.Vehicles[0].StartLocation.LocationId;
-        var job = request.Jobs[0];
+        var depotLocId = request.Vehicles[0].StartDepotLocationId;
+        var job = request.Stops[0];
 
-        var collidingJob = job with {
-            Location = job.Location with {
-                LocationId = depotLocId
-            }
-        };
+        var collidingJob = job;
 
         request = WithFastSettings(request with {
-            Jobs = request.Jobs
+            Stops = request.Stops
                 .Skip(1)
                 .Append(collidingJob)
-                .ToList()
+                .ToArray()
         });
 
         // Act
-        Action act = () => _sut.Optimize(request);
+        var response = _sut.Optimize(request);
 
         // Assert
-        act.Should()
-           .Throw<SolverInputInvalidException>()
-           .WithMessage("*Job/Depot LocationId collision*");
+        response.ErrorMessage.Should().BeNullOrEmpty();
     }
 
     [Fact]
-    public void Vehicle_with_missing_start_depot_should_throw() {
+    public void Vehicle_with_missing_start_depot_should_return_error() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
         var vehicle = request.Vehicles[0];
 
         var invalidVehicle = vehicle with {
-            StartLocation = vehicle.StartLocation with { LocationId = 999999 } // not in depots
+            StartDepotLocationId = 999999 // not in depots
         };
 
         request = WithFastSettings(request with {
             Vehicles = request.Vehicles
                 .Skip(1)
                 .Append(invalidVehicle)
-                .ToList()
+                .ToArray()
         });
 
         // Act
-        Action act = () => _sut.Optimize(request);
+        var response = _sut.Optimize(request);
 
         // Assert
-        act.Should()
-           .Throw<SolverInputInvalidException>()
-           .WithMessage("*references missing DepotId*");
+        response.ErrorMessage.Should().NotBeNullOrEmpty();
+        response.ErrorMessage.Should().Contain("references missing DepotId.");
     }
 
     [Fact]
-    public void Vehicle_with_missing_end_depot_should_throw() {
+    public void Vehicle_with_missing_end_depot_should_return_error() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
         var vehicle = request.Vehicles[0];
 
+        var invalidLocationId = 100;
+
         var invalidVehicle = vehicle with {
-            EndLocation = vehicle.EndLocation with { LocationId = 888888 } // not in depots
+            EndDepotLocationId = invalidLocationId // not in depots
         };
 
         request = WithFastSettings(request with {
             Vehicles = request.Vehicles
                 .Skip(1)
                 .Append(invalidVehicle)
-                .ToList()
+                .ToArray()
         });
 
         // Act
-        Action act = () => _sut.Optimize(request);
+        var response = _sut.Optimize(request);
 
         // Assert
-        act.Should()
-           .Throw<SolverInputInvalidException>()
-           .WithMessage("*references missing DepotId*");
+        response.ErrorMessage.Should().NotBeNullOrEmpty();
+        response.ErrorMessage.Should().Contain("references missing DepotId.");
     }
 
 }

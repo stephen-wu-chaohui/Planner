@@ -1,4 +1,5 @@
-﻿using Planner.Testing.Fixtures;
+﻿using Planner.Optimization.SnapshotTests.Snapshot;
+using Planner.Testing.Fixtures;
 using System.Threading.Tasks;
 using VerifyXunit;
 using Xunit;

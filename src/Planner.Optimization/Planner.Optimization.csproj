@@ -8,11 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="Google.OrTools" Version="9.14.6206" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
   </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Planner.Contracts\Planner.Contracts.csproj" />
+    <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

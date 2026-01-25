@@ -1,5 +1,7 @@
-using Planner.Contracts.Optimization.Inputs;
-using Planner.Contracts.Optimization.Requests;
+﻿
+using Planner.Domain;
+using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.Services;
 
@@ -15,28 +17,25 @@ public interface IMatrixCalculationService {
     /// <param name="timeScale">Scale factor for time values.</param>
     /// <param name="distanceScale">Scale factor for distance values.</param>
     /// <returns>Tuple containing distance matrix and travel time matrix.</returns>
-    (long[][] DistanceMatrix, long[][] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<LocationInput> locations,
+    (long[] DistanceMatrix, long[] TravelTimeMatrix) BuildMatrices(
+        IReadOnlyList<Location> locations,
         OptimizationSettings settings,
         long timeScale = 1,
         long distanceScale = 1);
 }
 
 public sealed class MatrixCalculationService : IMatrixCalculationService {
-    public (long[][] DistanceMatrix, long[][] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<LocationInput> locations,
+    public (long[] DistanceMatrix, long[] TravelTimeMatrix) BuildMatrices(
+        IReadOnlyList<Location> locations,
         OptimizationSettings settings,
         long timeScale = 1,
         long distanceScale = 1) {
         
         int n = locations.Count;
-        var dist = new long[n][];
-        var travel = new long[n][];
+        var dist = new long[n * n];
+        var travel = new long[n * n];
 
         for (int i = 0; i < n; i++) {
-            dist[i] = new long[n];
-            travel[i] = new long[n];
-
             for (int j = 0; j < n; j++) {
                 if (i == j) continue;
 
@@ -49,8 +48,8 @@ public sealed class MatrixCalculationService : IMatrixCalculationService {
                 double minutes = km * settings.TravelTimeMultiplier;
 
                 // Scale ONCE, store as long
-                dist[i][j] = (long)Math.Round(km * distanceScale);
-                travel[i][j] = (long)Math.Round(minutes * timeScale);
+                dist[i * n + j] = (long)Math.Round(km * distanceScale);
+                travel[i * n + j] = (long)Math.Round(minutes * timeScale);
             }
         }
 

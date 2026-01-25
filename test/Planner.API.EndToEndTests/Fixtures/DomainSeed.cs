@@ -78,6 +78,7 @@ public static class DomainSeed {
         db.Customers.Add(customer);
         db.Vehicles.Add(vehicle);
         db.Jobs.Add(job);
+        db.Customers.Add(customer);
 
         db.SaveChanges(); // Important: Persist before controller query
     }

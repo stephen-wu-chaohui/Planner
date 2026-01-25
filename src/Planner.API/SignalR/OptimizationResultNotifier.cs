@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Planner.Application.Messaging;
-using Planner.Contracts.Optimization.Responses;
+using Planner.Contracts.Optimization;
 using Planner.Messaging;
 
 namespace Planner.API.SignalR;
@@ -14,7 +14,7 @@ public class OptimizationResultNotifier(IHubContext<PlannerHub> hubContext, ILog
         }
     }
 
-    public async Task NotifyAsync(OptimizeRouteResponse evt) {
+    public async Task NotifyAsync(RoutingResultDto evt) {
         try {
             await hubContext.Clients
                 .Group(PlannerHub.TenantGroup(evt.TenantId))

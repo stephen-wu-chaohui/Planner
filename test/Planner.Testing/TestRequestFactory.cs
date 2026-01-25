@@ -1,5 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Planner.API.Services;
+using Planner.Domain;
+using Planner.Messaging.Optimization.Inputs;
+using System.Linq;
 using System.Security.Claims;
 
 namespace Planner.Testing;
@@ -10,66 +14,92 @@ public static class TestRequestFactory {
         int vehicleCount = 2,
         int jobCount = 4
     ) {
+        var _matrixCalculationService = new MatrixCalculationService();
         var tenantId = Guid.NewGuid();
+
         var runId = Guid.NewGuid();
 
         // ---- Depots --------------------------------------------------
         // Depots are derived from vehicle StartLocation/EndLocation.
-        var depotLocation = new LocationInput(
-            LocationId: 1,
-            Latitude: -31.95,
-            Longitude: 115.86,
-            Address: "Depot"
-        );
+        var depotLocation = new Location {
+            Id = 1,
+            Address = "Perth",
+            Latitude = -31.9505,
+            Longitude = 115.8605
+        };
 
         // ---- Vehicles ------------------------------------------------
         var vehicles = Enumerable.Range(1, vehicleCount)
-            .Select(i => new VehicleInput(
-                VehicleId: i,
-                Name: $"Vehicle {i}",
-                StartLocation: depotLocation,
-                EndLocation: depotLocation,
-                MaxPallets: 10,
-                MaxWeight: 1_000,
-                RefrigeratedCapacity: 5,
-                SpeedFactor: 1.0,
-                ShiftLimitMinutes: 8 * 60,
-                CostPerMinute: 1.0,
-                CostPerKm: 1.0,
-                BaseFee: 10.0
-            ))
+            .Select(i => new Vehicle {
+                Id = i,
+                TenantId = tenantId,
+                Name = $"Vehicle {i}",
+                DepotStartId = depotLocation.Id,
+                DepotEndId = depotLocation.Id,
+                StartDepot = new Depot { Location = depotLocation },
+                EndDepot = new Depot { Location = depotLocation },
+                MaxPallets = 10,
+                MaxWeight = 1_000,
+                RefrigeratedCapacity = 5,
+                SpeedFactor = 1.0,
+                ShiftLimitMinutes = 8 * 60,
+                BaseFee = 10.0
+            })
             .ToList();
 
-        // ---- Jobs ----------------------------------------------------
+        // ---- Stops ----------------------------------------------------
         var jobs = Enumerable.Range(1, jobCount)
-            .Select(i => new JobInput(
-                JobId: i,
-                JobType: 1, // JobType.Delivery,
-                Name: $"Job {i}",
-                Location: new LocationInput(
-                    LocationId: 100 + i,
-                    Latitude: -31.95 + i * 0.01,
-                    Longitude: 115.86 + i * 0.01,
-                    Address: $"Job {i}"
-                ),
-                ReadyTime: 0,
-                DueTime: 24 * 60,
-                ServiceTimeMinutes: 10,
-                PalletDemand: 1,
-                WeightDemand: 100,
-                RequiresRefrigeration: false
-            ))
+            .Select(i => new Job { 
+                Id = i,
+                TenantId = tenantId,
+                Name = $"Job {i}",
+                JobType = JobType.Delivery,
+                LocationId = 100 + i,
+                Location = new Location { 
+                    Id = 100 + i,
+                    Address = $"Customer {i} Address",
+                    Latitude = -31.9505 + (i * 0.01),
+                    Longitude = 115.8605 + (i * 0.01)
+                },
+                ReadyTime = 0,
+                DueTime = 24 * 60,
+                ServiceTimeMinutes = 10,
+                PalletDemand = 1,
+                WeightDemand = 100,
+                RequiresRefrigeration = false
+            })
             .ToList();
+
+        // ---- Build Matrices -----------------------------------------
+        var settings = FastSettings();
+        var allLocations = new[] { depotLocation }
+            .Concat(jobs.Select(j => j.Location))
+            .ToList();
+        
+        var (distanceMatrix, travelTimeMatrix) = _matrixCalculationService.BuildMatrices(allLocations, settings);
+
+        var stops = allLocations.Select(loc => {
+            var job = jobs.FirstOrDefault(j => j.LocationId == loc.Id);
+            if (job != null) {
+                return ToInput.FromJob(job);
+            }
+            var depotLoc = depotLocation;
+            if (depotLoc != null) {
+                return ToInput.FromDepotLocation(depotLoc.Id);
+            }
+            return ToInput.FromDepotLocation(1); // Fallback, should not happen
+        }).ToArray();
 
         // ---- Request -------------------------------------------------
         return new OptimizeRouteRequest(
             TenantId: tenantId,
             OptimizationRunId: runId,
             RequestedAt: DateTime.UtcNow,
-            Vehicles: vehicles,
-            Jobs: jobs,
-            Settings: FastSettings(),
-            OvertimeMultiplier: 2.0
+            Vehicles: vehicles.Select(ToInput.FromVehicle).ToArray(),
+            Stops: stops,
+            DistanceMatrix: distanceMatrix,
+            TravelTimeMatrix: travelTimeMatrix,
+            Settings: settings
         );
     }
 
@@ -91,6 +121,7 @@ public static class TestRequestFactory {
 
     public static OptimizationSettings FastSettings() =>
         new() {
-            SearchTimeLimitSeconds = 5
+            SearchTimeLimitSeconds = 5,
+            OvertimeMultiplier = 2.0,
         };
 }

@@ -3,10 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Controllers;
 using Planner.API.Services;
 using Planner.Infrastructure.Persistence;
-using Planner.Optimization.DependencyInjection;
 using Planner.Application;
 using System;
-using Planner.Messaging;
+using Planner.Optimization;
+using Planner.Messaging.Messaging;
 
 namespace Planner.API.EndToEndTests.Fixtures;
 

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using Planner.Contracts.Optimization.Abstractions;
-using Planner.Contracts.Optimization.Requests;
 using Planner.Messaging;
+using Planner.Messaging.Messaging;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.Optimization.Worker.Handlers;
 
@@ -31,10 +31,10 @@ public sealed class OptimizationRequestHandler(
         if (request.OptimizationRunId == Guid.Empty)
             throw new InvalidOperationException("OptimizationRunId missing.");
 
-        if (request.Vehicles.Count == 0)
+        if (request.Vehicles.Length == 0)
             throw new InvalidOperationException("No vehicles provided.");
 
-        if (request.Jobs.Count == 0)
+        if (request.Stops.Length == 0)
             throw new InvalidOperationException("No jobs provided.");
     }
 }

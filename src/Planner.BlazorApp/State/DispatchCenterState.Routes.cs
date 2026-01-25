@@ -1,16 +1,15 @@
 ﻿using Planner.BlazorApp.FormModels;
 using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State.Interfaces;
-using Planner.Contracts.Optimization.Outputs;
-using Planner.Contracts.Optimization.Requests;
-using Planner.Contracts.Optimization.Responses;
+using Planner.Contracts.API;
+using Planner.Contracts.Optimization;
 
 namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState : IRouteState
 {
-    private IReadOnlyList<RouteResult> _routes = [];
-    IReadOnlyList<RouteResult> IRouteState.Routes => _routes;
+    private IReadOnlyList<RouteDto> _routes = [];
+    IReadOnlyList<RouteDto> IRouteState.Routes => _routes;
 
     private IReadOnlyList<MapRoute> _mapRoutes = [];
 
@@ -20,39 +19,85 @@ public partial class DispatchCenterState : IRouteState
 
     IReadOnlyList<MapRoute> IRouteState.MapRoutes => _mapRoutes;
 
-    private void OnOptimizationCompleted(OptimizeRouteResponse evt)
+    private void OnOptimizationCompleted(RoutingResultDto evt)
     {
-        _routes = evt.Routes.ToList();
-        BuildMapRoutes();
-        OnRoutesChanged?.Invoke();
+        if (!string.IsNullOrEmpty(evt.ErrorMessage))
+        {
+            LastErrorMessage = evt.ErrorMessage;
+            _routes = [];
+            _mapRoutes = [];
+            NotifyStatus();
+        }
+        else
+        {
+            LastErrorMessage = null;
+            _routes = evt.Routes.ToList();
+            BuildMapRoutes();
+            OnRoutesChanged?.Invoke();
+        }
     }
 
     private void BuildMapRoutes()
     {
-        _mapRoutes = _routes.Select(route => new MapRoute
-        {
-            RouteName = route.VehicleName,
-            Color = ColourHelper.ColourFromString(route.VehicleName, 0.95, 0.25) ?? "#FF0000",
-            Points = route.Stops.Select(stop =>
-                    new CustomerMarker
-                    {
-                        Lat = stop.Location.Latitude,
-                        Lng = stop.Location.Longitude,
-                        Label = stop.Name,
-                        JobType = stop.JobType.ToString()
-                    })
-                .ToList()
+        // 1. Create a lookup map for O(1) access
+        var jobMap = _jobs.ToDictionary(job => job.Location.Id, job => job);
+        var vehicleMap = _vehicles.ToDictionary(vehicle => vehicle.Id, vehicle => vehicle);
 
+        _mapRoutes = _routes.Select(route => {
+            var vehicle = vehicleMap[route.VehicleId];
+            return new MapRoute {
+                RouteName = vehicle.Name,
+                Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
+                Points = route.Stops.Select(stop => {
+                    if (TenantInfo != null && stop.LocationId == TenantInfo.MainDepot.Location.Id) {
+                        // Depot stop
+                        return new CustomerMarker {
+                            Lat = 0, // Depots can be handled differently if needed
+                            Lng = 0,
+                            RouteName = vehicle.Name,
+                            Arrival = stop.ArrivalTime / 60.0,
+                            Departure = stop.DepartureTime / 60.0,
+                            PalletLoad = stop.PalletLoad,
+                            WeightLoad = stop.WeightLoad,
+                            RefrigeratedLoad = stop.RefrigeratedLoad,
+                            Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
+                            Label = "Depot",
+                            JobType = "Depot"
+                        };
+                    } else if (jobMap.TryGetValue(stop.LocationId, out var job)) {
+                        return new CustomerMarker {
+                            Lat = job.Location.Latitude,
+                            Lng = job.Location.Longitude,
+                            RouteName = vehicle.Name,
+                            Arrival = stop.ArrivalTime / 60.0,
+                            Departure = stop.DepartureTime / 60.0,
+                            PalletLoad = stop.PalletLoad,
+                            WeightLoad = stop.WeightLoad,
+                            RefrigeratedLoad = stop.RefrigeratedLoad,
+                            Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
+                            Label = job.Name,
+                            JobType = job.JobType.ToString()
+                        };
+                    } else {
+                        throw new KeyNotFoundException($"Job with LocationId {stop.LocationId} not found.");
+                    }
+                }).ToList()
+            };
         }).ToList();
     }
 
     public async Task SolveVrpAsync() {
         const string endpoint = "api/vrp/solve";
-        var settings = await api.GetFromJsonAsync<OptimizationSettings>(endpoint);
+        await api.GetAsync(endpoint);
 
-        if (settings?.SearchTimeLimitSeconds > 0) {
-            int waitMinutes = (settings.SearchTimeLimitSeconds + 59) / 60;
-            StartWait?.Invoke(waitMinutes);
-        }
+
+        //var settings = await api.GetFromJsonAsync<RouteSettings>(endpoint);
+
+        //if (settings?.SearchTimeLimitSeconds > 0) {
+        //    int waitMinutes = (settings.SearchTimeLimitSeconds + 59) / 60;
+        //    StartWait?.Invoke(waitMinutes);
+        //}
+
+        await api.GetFromJsonAsync<List<JobDto>>("/api/jobs");
     }
 }

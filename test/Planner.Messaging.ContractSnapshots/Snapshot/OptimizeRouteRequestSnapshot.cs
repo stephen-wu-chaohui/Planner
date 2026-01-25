@@ -1,4 +1,5 @@
-﻿using Planner.Contracts.Optimization.Requests;
+﻿global using Planner.Messaging.Optimization;
+using Planner.Messaging.Optimization.Inputs;
 using System.Linq;
 
 namespace Planner.Messaging.ContractSnapshots.Snapshot;
@@ -9,32 +10,25 @@ public static class OptimizeRouteRequestSnapshot {
             req.TenantId,
             req.OptimizationRunId,
 
-            Jobs = req.Jobs
-                .OrderBy(j => j.JobId)
+            Stops = req.Stops
+                .OrderBy(j => j.LocationId)
                 .Select(j => new {
-                    j.JobId,
-                    j.JobType,
-                    j.Name,
+                    j.LocationId,
+                    j.LocationType,
                     j.ReadyTime,
                     j.DueTime,
                     j.ServiceTimeMinutes,
                     j.PalletDemand,
                     j.WeightDemand,
                     j.RequiresRefrigeration,
-                    Location = new {
-                        j.Location.LocationId,
-                        j.Location.Latitude,
-                        j.Location.Longitude
-                    }
                 }),
 
             Vehicles = req.Vehicles
                 .OrderBy(v => v.VehicleId)
                 .Select(v => new {
                     v.VehicleId,
-                    v.Name,
-                    StartLocationId = v.StartLocation.LocationId,
-                    EndLocationId = v.EndLocation.LocationId,
+                    StartLocationId = v.StartDepotLocationId,
+                    EndLocationId = v.EndDepotLocationId,
                     v.ShiftLimitMinutes,
                     v.SpeedFactor,
                     v.CostPerMinute,

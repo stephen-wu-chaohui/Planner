@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Planner.BlazorApp.Auth;
-using Planner.Contracts.Optimization.Responses;
-using Planner.Messaging;
+using Planner.Contracts.Optimization;
 
 namespace Planner.BlazorApp.Services;
 
@@ -11,7 +10,7 @@ public sealed class OptimizationHubClient(
     IJwtTokenStore tokenStore) : IOptimizationHubClient {
     private HubConnection? _connection;
 
-    public event Action<OptimizeRouteResponse>? OptimizationCompleted;
+    public event Action<RoutingResultDto>? OptimizationCompleted;
 
     public async Task ConnectAsync(Guid? optimizationRunId = null) {
         if (_connection != null)
@@ -54,7 +53,7 @@ public sealed class OptimizationHubClient(
                         };
                     }
                 })
-                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10) })
+                .WithAutomaticReconnect([TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10)])
                 .ConfigureLogging(logging =>
                 {
                     logging.AddConsole();
@@ -63,8 +62,8 @@ public sealed class OptimizationHubClient(
                 .Build();
 
             // Register event handlers
-            _connection.On<OptimizeRouteResponse>(
-                MessageRoutes.Response,
+            _connection.On<RoutingResultDto>(
+                "RoutingResultDto",
                 evt => 
                 {
                     logger.LogInformation("Received OptimizationCompleted event for run {OptimizationRunId}", evt.OptimizationRunId);

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Planner.Messaging.Messaging;
 using Planner.Messaging.RabbitMQ;
 
 namespace Planner.Messaging.DependencyInjection;

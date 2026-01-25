@@ -3,12 +3,12 @@ using Planner.API.Controllers;
 using Planner.API.EndToEndTests.Fixtures;
 using Planner.API.EndToEndTests.Snapshot;
 using Planner.Application;
-using Planner.Contracts.Optimization.Requests;
 using Planner.Infrastructure.Persistence;
 using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 using VerifyXunit;
+using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.EndToEndTests.Tests;
 
