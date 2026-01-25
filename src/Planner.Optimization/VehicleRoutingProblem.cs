@@ -13,14 +13,14 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         double DistanceScale = settings.DistanceScale;
 
         // 1. Validation
+        if (request.Vehicles.Length == 0)
+            return CreateEmptyResponse(request, "No vehicles provided.");
+
         try {
             ValidateInput(request);
         } catch (SolverInputInvalidException ex) {
             return CreateEmptyResponse(request, $"Invalid input: {ex.Message}");
         }
-        
-        if (request.Vehicles.Length == 0) 
-            return CreateEmptyResponse(request, "No vehicles provided.");
 
         // 2. Initialize Context
         var vehicles = request.Vehicles;
@@ -140,6 +140,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         p.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.PathCheapestArc;
         p.LocalSearchMetaheuristic = LocalSearchMetaheuristic.Types.Value.GuidedLocalSearch;
         p.TimeLimit = new Duration { Seconds = settings.SearchTimeLimitSeconds };
+        p.LogSearch = true; // ENABLE LOGGING
         return rt.SolveWithParameters(p);
     }
 

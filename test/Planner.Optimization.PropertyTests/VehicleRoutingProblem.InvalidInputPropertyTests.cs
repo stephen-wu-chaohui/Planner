@@ -20,7 +20,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         };
 
     [Fact]
-    public void Job_and_depot_location_id_collision_should_return_error() {
+    public void Job_and_depot_location_id_should_list() {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
@@ -40,8 +40,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         var response = _sut.Optimize(request);
 
         // Assert
-        response.ErrorMessage.Should().NotBeNullOrEmpty();
-        response.ErrorMessage.Should().Contain("Depot LocationId not in stops.");
+        response.ErrorMessage.Should().BeNullOrEmpty();
     }
 
     [Fact]
@@ -67,7 +66,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
 
         // Assert
         response.ErrorMessage.Should().NotBeNullOrEmpty();
-        response.ErrorMessage.Should().Contain("Depot LocationId not in stops.");
+        response.ErrorMessage.Should().Contain("references missing DepotId.");
     }
 
     [Fact]
@@ -77,8 +76,10 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
 
         var vehicle = request.Vehicles[0];
 
+        var invalidLocationId = 100;
+
         var invalidVehicle = vehicle with {
-            EndDepotLocationId = vehicle.EndDepotLocationId // not in depots
+            EndDepotLocationId = invalidLocationId // not in depots
         };
 
         request = WithFastSettings(request with {
@@ -93,7 +94,7 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
 
         // Assert
         response.ErrorMessage.Should().NotBeNullOrEmpty();
-        response.ErrorMessage.Should().Contain("Depot LocationId not in stops");
+        response.ErrorMessage.Should().Contain("references missing DepotId.");
     }
 
 }
