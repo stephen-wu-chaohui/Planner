@@ -33,27 +33,12 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
             .ToList();
 
         // Validate matrix dimensions
-        if (distMatrix.Length != stops.Length || travelMatrix.Length != stops.Length)
+        if (distMatrix.Length != stops.Length * stops.Length || travelMatrix.Length != stops.Length * stops.Length)
         {
             return CreateEmptyResponse(request, 
                 $"Matrix dimension mismatch: expected {stops.Length}x{stops.Length}, " +
-                $"but got DistanceMatrix {distMatrix.Length}x{(distMatrix.Length > 0 ? distMatrix[0].Length : 0)} " +
-                $"and TravelTimeMatrix {travelMatrix.Length}x{(travelMatrix.Length > 0 ? travelMatrix[0].Length : 0)}");
-        }
-
-        // Validate all inner arrays have correct length
-        for (int i = 0; i < distMatrix.Length; i++)
-        {
-            if (distMatrix[i].Length != stops.Length)
-            {
-                return CreateEmptyResponse(request,
-                    $"DistanceMatrix row {i} has length {distMatrix[i].Length}, expected {stops.Length}");
-            }
-            if (travelMatrix[i].Length != stops.Length)
-            {
-                return CreateEmptyResponse(request,
-                    $"TravelTimeMatrix row {i} has length {travelMatrix[i].Length}, expected {stops.Length}");
-            }
+                $"but got DistanceMatrix {distMatrix.Length} " +
+                $"and TravelTimeMatrix {travelMatrix.Length} ");
         }
 
         var depotMap = DepotIndexMap.FromSolverLocations(stops);
@@ -110,8 +95,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
     private static void ConfigureDimensions(RoutingModel rt, RoutingIndexManager mgr, OptimizeRouteRequest request) {
         var overtimeMult = request.Settings?.OvertimeMultiplier ?? 2.0;
         var locs = request.Stops;
-        var dists = request.DistanceMatrix;
-        var travels = request.TravelTimeMatrix;
+        var distMatrix = request.DistanceMatrix;
+        var travelMatrix = request.TravelTimeMatrix;
         var settings = request.Settings;
 
         // Capacity Dimensions
@@ -122,7 +107,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         // Time Dimension
         int[] timeCbs = [.. request.Vehicles.Select(v => rt.RegisterTransitCallback((long from, long to) => {
             int f = mgr.IndexToNode(from); int t = mgr.IndexToNode(to);
-            return (long)Math.Round((travels[f][t] + locs[f].ServiceTimeMinutes) * v.SpeedFactor);
+            return (long)Math.Round((travelMatrix[f * locs.Length + t] + locs[f].ServiceTimeMinutes) * v.SpeedFactor);
         }))];
 
         rt.AddDimensionWithVehicleTransits(timeCbs, settings.MaxSlackMinutes, settings.HorizonMinutes, true, "Time");
@@ -139,7 +124,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
             rt.SetFixedCostOfVehicle((long)Math.Round(veh.BaseFee * DistanceScale), v);
             int costCb = rt.RegisterTransitCallback((long from, long to) => {
                 int f = mgr.IndexToNode(from); int t = mgr.IndexToNode(to);
-                return (long)Math.Round(((travels[f][t] + locs[f].ServiceTimeMinutes) * veh.CostPerMinute + dists[f][t] * veh.CostPerKm) * DistanceScale);
+                return (long)Math.Round(((travelMatrix[f * locs.Length + t] + locs[f].ServiceTimeMinutes) * veh.CostPerMinute + distMatrix[f * locs.Length + t] * veh.CostPerKm) * DistanceScale);
             });
             rt.SetArcCostEvaluatorOfVehicle(costCb, v);
         }
@@ -158,7 +143,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         return rt.SolveWithParameters(p);
     }
 
-    private static OptimizeRouteResponse MapResults(OptimizeRouteRequest request, RoutingModel rt, RoutingIndexManager mgr, Assignment sol, StopInput [] locs, long[][] dists, long[][] travels) {
+    private static OptimizeRouteResponse MapResults(OptimizeRouteRequest request, RoutingModel rt, RoutingIndexManager mgr, Assignment sol, StopInput [] locs, long[] dists, long[] travels) {
         var routes = new List<RouteResult>();
         double grandTotal = 0;
         var (dimT, dimP, dimW, dimR) = (rt.GetMutableDimension("Time"), rt.GetMutableDimension("Pallets"), rt.GetMutableDimension("Weight"), rt.GetMutableDimension("Refrig"));
@@ -183,8 +168,8 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
                     stops.Add(new(locs[from].LocationId, sol.Value(dimT.CumulVar(idx)), sol.Value(dimT.CumulVar(idx)) + locs[from].ServiceTimeMinutes,
                         sol.Value(dimP.CumulVar(idx)), sol.Value(dimW.CumulVar(idx)), sol.Value(dimR.CumulVar(idx))));
                 }
-                tTime += travels[from][to] + locs[from].ServiceTimeMinutes;
-                tDist += dists[from][to];
+                tTime += travels[from * locs.Length + to] + locs[from].ServiceTimeMinutes;
+                tDist += dists[from * locs.Length + to];
                 idx = nextIdx;
             }
 

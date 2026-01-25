@@ -19,7 +19,7 @@ public sealed record OptimizeRouteRequest(
     DateTime RequestedAt,
     VehicleInput[] Vehicles,
     StopInput[] Stops,
-    long[][] DistanceMatrix,
-    long[][] TravelTimeMatrix,
+    long[] DistanceMatrix,    // Length = (Stops.Length x Stops.Length)
+    long[] TravelTimeMatrix,  // Length = (Stops.Length x Stops.Length)
     OptimizationSettings? Settings = null
 );
