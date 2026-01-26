@@ -15,6 +15,7 @@ public interface IRouteService {
 /// </summary>
 public sealed class RouteService(IMessageHubPublisher hub) : IRouteService {
     public Task PublishAsync(RoutingResultDto result) {
-        return hub.PublishAsync("RoutingResultDto", result);
+        ArgumentNullException.ThrowIfNull(result);
+        return hub.PublishAsync(nameof(RoutingResultDto), result);
     }
 }
