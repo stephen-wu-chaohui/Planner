@@ -11,7 +11,8 @@ static public class OptimizeRouteResponseToDto {
             resp.OptimizationRunId,
             resp.CompletedAt,
             resp.Routes.Select(r => r.ToDto()).ToList(),
-            resp.TotalCost);
+            resp.TotalCost,
+            resp.ErrorMessage);
     }
 
     public static RouteDto ToDto(this RouteResult route) {

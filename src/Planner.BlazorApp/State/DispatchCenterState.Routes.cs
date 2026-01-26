@@ -1,4 +1,6 @@
-﻿using Planner.BlazorApp.FormModels;
+﻿using Planner.BlazorApp.Components;
+using Planner.BlazorApp.Components.DispatchCenter.Models;
+using Planner.BlazorApp.FormModels;
 using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State.Interfaces;
 using Planner.Contracts.API;
@@ -8,8 +10,10 @@ namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState : IRouteState
 {
-    private IReadOnlyList<RouteDto> _routes = [];
-    IReadOnlyList<RouteDto> IRouteState.Routes => _routes;
+    private List<RouteDto> _routes = [];
+    IReadOnlyList<RouteDto> IRouteState.Routes => _routes.AsReadOnly();
+
+    public OptimizationSummaryInfo LastOptimizationSummary { get; private set; }
 
     private IReadOnlyList<MapRoute> _mapRoutes = [];
 
@@ -35,6 +39,16 @@ public partial class DispatchCenterState : IRouteState
             BuildMapRoutes();
             OnRoutesChanged?.Invoke();
         }
+        // Calculate optimization summary
+        if (_routes != null && _routes.Count > 0) {
+            var totalCost = _routes.Sum(r => r.TotalCost);
+            var totalStops = _routes.Sum(r => r.Stops.Count);
+            LastOptimizationSummary = new OptimizationSummaryInfo(_routes.Count, totalStops, totalCost);
+        } else if (string.IsNullOrEmpty(LastErrorMessage)) {
+            // Clear summary if no routes and no error (manual reset)
+            LastOptimizationSummary = null;
+        }
+
     }
 
     private void BuildMapRoutes()
@@ -86,8 +100,10 @@ public partial class DispatchCenterState : IRouteState
         }).ToList();
     }
 
-    public async Task SolveVrpAsync() {
-        const string endpoint = "api/vrp/solve";
+    public async Task SolveVrpAsync(int? searchTimeLimitSeconds = null) {
+        var endpoint = searchTimeLimitSeconds.HasValue 
+            ? $"api/vrp/solve?searchTimeLimitSeconds={searchTimeLimitSeconds.Value}"
+            : "api/vrp/solve";
         var settings = await api.GetFromJsonAsync<OptimizationSummary>(endpoint);
 
         if (settings?.SearchTimeLimitSeconds > 0) {
@@ -99,5 +115,12 @@ public partial class DispatchCenterState : IRouteState
             _jobs = jobs;
             OnJobsChanged?.Invoke();
         }
+    }
+
+    public async Task ClearRoutesAsync() {
+        _routes = [];
+        _mapRoutes = [];
+        OnRoutesChanged?.Invoke();
+        await Task.CompletedTask;
     }
 }

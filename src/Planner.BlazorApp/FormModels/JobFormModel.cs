@@ -28,8 +28,8 @@ public sealed class JobFormModel : EditableFlags {
 
     // --- Time constraints ---
     public long ServiceTimeMinutes { get; set; }
-    public long ReadyTime { get; set; }
-    public long DueTime { get; set; }
+    public DateTime ReadyTime { get; set; }
+    public DateTime DueTime { get; set; }
 
     // --- Capacity / constraints ---
     public long PalletDemand { get; set; }
@@ -81,8 +81,8 @@ public static class JobMapper {
             ServiceTimeMinutes: form.ServiceTimeMinutes,
             PalletDemand: form.PalletDemand,
             WeightDemand: form.WeightDemand,
-            ReadyTime: form.ReadyTime,
-            DueTime: form.DueTime,
+            ReadyTime: (long)(form.ReadyTime - DateTime.Today.AddHours(8).AddMinutes(30)).TotalMinutes,
+            DueTime: (long)(form.DueTime - DateTime.Today.AddHours(8).AddMinutes(30)).TotalMinutes,
             RequiresRefrigeration: form.RequiresRefrigeration
         );
     }
@@ -105,8 +105,8 @@ public static class JobMapper {
             Latitude = dto.Location.Latitude,
             Longitude = dto.Location.Longitude,
             ServiceTimeMinutes = dto.ServiceTimeMinutes,
-            ReadyTime = dto.ReadyTime,
-            DueTime = dto.DueTime,
+            ReadyTime = DateTime.Today.AddHours(8).AddMinutes(30).AddMinutes(dto.ReadyTime),
+            DueTime = DateTime.Today.AddHours(8).AddMinutes(30).AddMinutes(dto.DueTime),
             PalletDemand = dto.PalletDemand,
             WeightDemand = dto.WeightDemand,
             RequiresRefrigeration = dto.RequiresRefrigeration

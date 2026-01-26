@@ -8,35 +8,95 @@
 @inject IRouteState RouteState
 
 <div class="planner-tab-wrapper">
-    @if (Routes is null || Routes!.Count == 0) {
-        <RoutesBuildPanel TotalSeconds="TotalSeconds"
-                         TickSeconds="TickSeconds"
-                         IsBuilding="IsBuilding"
-                         CompletedJobs="CompletedJobs"
-                         OnBuildRoutes="BuildRoutes" />
-    }
-    else {
+@if (Routes is null || Routes!.Count == 0) {
+    <div class="p-3">
+        <div class="alert alert-info mb-3">
+            <div class="fw-bold mb-1">No routes have been planned yet.</div>
+            <br />
+            <div>
+                <p>
+                    To generate routes, Planner collects the current set of vehicles, jobs, depots, and planning constraints,
+                    then submits a planning request to the routing engine.
+                </p>
+                <p>
+                    The resulting plan assigns jobs to vehicles, calculates feasible routes, and returns cost and timing information for review.
+                </p>
+                <p>
+                    Route planning is performed by a dedicated optimization worker built on <strong>Google OR-Tools</strong>, running as a separate service.
+                </p>
+                <p>
+                    This worker evaluates feasibility and optimisation logic independently from the web application,
+                    illustrating a clean separation between planning orchestration and optimisation execution.
+                </p>
+            </div>
+            <br /> 
+            <div class="mt-2">
+                <p>Estimated time: <strong>@EstimatedTimeText</strong></p>
+                <p><em>Close the modal when routing finishes.</em></p>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-3 align-items-center">
+            <button class="btn btn-outline-primary" @onclick="@(() => BuildRoutes(5))" disabled="@IsBuilding">
+                ⚡ Build in 5s
+            </button>
+            <button class="btn btn-outline-primary" @onclick="@(() => BuildRoutes(15))" disabled="@IsBuilding">
+                ⚡ Build in 15s
+            </button>
+            <button class="btn btn-outline-primary" @onclick="@(() => BuildRoutes(30))" disabled="@IsBuilding">
+                ⚡ Build in 30s
+            </button>
+            <button class="btn btn-outline-success" @onclick="@(() => BuildRoutes(null))" disabled="@IsBuilding">
+                🧮 Build routes
+            </button>
+            @if (!string.IsNullOrEmpty(RouteState.LastErrorMessage)) {
+                <div class="alert alert-danger mb-0 py-1 px-2 ms-2 flex-grow-1" role="alert">
+                    <small><strong>Error:</strong> @RouteState.LastErrorMessage</small>
+                </div>
+                } else if (RouteState.LastOptimizationSummary != null) {
+                <div class="alert alert-success mb-0 py-1 px-2 ms-2 flex-grow-1" role="alert">
+                        <small><strong>Optimization completed:</strong> @RouteState.LastOptimizationSummary.Text</small>
+                </div>
+            }
+        </div>
+
+        @if (IsBuilding) {
+            <RoutesBuildPanel TotalSeconds="TotalSeconds"
+                             TickSeconds="TickSeconds"
+                             CompletedJobs="CompletedJobs" />
+        }
+    </div>
+}
+else {
         <div class="table-scroll">
             <table class="polished-table table table-sm table-bordered align-middle">
                     <thead class="table-light">
                         <tr>
                             <th class="sticky-col">Vehicle</th>
-                            <th>Jobs Served</th>
+                            <th>Stops</th>
                             <th>Distance (km)</th>
-                            <th>Duration (min)</th>
+                            <th>Duration</th>
                             <th>Cost</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var r in Routes) {
                             <tr class="vehicle-row @(!r.Stops.Any() ? "text-muted" : "")">
-                                <td><strong>@(r.VehicleName ?? r.VehicleId.ToString())</strong></td>
+                                <td>
+                                    @if (r.Stops.Any()) {
+                                        <span @onclick="@(() => ToggleRouteExpansion(r.VehicleId))" 
+                                              style="cursor: pointer; user-select: none; margin-right: 8px;">
+                                            @(IsRouteExpanded(r.VehicleId) ? "▼" : "▶")
+                                        </span>
+                                    }
+                                    <strong>@(r.VehicleName ?? r.VehicleId.ToString())</strong>
+                                </td>
                                 <td>@r.Stops.Count</td>
                                 <td>@($"{r.TotalDistanceKm:F1}")</td>
-                                <td>@($"{r.TotalMinutes:F0}")</td>
+                                <td>@TimeFormat.FormatDuration(r.TotalMinutes)</td>
                                 <td>@($"{r.TotalCost:F2}")</td>
                             </tr>
-                            @if (r.Stops.Any()) {
+                            @if (r.Stops.Any() && IsRouteExpanded(r.VehicleId)) {
                                 <tr>
                                     <td colspan="5" class="p-0 ps-4">
                                     <table class="table table-sm mb-0">
@@ -56,8 +116,8 @@
                                                         <td>@(i + 1)</td>
                                                         <td>@(s.JobName ?? s.LocationId.ToString())</td>
                                                         <td>@(s.JobType ?? "Unknown")</td>
-                                                        <td>@Readable(s.ArrivalTime)</td>
-                                                        <td>@Readable(s.DepartureTime)</td>
+                                                        <td>@TimeFormat.Readable(s.ArrivalTime)</td>
+                                                        <td>@TimeFormat.Readable(s.DepartureTime)</td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -69,18 +129,29 @@
                     </tbody>
                 </table>
         </div>
-        <button class="btn btn-outline-success" @onclick="BuildRoutes" disabled="@IsBuilding">
-            🧮 Clear routes
-        </button>
+        <div class="d-flex gap-2 mt-2 align-items-center">
+            @if (!string.IsNullOrEmpty(RouteState.LastErrorMessage)) {
+                <div class="alert alert-danger mb-0 py-1 px-2 flex-grow-1" role="alert">
+                    <small><strong>Error:</strong> @RouteState.LastErrorMessage</small>
+                </div>
+            } else if (RouteState.LastOptimizationSummary != null) {
+                <div class="alert alert-success mb-0 py-1 px-2 flex-grow-1" role="alert">
+                    <small><strong>Optimization completed:</strong> @RouteState.LastOptimizationSummary.Text</small>
+                </div>
+            }
+            <button class="btn btn-outline-danger ms-auto" @onclick="ResetRoutes">
+                🔄 Reset
+            </button>
+        </div>
     }
 
 </div>
 
 @code {
-
     [Parameter] public int TickSeconds { get; set; } = 1;
 
     private IReadOnlyList<RouteDto>? Routes;
+    private Dictionary<long, bool> _expandedRoutes = new();
 
     private System.Threading.Timer? _progressTimer;
     private bool _isBuilding;
@@ -90,11 +161,15 @@
     private int TotalSeconds = 30;
     private int CompletedJobs => Math.Min(TotalSeconds, _elapsedSlots);
 
-    private int ProgressPercent => TotalSeconds <= 0
-        ? 0
-        : (int)Math.Clamp((CompletedJobs * 100.0) / TotalSeconds, 0, 100);
-
     private int SafeTickSeconds => Math.Clamp(TickSeconds, 1, 20);
+    private int EstimatedTotalSeconds => Math.Max(0, TotalSeconds) * SafeTickSeconds;
+    
+    private string EstimatedTimeText => EstimatedTotalSeconds switch
+    {
+        <= 0 => "0 seconds",
+        < 180 => $"{EstimatedTotalSeconds} seconds",
+        _ => $"{(EstimatedTotalSeconds / 60.0):F1} minutes"
+    };
 
     protected override void OnInitialized()
     {
@@ -115,13 +190,24 @@
     {
         Routes = RouteState.Routes;
         _elapsedSlots = TotalSeconds;
+        _isBuilding = false;
+        _expandedRoutes.Clear(); // Clear expansion state when routes change
+        
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private async Task BuildRoutes()
+    private async Task BuildRoutes(int? searchTimeLimitSeconds)
     {
         if (IsBuilding) return;
-        await RouteState.SolveVrpAsync();
+        await RouteState.SolveVrpAsync(searchTimeLimitSeconds);
+    }
+
+    private async Task ResetRoutes()
+    {
+        if (IsBuilding) return;
+        _expandedRoutes.Clear(); // Clear expansion state on reset
+        await RouteState.ClearRoutesAsync();
+        StateHasChanged();
     }
 
     private void StartProgress(int seconds)
@@ -151,10 +237,16 @@
         _progressTimer = null;
     }
 
-    private string Readable(double minutesFromStart)
+    private void ToggleRouteExpansion(long vehicleId)
     {
-        var startTime = new DateTime(2025, 1, 1, 8, 30, 0); // 8:30 AM
-        var arrival = startTime.AddMinutes(minutesFromStart);
-        return arrival.ToString("hh:mm tt");
+        if (_expandedRoutes.ContainsKey(vehicleId))
+            _expandedRoutes[vehicleId] = !_expandedRoutes[vehicleId];
+        else
+            _expandedRoutes[vehicleId] = true;
+    }
+
+    private bool IsRouteExpanded(long vehicleId)
+    {
+        return _expandedRoutes.TryGetValue(vehicleId, out var expanded) && expanded;
     }
 }

@@ -137,7 +137,9 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
 
     private static Assignment? Solve(RoutingModel rt, OptimizationSettings settings) {
         var p = operations_research_constraint_solver.DefaultRoutingSearchParameters();
-        p.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.PathCheapestArc;
+        //p.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.PathCheapestArc;
+        //p.LocalSearchMetaheuristic = LocalSearchMetaheuristic.Types.Value.GuidedLocalSearch;
+        p.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.Savings;
         p.LocalSearchMetaheuristic = LocalSearchMetaheuristic.Types.Value.GuidedLocalSearch;
         p.TimeLimit = new Duration { Seconds = settings.SearchTimeLimitSeconds };
         p.LogSearch = true; // ENABLE LOGGING

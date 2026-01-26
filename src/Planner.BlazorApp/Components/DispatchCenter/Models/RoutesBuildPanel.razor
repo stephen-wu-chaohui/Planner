@@ -1,72 +1,26 @@
-﻿<div class="p-3">
-    <div class="alert alert-info mb-3">
-        <div class="fw-bold mb-1">No routes have been planned yet.</div>
-        <br />
-        <div>
-            <p>
-                To generate routes, Planner collects the current set of vehicles, jobs, depots, and planning constraints,
-                then submits a planning request to the routing engine.
-            </p>
-            <p>
-                The resulting plan assigns jobs to vehicles, calculates feasible routes, and returns cost and timing information for review.
-            </p>
-            <p>
-                Route planning is performed by a dedicated optimization worker built on <strong>Google OR-Tools</strong>, running as a separate service.
-            </p>
-            <p>
-                This worker evaluates feasibility and optimisation logic independently from the web application,
-                illustrating a clean separation between planning orchestration and optimisation execution.
-            </p>
-        </div>
-        <br /> 
-        <div class="mt-2">
-            <p>Estimated time: <strong>@EstimatedTimeText</strong></p>
-            <p><em>Close the modal when routing finishes.</em></p>
-        </div>
+﻿<div class="mt-3">
+    <div class="d-flex justify-content-between">
+        <div class="text-muted">Building routes…</div>
+        <div class="text-muted">@ProgressText</div>
     </div>
 
-    <button class="btn btn-outline-success" @onclick="OnBuildRoutes" disabled="@IsBuilding">
-        🧮 Build routes
-    </button>
-
-    @if (IsBuilding) {
-        <div class="mt-3">
-            <div class="d-flex justify-content-between">
-                <div class="text-muted">Building routes…</div>
-                <div class="text-muted">@ProgressText</div>
-            </div>
-
-            <div class="progress mt-2" style="height: 10px;">
-                <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%" aria-valuenow="@ProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-        </div>
-    }
+    <div class="progress mt-2" style="height: 10px;">
+        <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%" aria-valuenow="@ProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
 </div>
+
 
 @code {
     [Parameter] public int TotalSeconds { get; set; }
     [Parameter] public int TickSeconds { get; set; }
-
-    [Parameter] public bool IsBuilding { get; set; }
     [Parameter] public int CompletedJobs { get; set; }
 
-    [Parameter] public EventCallback OnBuildRoutes { get; set; }
-
     private int SafeTickSeconds => Math.Clamp(TickSeconds, 1, 20);
-
-    private int EstimatedTotalSeconds => Math.Max(0, TotalSeconds) * SafeTickSeconds;
     private int EstimatedSlots => Math.Max(0, TotalSeconds);
 
     private int ProgressPercent => EstimatedSlots <= 0
         ? 0
         : (int)Math.Clamp((CompletedJobs * 100.0) / EstimatedSlots, 0, 100);
-
-    private string EstimatedTimeText => EstimatedTotalSeconds switch
-    {
-        <= 0 => "0 seconds",
-        < 180 => $"{EstimatedTotalSeconds} seconds",
-        _ => $"{(EstimatedTotalSeconds / 60.0):F1} minutes"
-    };
 
     private string ProgressText => EstimatedSlots <= 0
         ? "Waiting…"

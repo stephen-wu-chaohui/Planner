@@ -37,13 +37,16 @@
         </table>
     </div>
 
-    <div class="planner-tab-actions d-flex justify-content-end p-2 border-top bg-light">
-        <button class="btn btn-outline-secondary me-2" @onclick="Discard" disabled="@(!HasChanges || CustomerState.IsProcessing)">Discard</button>
-        <button class="btn btn-primary" @onclick="Save" disabled="@(!HasChanges || CustomerState.IsProcessing)">
-            @if(CustomerState.IsProcessing) { <span class="spinner-border spinner-border-sm me-1"></span> }
-            Save Changes
-        </button>
+    <div class="planner-tab-actions">
+        <div class="actions-left">
+            <button class="btn btn-sm btn-outline-primary" @onclick="Save">💾 Apply</button>
+            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="Discard">🧹 Discard</button>
+        </div>
+        <div class="actions-right">
+            <small class="text-muted">Stored at Planner.API backend</small>
+        </div>
     </div>
+
 </div>
 
 @if (Editing is not null) {
