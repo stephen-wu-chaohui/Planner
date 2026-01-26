@@ -9,6 +9,13 @@
 .planner-modal-header-light {
 	background: #f8f9fa;
 	border-bottom: 1px solid #ddd;
+	padding: 0.5rem 1rem; /* Reduced from default 1rem to make it half height */
+	min-height: 2.5rem; /* Ensure minimum height */
+}
+
+.planner-modal-header-light .modal-title {
+	font-size: 1rem; /* Slightly smaller title */
+	margin: 0;
 }
 
 

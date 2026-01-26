@@ -71,7 +71,7 @@
             try
             {
                 await JS.InvokeVoidAsync("loadGoogleMaps", apiKey);
-                await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
+                // Don't register click handler here - wait for map to be initialized in OnTenantChanged
                 _mapReadySource.SetResult(true);
             }
             catch (JSException jsex)
@@ -128,9 +128,18 @@
     /// </summary>
     private async void OnTenantChanged()
     {
+        // Wait for Google Maps API to be loaded
+        await _mapReadySource.Task;
+        
         var mapCenter = TenantState.TenantInfo?.MainDepot?.Location ?? new LocationDto(Id: 0, Address: "Perth", Latitude: -31.9505, Longitude: 115.8605);
         var apiMapId = Config["GoogleMaps:MapId"];
         await JS.InvokeVoidAsync("plannerMap.initMap", mapCenter.Latitude, mapCenter.Longitude, apiMapId);
+        
+        // Now that the map is initialized, register the click handler
+        if (dotNetRef is not null)
+        {
+            await JS.InvokeVoidAsync("plannerMap.registerClickHandler", dotNetRef, nameof(OnMapClick));
+        }
     }
 
     /// <summary>

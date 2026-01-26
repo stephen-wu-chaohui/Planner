@@ -24,8 +24,8 @@ public class OptimizationController(
     /// Accept a route optimization request and dispatch it to the optimization worker.
     /// </summary>
     [HttpGet("solve")]
-    public async Task<IActionResult> Solve() {
-        var request = await BuildRequestFromDomainAsync();
+    public async Task<IActionResult> Solve([FromQuery] int? searchTimeLimitSeconds = null) {
+        var request = await BuildRequestFromDomainAsync(searchTimeLimitSeconds);
 
         if (request.Stops.Length == 0 || request.Vehicles.Length == 0)
             return BadRequest("No jobs or vehicles available for optimization.");
@@ -43,7 +43,7 @@ public class OptimizationController(
         return Ok(summary);
     }
 
-    private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync() {
+    private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync(int? searchTimeLimitSeconds = null) {
 
         EnsureJobsForAllCustomers();
 
@@ -59,7 +59,7 @@ public class OptimizationController(
             .ToListAsync();
 
         var settings = new OptimizationSettings(
-            SearchTimeLimitSeconds: 1 * jobs.Count // 1 second per job
+            SearchTimeLimitSeconds: searchTimeLimitSeconds ?? (1 * jobs.Count) // Use provided value or default to 1 second per job
         );
 
         // Build location list in the same order as solver expects: depots first, then jobs

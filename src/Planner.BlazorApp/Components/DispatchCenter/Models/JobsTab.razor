@@ -14,12 +14,11 @@
                 <tr>
                     <th>Customer</th>
                     <th>Type</th>
-                    <th>Ready</th>
-                    <th>Due</th>
-                    <th>Service (min)</th>
+                    <th>Avail.From</th>
+                    <th>To</th>
+                    <th>Stay</th>
                     <th>Pallets</th>
                     <th>Weight</th>
-                    <th>Refrig</th>
                     <th style="width:100px;"></th>
                 </tr>
             </thead>
@@ -28,12 +27,11 @@
                     <tr class="@j.GetRowClass()" @key="j.JobId">
                         <td>@j.Name</td>
                         <td>@(j.JobType == 1 ? "Delivery" : "Pickup")</td>
-                        <td>@j.ReadyTime</td>
-                        <td>@j.DueTime</td>
-                        <td>@j.ServiceTimeMinutes</td>
+                        <td>@j.ReadyTime.TimeOfDay</td>
+                        <td>@j.DueTime.TimeOfDay</td>
+                        <td>@TimeFormat.FormatDuration(j.ServiceTimeMinutes)</td>
                         <td>@j.PalletDemand</td>
                         <td>@j.WeightDemand</td>
-                        <td>@j.RequiresRefrigeration</td>
                         <td class="actions">
                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="@(() => Edit(j))">✏️</button>
                             <button class="btn btn-sm btn-outline-danger" @onclick="@(() => Delete(j))">🗑️</button>
@@ -47,8 +45,7 @@
     <div class="planner-tab-actions">
         <div class="actions-left">
             <button class="btn btn-sm btn-success me-1" @onclick="CreateJobsForAllCustomers">👥 Build</button>
-            <button class="btn btn-sm btn-success me-1" @onclick="AddNew">➕ Add</button>
-            <button class="btn btn-sm btn-primary me-1" @onclick="Save">Save Changes</button>
+            <button class="btn btn-sm btn-primary me-1" @onclick="Save">💾 Apply</button>
             <button class="btn btn-sm btn-outline-danger me-1" @onclick="Discard">🧹 Discard</button>
         </div>
         <div class="actions-right">
@@ -67,46 +64,29 @@
                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-2">
-                        <label class="form-label">Name</label>
-                        <input class="form-control" @bind="Editing.Name" />
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">Job Type</label>
-                        <select class="form-select" @bind="Editing.JobType">
-                            <option value="1">Delivery</option>
-                            <option value="2">Pickup</option>
-                        </select>
-                    </div>
-
                     <div class="row mb-2">
-                        <div class="col">
-                            <label class="form-label">Ready Time</label>
-                            <input class="form-control" type="number" @bind="Editing.ReadyTime" />
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">Name</span>
+                            <input type="text" @bind="Editing.Name" class="form-control" />
+                            <label class="input-group-text">Job Type</label>
+                            <select @bind="Editing.JobType" class="form-select">
+                                <option value="1">Delivery</option>
+                                <option value="2">Pickup</option>
+                            </select>
                         </div>
-                        <div class="col">
-                            <label class="form-label">Due Time</label>
-                            <input class="form-control" type="number" @bind="Editing.DueTime" />
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">Window</span>
+                            <input type="time" @bind="Editing.ReadyTime" class="form-control" aria-label="Start Time">
+                            <span class="input-group-text">to</span>
+                            <input type="time" @bind="Editing.DueTime" class="form-control" aria-label="End Time">
                         </div>
-                        <div class="col">
-                            <label class="form-label">Service</label>
-                            <input class="form-control" type="number" @bind="Editing.ServiceTimeMinutes" />
-                        </div>
-                    </div>
-
-                    <div class="row mb-2">
-                        <div class="col">
-                            <label class="form-label">Pallets</label>
-                            <input class="form-control" type="number" @bind="Editing.PalletDemand" />
-                        </div>
-                        <div class="col">
-                            <label class="form-label">Weight</label>
-                            <input class="form-control" type="number" @bind="Editing.WeightDemand" />
-                        </div>
-                        <div class="col">
-                            <label class="form-label">Refrigerated</label>
-                            <input class="form-control" type="checkbox" @bind="Editing.RequiresRefrigeration" />
+                        <div class="input-group mb-3">
+                            <span class="input-group-text">Stay</span>
+                            <input type="number" @bind="Editing.ServiceTimeMinutes" class="form-control" />
+                            <span class="input-group-text">Pallets</span>
+                            <input type="number" @bind="Editing.PalletDemand" class="form-control" />
+                            <span class="input-group-text">Weight</span>
+                            <input type="number" @bind="Editing.WeightDemand" class="form-control" />
                         </div>
                     </div>
                 </div>
@@ -155,8 +135,8 @@
             Longitude = 0,
             LocationId = Customers.First().LocationId,
             ServiceTimeMinutes = 30,
-            ReadyTime = 0,
-            DueTime = 480,
+            ReadyTime = DateTime.Today.AddHours(8).AddMinutes(30),
+            DueTime = DateTime.Today.AddHours(16).AddMinutes(30),
             PalletDemand = 1,
             WeightDemand = 50,
             RequiresRefrigeration = false
