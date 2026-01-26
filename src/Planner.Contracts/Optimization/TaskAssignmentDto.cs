@@ -11,5 +11,8 @@ public sealed record TaskAssignmentDto(
     double DepartureTime,
     long PalletLoad,
     long WeightLoad,
-    long RefrigeratedLoad
+    long RefrigeratedLoad,
+    string? JobName = null,
+    string? JobType = null,
+    string? CustomerName = null
 );
