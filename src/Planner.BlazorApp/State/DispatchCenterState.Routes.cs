@@ -15,7 +15,7 @@ public partial class DispatchCenterState : IRouteState
 
     public event Action OnRoutesChanged = delegate { };
 
-    public event Action<int> StartWait = delegate { };
+    public event Action<int> StartWaitingForSolve = delegate { };
 
     IReadOnlyList<MapRoute> IRouteState.MapRoutes => _mapRoutes;
 
@@ -88,16 +88,16 @@ public partial class DispatchCenterState : IRouteState
 
     public async Task SolveVrpAsync() {
         const string endpoint = "api/vrp/solve";
-        await api.GetAsync(endpoint);
+        var settings = await api.GetFromJsonAsync<OptimizationSummary>(endpoint);
 
+        if (settings?.SearchTimeLimitSeconds > 0) {
+            StartWaitingForSolve?.Invoke(settings.SearchTimeLimitSeconds);
+        }
 
-        //var settings = await api.GetFromJsonAsync<RouteSettings>(endpoint);
-
-        //if (settings?.SearchTimeLimitSeconds > 0) {
-        //    int waitMinutes = (settings.SearchTimeLimitSeconds + 59) / 60;
-        //    StartWait?.Invoke(waitMinutes);
-        //}
-
-        await api.GetFromJsonAsync<List<JobDto>>("/api/jobs");
+        var jobs = await api.GetFromJsonAsync<List<JobDto>>("/api/jobs");
+        if (jobs?.Count > 0) {
+            _jobs = jobs;
+            OnJobsChanged?.Invoke();
+        }
     }
 }

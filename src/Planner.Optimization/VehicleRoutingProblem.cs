@@ -97,7 +97,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         var locs = request.Stops;
         var distMatrix = request.DistanceMatrix;
         var travelMatrix = request.TravelTimeMatrix;
-        var settings = request.Settings;
+        var settings = request.Settings ?? new OptimizationSettings();
 
         // Capacity Dimensions
         AddCapacity(rt, mgr, locs, "Pallets", request.Vehicles.Select(v => v.MaxPallets), l => l.PalletDemand);

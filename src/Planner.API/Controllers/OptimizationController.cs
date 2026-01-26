@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.API.Services;
 using Planner.Application;
+using Planner.Contracts.Optimization;
 using Planner.Domain;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging;
@@ -30,7 +31,16 @@ public class OptimizationController(
             return BadRequest("No jobs or vehicles available for optimization.");
 
         await bus.PublishAsync(MessageRoutes.Request, request);
-        return Ok();
+
+        var summary = new OptimizationSummary(
+            request.TenantId,
+            request.OptimizationRunId,
+            request.Stops.Length,
+            request.Vehicles.Length,
+            request.RequestedAt,
+            request.Settings?.SearchTimeLimitSeconds ?? 60
+        );
+        return Ok(summary);
     }
 
     private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync() {

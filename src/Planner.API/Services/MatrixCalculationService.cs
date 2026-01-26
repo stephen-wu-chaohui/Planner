@@ -25,12 +25,14 @@ public interface IMatrixCalculationService {
 }
 
 public sealed class MatrixCalculationService : IMatrixCalculationService {
+    const double kmDegreeConstant = 111.32;   // Approximate conversion factor
+
     public (long[] DistanceMatrix, long[] TravelTimeMatrix) BuildMatrices(
         IReadOnlyList<Location> locations,
         OptimizationSettings settings,
         long timeScale = 1,
         long distanceScale = 1) {
-        
+
         int n = locations.Count;
         var dist = new long[n * n];
         var travel = new long[n * n];
@@ -41,11 +43,11 @@ public sealed class MatrixCalculationService : IMatrixCalculationService {
 
                 // Compute in double
                 double km =
-                    settings.KmDegreeConstant *
+                    kmDegreeConstant *
                     (Math.Abs(locations[i].Latitude - locations[j].Latitude)
                    + Math.Abs(locations[i].Longitude - locations[j].Longitude));
 
-                double minutes = km * settings.TravelTimeMultiplier;
+                double minutes = km / settings.KmPerMinute;
 
                 // Scale ONCE, store as long
                 dist[i * n + j] = (long)Math.Round(km * distanceScale);
