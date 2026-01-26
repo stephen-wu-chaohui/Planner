@@ -39,18 +39,6 @@
             <div class="progress mt-2" style="height: 10px;">
                 <div class="progress-bar" role="progressbar" style="width: @ProgressPercent%" aria-valuenow="@ProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
-
-            <div class="mt-3">
-                <div class="small text-muted mb-2">Jobs</div>
-                <div class="routes-job-grid">
-                    @for (var i = 0; i < TotalSeconds; i++) {
-                        var completed = i < CompletedJobs;
-                        <div class="routes-job-chip @(completed ? "done" : "")" title="Job @(i + 1)">
-                            @(i + 1)
-                        </div>
-                    }
-                </div>
-            </div>
         </div>
     }
 </div>

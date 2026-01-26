@@ -52,8 +52,8 @@ public partial class DispatchCenterState : IRouteState
                     if (TenantInfo != null && stop.LocationId == TenantInfo.MainDepot.Location.Id) {
                         // Depot stop
                         return new CustomerMarker {
-                            Lat = 0, // Depots can be handled differently if needed
-                            Lng = 0,
+                            Lat = TenantInfo.MainDepot.Location.Latitude,
+                            Lng = TenantInfo.MainDepot.Location.Longitude,
                             RouteName = vehicle.Name,
                             Arrival = stop.ArrivalTime / 60.0,
                             Departure = stop.DepartureTime / 60.0,
