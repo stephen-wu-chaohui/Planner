@@ -9,5 +9,6 @@ public sealed record RouteDto(
     IReadOnlyList<TaskAssignmentDto> Stops,
     double TotalMinutes,
     double TotalDistanceKm,
-    double TotalCost
+    double TotalCost,
+    string? VehicleName = null
 );

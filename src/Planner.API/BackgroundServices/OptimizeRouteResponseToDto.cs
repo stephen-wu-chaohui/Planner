@@ -20,7 +20,8 @@ static public class OptimizeRouteResponseToDto {
             route.Stops.Select(s => s.ToDto()).ToList(),
             route.TotalMinutes,
             route.TotalDistanceKm,
-            route.TotalCost);
+            route.TotalCost,
+            VehicleName: null);
     }
 
     public static TaskAssignmentDto ToDto(this TaskAssignment stop) {
@@ -30,7 +31,10 @@ static public class OptimizeRouteResponseToDto {
             stop.DepartureTime,
             stop.PalletLoad,
             stop.WeightLoad,
-            stop.RefrigeratedLoad
+            stop.RefrigeratedLoad,
+            JobName: null,
+            JobType: null,
+            CustomerName: null
         );
     }
 }

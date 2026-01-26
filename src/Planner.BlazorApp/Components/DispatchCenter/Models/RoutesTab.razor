@@ -30,7 +30,7 @@
                     <tbody>
                         @foreach (var r in Routes) {
                             <tr class="vehicle-row @(!r.Stops.Any() ? "text-muted" : "")">
-                                <td><strong>@r.VehicleId</strong></td>
+                                <td><strong>@(r.VehicleName ?? r.VehicleId.ToString())</strong></td>
                                 <td>@r.Stops.Count</td>
                                 <td>@($"{r.TotalDistanceKm:F1}")</td>
                                 <td>@($"{r.TotalMinutes:F0}")</td>
@@ -54,10 +54,10 @@
                                                     var s = r.Stops[i];
                                                     <tr>
                                                         <td>@(i + 1)</td>
-                                                        <td>@s.LocationId</td>
-                                                        <td>JobType</td>
-                                                        <td>@Readble(s.ArrivalTime)</td>
-                                                        <td>@Readble(s.DepartureTime)</td>
+                                                        <td>@(s.JobName ?? s.LocationId.ToString())</td>
+                                                        <td>@(s.JobType ?? "Unknown")</td>
+                                                        <td>@Readable(s.ArrivalTime)</td>
+                                                        <td>@Readable(s.DepartureTime)</td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -70,7 +70,7 @@
                 </table>
         </div>
         <button class="btn btn-outline-success" @onclick="BuildRoutes" disabled="@IsBuilding">
-            🧮 Re-Build routes
+            🧮 Clear routes
         </button>
     }
 
@@ -151,7 +151,7 @@
         _progressTimer = null;
     }
 
-    private string Readble(double minutesFromStart)
+    private string Readable(double minutesFromStart)
     {
         var startTime = new DateTime(2025, 1, 1, 8, 30, 0); // 8:30 AM
         var arrival = startTime.AddMinutes(minutesFromStart);

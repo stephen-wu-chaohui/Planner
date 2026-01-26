@@ -29,6 +29,7 @@ flowchart TD
         B1[REST + SignalR Hub]
         B2[Publishes optimization requests]
         B3[Receives solver results]
+        B4[RouteService publishes routing results]
     end
     subgraph Worker["⚙️ Planner.Optimization.Worker (.NET Background Service)"]
         C1[Consumes RabbitMQ queue]

@@ -1,4 +1,5 @@
-﻿using Planner.Application.Messaging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Planner.API.Services;
 using Planner.Messaging;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Outputs;
@@ -7,7 +8,7 @@ namespace Planner.API.BackgroundServices;
 
 public sealed class OptimizeRouteResultConsumer(
     IMessageBus bus,
-    IMessageHubPublisher hub,
+    IServiceScopeFactory scopeFactory,
     ILogger<OptimizeRouteResultConsumer> logger) : BackgroundService {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         logger.LogInformation("[OptimizeRouteResultConsumer] Starting.");
@@ -16,9 +17,9 @@ public sealed class OptimizeRouteResultConsumer(
             MessageRoutes.Response,
             async resp => {
                 try {
-                    await hub.PublishAsync(
-                        "RoutingResultDto",
-                        resp.ToDto());
+                    using var scope = scopeFactory.CreateScope();
+                    var routeService = scope.ServiceProvider.GetRequiredService<IRouteService>();
+                    await routeService.PublishAsync(resp.ToDto());
                 } catch (Exception ex) {
                     logger.LogError(ex,
                         "[OptimizeRouteResultConsumer] Error forwarding optimization result (RunId={RunId})",

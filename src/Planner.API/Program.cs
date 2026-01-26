@@ -46,6 +46,7 @@ builder.Services.AddControllers();
 
 // API Services
 builder.Services.AddScoped<Planner.API.Services.IMatrixCalculationService, Planner.API.Services.MatrixCalculationService>();
+builder.Services.AddScoped<Planner.API.Services.IRouteService, Planner.API.Services.RouteService>();
 
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
