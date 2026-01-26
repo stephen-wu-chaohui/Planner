@@ -24,7 +24,6 @@ public sealed class VehicleRoutingProblemInvalidInputTests {
         // Arrange
         var request = TestRequestFactory.CreateSimpleRequest();
 
-        var depotLocId = request.Vehicles[0].StartDepotLocationId;
         var job = request.Stops[0];
 
         var collidingJob = job;

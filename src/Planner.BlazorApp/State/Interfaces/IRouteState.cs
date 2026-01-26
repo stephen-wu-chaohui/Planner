@@ -8,7 +8,7 @@ public interface IRouteState : IDispatchStateProcessing
     IReadOnlyList<RouteDto> Routes { get; }
     IReadOnlyList<MapRoute> MapRoutes { get; }
     event Action OnRoutesChanged;
-    event Action<int> StartWait;
+    event Action<int> StartWaitingForSolve;
 
     Task SolveVrpAsync();
 }

@@ -67,4 +67,7 @@ h1:focus {
     color: #6c757d;
 }
 
-
+/* Resetting the border to nothing */
+.table > :not(:last-child) > :last-child > * {
+    border-bottom-color: #dee2e6; /* Standard Bootstrap gray */
+}
