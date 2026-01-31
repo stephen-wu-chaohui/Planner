@@ -11,17 +11,10 @@ public sealed class PlannerApiClient(
     {
         var client = httpClientFactory.CreateClient("PlannerApi");
 
-        // Always set/clear auth per request based on the *current* scoped TokenStore
-        if (!string.IsNullOrWhiteSpace(tokenStore.AccessToken) && !tokenStore.IsExpired())
-        {
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", tokenStore.AccessToken);
-        }
-        else
-        {
-            client.DefaultRequestHeaders.Authorization = null;
-        }
-
+        // With cookie-based authentication, we no longer need to manually set Authorization headers
+        // The HttpClient will automatically include cookies in requests
+        // Keep token store for backward compatibility and token inspection
+        
         return client;
     }
 

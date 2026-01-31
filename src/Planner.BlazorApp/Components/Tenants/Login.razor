@@ -41,11 +41,7 @@
                 <h2>You are logged in</h2>
                 <p class="login-status">Your session is active.</p>
 
-                @* Logout usually needs a form post too if you want to clear cookies securely *@
-                <form method="post" @onsubmit="DoLogout" action="auth/logout">
-                    <AntiforgeryToken />
-                    <button type="submit" class="logout-button">Logout</button>
-                </form>
+                <button type="button" class="logout-button" @onclick="DoLogout">Logout</button>
 
                 <button class="secondary-button" @onclick="NavigateToApp">
                     Go to Dispatch Center
@@ -86,6 +82,9 @@
             }
 
             var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+            
+            // Store token for compatibility (used for token inspection and SignalR)
+            // The HTTP-only cookie is set by the API and will be used for authentication
             TokenStore.Set(result!.AccessToken);
 
             Nav.NavigateTo("/dispatch-center");
@@ -96,7 +95,14 @@
         }
     }
 
-    private void DoLogout() {
+    private async Task DoLogout() {
+        try {
+            // Call the logout endpoint to clear the HTTP-only cookie
+            await ApiClient.PostAsJsonAsync("auth/logout", new { });
+        } catch {
+            // Even if the API call fails, clear local state
+        }
+        
         TokenStore.Clear();
         Nav.NavigateTo("/login", forceLoad: true);
     }

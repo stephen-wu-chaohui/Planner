@@ -69,9 +69,13 @@ Multi-tenancy is enforced across storage, API, and realtime updates:
 
 ## Authentication & authorization
 
-- **Auth**: JWT Bearer authentication (see `src/Planner.Infrastructure/ServiceRegistration.cs`).
+- **Auth**: HTTP-only cookie-based authentication with JWT tokens (BFF pattern)
 - **Roles**: role claim is `ClaimTypes.Role` and is used for policies.
 - **Admin policy**: `/api/vrp/solve` is protected by `AdminOnly` (see `src/Planner.API/Controllers/OptimizationController.cs`).
+- **Security**: Tokens stored in HTTP-only cookies inaccessible to JavaScript, providing protection against XSS attacks
+- **Session persistence**: Authentication persists across page refreshes and browser sessions (7-day expiration)
+
+For detailed information about the authentication architecture, see [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
 Demo note: `AuthController` currently uses a demo password check (plain-text comparison). For a real PaaS, replace this with a proper password hashing/identity implementation.
 
