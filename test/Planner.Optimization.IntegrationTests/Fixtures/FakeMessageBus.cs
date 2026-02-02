@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
-using Planner.Messaging.Messaging;
+using Planner.Application.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

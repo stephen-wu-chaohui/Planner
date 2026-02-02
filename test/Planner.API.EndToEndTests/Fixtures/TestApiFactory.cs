@@ -6,7 +6,7 @@ using Planner.Infrastructure.Persistence;
 using Planner.Application;
 using System;
 using Planner.Optimization;
-using Planner.Messaging.Messaging;
+using Planner.Application.Messaging;
 
 namespace Planner.API.EndToEndTests.Fixtures;
 
