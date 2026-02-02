@@ -5,7 +5,7 @@ using Planner.API.EndToEndTests.Fixtures;
 using Planner.Application;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging;
-using Planner.Messaging.Messaging;
+using Planner.Application.Messaging;
 using Planner.Messaging.Optimization.Inputs;
 using Planner.Testing;
 using System.Threading.Tasks;
@@ -43,7 +43,7 @@ public sealed class OptimizationControllerEndToEndTests {
 
         method.Should().NotBeNull();
 
-        var request = await (Task<OptimizeRouteRequest>) method!.Invoke(controller, null)!;
+        var request = await (Task<OptimizeRouteRequest>) method!.Invoke(controller, [null])!;
 
         request.Should().NotBeNull();
 

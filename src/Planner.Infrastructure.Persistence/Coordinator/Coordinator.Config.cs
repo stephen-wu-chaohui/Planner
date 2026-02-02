@@ -1,6 +1,6 @@
 using System.Xml.Serialization;
 
-namespace Planner.Infrastructure.Coordinator;
+namespace Planner.Infrastructure.Persistence.Coordinator;
 
 [XmlRoot("Coordinator")]
 public class CoordinatorConfig {

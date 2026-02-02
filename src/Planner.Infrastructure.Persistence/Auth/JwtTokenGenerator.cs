@@ -4,7 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Planner.Infrastructure.Auth;
+namespace Planner.Infrastructure.Persistence.Auth;
 
 public sealed class JwtTokenGenerator(IOptions<JwtOptions> options) : IJwtTokenGenerator {
     private readonly JwtOptions _options = options.Value;
@@ -15,8 +15,7 @@ public sealed class JwtTokenGenerator(IOptions<JwtOptions> options) : IJwtTokenG
         string role) {
         var claims = new List<Claim>
         {
-            // new(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new("sub", userId.ToString()),
+            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new("tenant_id", tenantId.ToString()),
             new(ClaimTypes.Role, role)
         };
@@ -36,12 +35,6 @@ public sealed class JwtTokenGenerator(IOptions<JwtOptions> options) : IJwtTokenG
             expires: DateTime.UtcNow.AddMinutes(_options.ExpirationInMinutes),
             signingCredentials: credentials);
 
-        //return new JwtSecurityTokenHandler().WriteToken(token);
-        try {
-            var s = new JwtSecurityTokenHandler().WriteToken(token);
-            return s.ToString();
-        } catch(Exception ex) {
-            return ex.Message;
-        }
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

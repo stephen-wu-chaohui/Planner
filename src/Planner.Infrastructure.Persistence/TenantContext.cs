@@ -1,4 +1,6 @@
-﻿namespace Planner.Application;
+﻿using Planner.Application;
+
+namespace Planner.Infrastructure.Persistence;
 
 public sealed class TenantContext : ITenantContext {
     private Guid? _tenantId;

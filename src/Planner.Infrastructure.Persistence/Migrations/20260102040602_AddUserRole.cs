@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Planner.Infrastructure.Migrations
+namespace Planner.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class AddUserRole : Migration

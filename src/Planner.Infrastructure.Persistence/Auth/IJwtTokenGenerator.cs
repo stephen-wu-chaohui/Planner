@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace Planner.Infrastructure.Auth;
+namespace Planner.Infrastructure.Persistence.Auth;
 
 public interface IJwtTokenGenerator {
     string GenerateToken(
