@@ -3,10 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Planner.Infrastructure.Persistence;
 using System.Text;
-using Planner.Infrastructure.Persistence.Auth;
+using Planner.Infrastructure.Auth;
 
-namespace Planner.Infrastructure.Persistence;
+namespace Planner.Infrastructure;
 
 public static class ServiceRegistration {
     public static IServiceCollection AddInfrastructure(

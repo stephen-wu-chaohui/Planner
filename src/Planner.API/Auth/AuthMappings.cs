@@ -1,6 +1,6 @@
 using Planner.Contracts.API.Auth;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence.Auth;
+using Planner.Infrastructure.Auth;
 
 namespace Planner.API.Auth;
 

@@ -2,8 +2,8 @@
 using Microsoft.Extensions.Hosting;
 using Planner.Messaging;
 using Planner.Optimization.Worker.Handlers;
-using Planner.Infrastructure.Messaging.RabbitMQ;
-using Planner.Application.Messaging;
+using Planner.Messaging.RabbitMQ;
+using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.Optimization.Worker.BackgroundServices;

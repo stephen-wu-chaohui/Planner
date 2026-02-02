@@ -10,8 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Planner.Application\Planner.Application.csproj" />
     <ProjectReference Include="..\Planner.Contracts\Planner.Contracts.csproj" />
-    <ProjectReference Include="..\Planner.Infrastructure.Persistence\Planner.Infrastructure.Persistence.csproj" />
-    <ProjectReference Include="..\Planner.Infrastructure.Messaging.RabbitMQ\Planner.Infrastructure.Messaging.RabbitMQ.csproj" />
+    <ProjectReference Include="..\Planner.Infrastructure\Planner.Infrastructure.csproj" />
     <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
   </ItemGroup>
 

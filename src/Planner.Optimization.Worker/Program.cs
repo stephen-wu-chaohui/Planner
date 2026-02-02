@@ -1,4 +1,4 @@
-﻿using Planner.Infrastructure.Messaging.RabbitMQ;
+﻿using Planner.Messaging.DependencyInjection;
 using Planner.Optimization.Worker.BackgroundServices;
 using Planner.Optimization.Worker.Handlers;
 using Microsoft.Extensions.Configuration;
@@ -26,7 +26,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 // Shared infrastructure
-builder.Services.AddRabbitMqMessaging();
+builder.Services.AddMessagingBus();
 
 // --- Optimization ---
 builder.Services.AddOptimization();

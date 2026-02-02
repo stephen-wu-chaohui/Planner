@@ -9,18 +9,18 @@ using Planner.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace Planner.Infrastructure.Persistence.Migrations
+namespace Planner.Infrastructure.Migrations
 {
     [DbContext(typeof(PlannerDbContext))]
-    [Migration("20251231095107_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260102040602_AddUserRole")]
+    partial class AddUserRole
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -252,6 +252,10 @@ namespace Planner.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Planner.Infrastructure.Persistence.Auth;
+namespace Planner.Infrastructure.Auth;
 
 public record JwtOptions {
     public const string SectionName = "JwtOptions";
