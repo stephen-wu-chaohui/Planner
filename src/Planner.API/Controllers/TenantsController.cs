@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Planner.Application;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure.Persistence.Persistence;
 
 namespace Planner.API.Controllers;
 

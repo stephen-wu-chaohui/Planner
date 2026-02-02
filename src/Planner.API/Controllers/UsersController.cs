@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure.Persistence.Persistence;
 using System.Diagnostics;
 
 namespace Planner.Api.Controllers;

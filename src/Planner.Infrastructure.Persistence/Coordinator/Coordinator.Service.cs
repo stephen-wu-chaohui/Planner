@@ -3,10 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure.Persistence.Persistence;
 using System.Xml.Serialization;
 
-namespace Planner.Infrastructure.Coordinator;
+namespace Planner.Infrastructure.Persistence.Coordinator;
 
 public class CoordinatorService(ILogger<CoordinatorService> logger, IServiceProvider services) : BackgroundService {
     private readonly ILogger<CoordinatorService> _logger = logger;

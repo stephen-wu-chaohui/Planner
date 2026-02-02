@@ -4,10 +4,10 @@ using Planner.API.BackgroundServices;
 using Planner.API.Middleware;
 using Planner.API.SignalR;
 using Planner.Application;
-using Planner.Infrastructure;
-using Planner.Infrastructure.Auth;
-using Planner.Infrastructure.Coordinator;
-using Planner.Messaging.DependencyInjection;
+using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure.Persistence.Auth;
+using Planner.Infrastructure.Persistence.Coordinator;
+using Planner.Infrastructure.Messaging.RabbitMQ;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +56,7 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // Messaging & SignalR
-builder.Services.AddMessagingBus();
+builder.Services.AddRabbitMqMessaging();
 builder.Services.AddRealtime(builder.Configuration);
 
 // Background consumers / coordinators

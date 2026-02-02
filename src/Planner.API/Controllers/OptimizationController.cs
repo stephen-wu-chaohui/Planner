@@ -5,9 +5,9 @@ using Planner.API.Services;
 using Planner.Application;
 using Planner.Contracts.Optimization;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence;
-using Planner.Messaging;
-using Planner.Messaging.Messaging;
+using Planner.Infrastructure.Persistence.Persistence;
+using Planner.Application.Messaging;
+using Planner.Application.Messaging;
 using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.Controllers;

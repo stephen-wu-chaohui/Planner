@@ -4,7 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Planner.Infrastructure.Auth;
+namespace Planner.Infrastructure.Persistence.Auth;
 
 public sealed class JwtTokenGenerator(IOptions<JwtOptions> options) : IJwtTokenGenerator {
     private readonly JwtOptions _options = options.Value;
