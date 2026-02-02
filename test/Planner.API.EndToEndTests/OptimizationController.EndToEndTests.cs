@@ -43,7 +43,7 @@ public sealed class OptimizationControllerEndToEndTests {
 
         method.Should().NotBeNull();
 
-        var request = await (Task<OptimizeRouteRequest>) method!.Invoke(controller, null)!;
+        var request = await (Task<OptimizeRouteRequest>) method!.Invoke(controller, [null])!;
 
         request.Should().NotBeNull();
 
