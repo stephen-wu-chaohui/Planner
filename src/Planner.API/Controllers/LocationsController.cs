@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
-using Planner.Infrastructure.Persistence.Persistence;
+using Planner.Infrastructure.Persistence;
 
 namespace Planner.API.Controllers;
 

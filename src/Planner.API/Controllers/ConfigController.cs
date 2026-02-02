@@ -5,7 +5,7 @@ using Planner.API.Mappings;
 using Planner.Application;
 using Planner.Contracts.API;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence.Persistence;
+using Planner.Infrastructure.Persistence;
 
 namespace Planner.API.Controllers;
 

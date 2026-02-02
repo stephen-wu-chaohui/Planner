@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Services;
 using Planner.Application.Messaging;
-using Planner.Application.Messaging;
+using Planner.Messaging;
 using Planner.Messaging.Optimization.Outputs;
 
 namespace Planner.API.BackgroundServices;

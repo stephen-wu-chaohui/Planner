@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence.Persistence;
 using System.Xml.Serialization;
 
 namespace Planner.Infrastructure.Persistence.Coordinator;

@@ -2,7 +2,7 @@
 using Planner.Application;
 using Planner.Application.Messaging;
 using Planner.Contracts.Optimization;
-using Planner.Infrastructure.Persistence.Persistence;
+using Planner.Infrastructure.Persistence;
 
 namespace Planner.API.Services;
 

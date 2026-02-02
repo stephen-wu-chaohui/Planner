@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Planner.Infrastructure.Persistence.Persistence;
 using System.Text;
 using Planner.Infrastructure.Persistence.Auth;
 

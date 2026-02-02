@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Planner.Application.Messaging;
 using Planner.Contracts.Optimization;
-using Planner.Application.Messaging;
+using Planner.Messaging;
 
 namespace Planner.API.SignalR;
 
