@@ -36,6 +36,9 @@ services:
       - JwtOptions__Secret=p7Q$2mK#v9WzLx!5nR8bYcE@1tGj4sH6uV9X
       - JwtOptions__SigningKey=m3N&8vP*1qRzTw$9bLxcY!2sDk5fJ7gH4uV0
       - JwtOptions__ExpirationInMinutes=60
+      - TwilioSms__AccountSid=${TWILIO_ACCOUNT_SID:-}
+      - TwilioSms__AuthToken=${TWILIO_AUTH_TOKEN:-}
+      - TwilioSms__FromPhoneNumber=${TWILIO_FROM_PHONE_NUMBER:-}
  
   planner-optimization-worker:
     build:

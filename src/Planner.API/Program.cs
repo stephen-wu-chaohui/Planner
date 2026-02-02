@@ -7,6 +7,7 @@ using Planner.Application;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Auth;
 using Planner.Infrastructure.Coordinator;
+using Planner.Infrastructure.TwilioSmsService;
 using Planner.Messaging.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +51,8 @@ builder.Services.AddScoped<Planner.API.Services.IRouteService, Planner.API.Servi
 
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
+// SMS Service
+builder.Services.AddTwilioSmsService(builder.Configuration);
 // Auth
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddJwtAuthentication(builder.Configuration);
