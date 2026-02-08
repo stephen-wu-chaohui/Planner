@@ -53,3 +53,18 @@ services:
       - SignalR__Server=http://localhost:7085
       - SignalR__Client=http://localhost:7014
       - SignalR__Route=/hubs/planner
+
+  planner-ai-worker:
+    build:
+      context: src/Planner.AI
+      dockerfile: Dockerfile
+    depends_on:
+      - planner-api
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=gemini-2.0-flash-exp
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/firebase-credentials.json
+    volumes:
+      # Mount Firebase credentials from host
+      # Set the path in your .env file or environment variable
+      - ${FIREBASE_CREDENTIALS_PATH:-./firebase-credentials.json}:/app/credentials/firebase-credentials.json:ro

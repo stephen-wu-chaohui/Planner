@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# Firebase credentials (sensitive)
+*firebase-credentials.json
+*-firebase-adminsdk-*.json
+
 # User-specific files
 *.rsuser
 *.suo
