@@ -37,6 +37,7 @@ builder.Services.AddScoped<PlannerApiClient>();
 
 // App services
 builder.Services.AddScoped<IOptimizationHubClient, OptimizationHubClient>();
+builder.Services.AddScoped<IRouteInsightsListenerService, RouteInsightsListenerService>();
 
 builder.Services.AddScoped<DispatchCenterState>();
 builder.Services.AddScoped<ITenantState>(sp => sp.GetRequiredService<DispatchCenterState>());
