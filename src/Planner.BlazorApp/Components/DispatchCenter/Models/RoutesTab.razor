@@ -2,10 +2,12 @@
 @using Planner.BlazorApp.Services
 @using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.Optimization
+@using Planner.BlazorApp.State
 
 @inject IJobState JobState
 @inject IVehicleState VehicleState
 @inject IRouteState RouteState
+@inject DispatchCenterState DispatchState
 
 <div class="planner-tab-wrapper">
 @if (Routes is null || Routes!.Count == 0) {
@@ -139,6 +141,11 @@ else {
                     <small><strong>Optimization completed:</strong> @RouteState.LastOptimizationSummary.Text</small>
                 </div>
             }
+            @if (DispatchState.LatestInsight != null) {
+                <button class="btn btn-outline-primary" @onclick="ShowInsightsModal">
+                    🤖 AI Insights
+                </button>
+            }
             <button class="btn btn-outline-danger ms-auto" @onclick="ResetRoutes">
                 🔄 Reset
             </button>
@@ -147,11 +154,16 @@ else {
 
 </div>
 
+<RouteInsightsModal Insight="@DispatchState.LatestInsight" 
+                    IsVisible="@_showInsightsModal" 
+                    OnClose="@CloseInsightsModal" />
+
 @code {
     [Parameter] public int TickSeconds { get; set; } = 1;
 
     private IReadOnlyList<RouteDto>? Routes;
     private Dictionary<long, bool> _expandedRoutes = new();
+    private bool _showInsightsModal = false;
 
     private System.Threading.Timer? _progressTimer;
     private bool _isBuilding;
@@ -176,6 +188,7 @@ else {
         Routes = RouteState.Routes;
         RouteState.OnRoutesChanged += HandleRoutesChanged;
         RouteState.StartWaitingForSolve += StartProgress;
+        DispatchState.OnNewInsightReceived += HandleNewInsight;
     }
 
     public void Dispose()
@@ -183,6 +196,7 @@ else {
         StopProgress();
         RouteState.OnRoutesChanged -= HandleRoutesChanged;
         RouteState.StartWaitingForSolve -= StartProgress;
+        DispatchState.OnNewInsightReceived -= HandleNewInsight;
     }
 
     // Fix: Implement the missing handler for RouteState.OnRoutesChanged
@@ -248,5 +262,22 @@ else {
     private bool IsRouteExpanded(long vehicleId)
     {
         return _expandedRoutes.TryGetValue(vehicleId, out var expanded) && expanded;
+    }
+
+    private void HandleNewInsight()
+    {
+        // Automatically show modal when new insight arrives
+        _showInsightsModal = true;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ShowInsightsModal()
+    {
+        _showInsightsModal = true;
+    }
+
+    private void CloseInsightsModal()
+    {
+        _showInsightsModal = false;
     }
 }

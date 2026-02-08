@@ -1,0 +1,56 @@
+@using Markdig
+@using Planner.BlazorApp.Services
+
+@if (Insight != null && IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1"
+         style="background-color:rgba(0,0,0,.5); z-index:1060;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🤖 AI Route Insights</h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="insights-container">
+                        @((MarkupString)RenderMarkdown(Insight.Analysis))
+                    </div>
+                    <div class="insights-meta text-muted small mt-3">
+                        <span>Generated at: @Insight.Timestamp.ToLocalTime().ToString("g")</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public RouteInsight? Insight { get; set; }
+
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private void Close()
+    {
+        OnClose.InvokeAsync();
+    }
+
+    private string RenderMarkdown(string markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+            return "<p>No analysis available.</p>";
+
+        var pipeline = new MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .Build();
+
+        return Markdown.ToHtml(markdown, pipeline);
+    }
+}
