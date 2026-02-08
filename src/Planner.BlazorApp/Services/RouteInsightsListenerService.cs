@@ -57,11 +57,21 @@ public sealed class RouteInsightsListenerService : IRouteInsightsListenerService
             // Set credentials if path is provided
             if (!string.IsNullOrEmpty(credentialsPath) && File.Exists(credentialsPath))
             {
-                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath);
-                _logger.LogInformation("Firestore credentials loaded for Blazor");
+                // Use FirestoreDbBuilder to avoid setting process-wide environment variables
+                var builder = new FirestoreDbBuilder
+                {
+                    ProjectId = projectId,
+                    JsonCredentials = File.ReadAllText(credentialsPath)
+                };
+                _db = builder.Build();
+                _logger.LogInformation("Firestore listener initialized with credentials from file");
             }
-
-            _db = FirestoreDb.Create(projectId);
+            else
+            {
+                // Use default credentials
+                _db = FirestoreDb.Create(projectId);
+                _logger.LogInformation("Firestore listener initialized with default credentials");
+            }
             _isEnabled = true;
             _logger.LogInformation("Firestore listener initialized for route insights");
         }

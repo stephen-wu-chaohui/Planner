@@ -47,8 +47,10 @@
         if (string.IsNullOrWhiteSpace(markdown))
             return "<p>No analysis available.</p>";
 
+        // Build pipeline with advanced extensions but disable HTML
         var pipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
+            .DisableHtml() // Prevent raw HTML from being rendered
             .Build();
 
         return Markdown.ToHtml(markdown, pipeline);

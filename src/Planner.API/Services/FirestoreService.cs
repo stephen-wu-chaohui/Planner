@@ -40,11 +40,21 @@ public sealed class FirestoreService : IFirestoreService
             // Set credentials if path is provided
             if (!string.IsNullOrEmpty(credentialsPath) && File.Exists(credentialsPath))
             {
-                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath);
-                _logger.LogInformation("Firestore credentials loaded from: {Path}", credentialsPath);
+                // Use FirestoreDbBuilder to avoid setting process-wide environment variables
+                var builder = new FirestoreDbBuilder
+                {
+                    ProjectId = projectId,
+                    JsonCredentials = File.ReadAllText(credentialsPath)
+                };
+                _db = builder.Build();
+                _logger.LogInformation("Firestore initialized with credentials from: {Path}", credentialsPath);
             }
-
-            _db = FirestoreDb.Create(projectId);
+            else
+            {
+                // Use default credentials
+                _db = FirestoreDb.Create(projectId);
+                _logger.LogInformation("Firestore initialized with default credentials for project: {ProjectId}", projectId);
+            }
             _isEnabled = true;
             _logger.LogInformation("Firestore initialized for project: {ProjectId}", projectId);
         }
