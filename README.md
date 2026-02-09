@@ -204,10 +204,10 @@ Typical URLs (from current launch profiles):
 ### Demo login
 
 The Blazor login page (`/login`) is pre-filled with a seeded demo admin:
-- Email: `perth.admin@demo.local`
+- Email: `christchurch.admin@demo.local`
 - Password: `admin123`
 
-Other demo tenants: `sydney`, `melbourne`, `taipei`, `auckland`, `christchurch` (replace the prefix in the email).
+Other demo tenants: `sydney`, `melbourne`, `taipei`, `auckland`, `perth` (replace the prefix in the email).
 
 ## CI/CD (GitHub Actions)
 
