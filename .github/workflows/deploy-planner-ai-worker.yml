@@ -1,0 +1,43 @@
+﻿name: Deploy Planner.AI to DigitalOcean
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p ~/planner-ai
+            cd ~/planner-ai
+            
+            # Update the source code
+            if [ -d ".git" ]; then
+              git pull origin main
+            else
+              git clone https://github.com/${{ github.repository }} .
+            fi
+
+            # Build the image using the Dockerfile you shared
+            docker build -t planner-ai-worker .
+
+            # Restart the container
+            docker stop planner-ai-worker || true
+            docker rm planner-ai-worker || true
+            
+            # Run with environment variables from the Droplet's local .env
+            docker run -d \
+              --name planner-ai-worker \
+              --restart always \
+              --env-file .env \
+              planner-ai-worker
