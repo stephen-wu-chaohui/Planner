@@ -18,26 +18,35 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # 1. Ensure the directory exists
             mkdir -p ~/planner-ai
             cd ~/planner-ai
-            
-            # Update the source code
+
+            # 2. Handle the Git logic more robustly
             if [ -d ".git" ]; then
-              git pull origin main
+                git fetch origin main
+                git reset --hard origin/main
             else
-              git clone https://github.com/${{ github.repository }} .
+                # If the folder has files but isn't a git repo, clean it first
+                rm -rf * git clone https://github.com/stephen-wu-chaohui/Planner .
             fi
 
-            # Build the image using the Dockerfile you shared
+            # 3. MOVE TO THE SUBDIRECTORY
+            # This is where your Dockerfile and worker script are located
+            cd src/Planner.AI
+
+            # 4. Build the image
+            # Now that we are in the same folder as the Dockerfile, this will work
             docker build -t planner-ai-worker .
 
-            # Restart the container
+            # 5. Restart the container
             docker stop planner-ai-worker || true
             docker rm planner-ai-worker || true
-            
-            # Run with environment variables from the Droplet's local .env
+
+            # 6. Run the worker
+            # We use '../../.env' because the .env file is likely at the root ~/planner-ai/
             docker run -d \
-              --name planner-ai-worker \
-              --restart always \
-              --env-file .env \
-              planner-ai-worker
+                --name planner-ai-worker \
+                --restart always \
+                --env-file ../../.env \
+                planner-ai-worker
