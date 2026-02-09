@@ -42,15 +42,19 @@ public sealed class RouteEnrichmentService(PlannerDbContext db) : IRouteEnrichme
             .ToList();
 
         // Perform database queries
-        var vehicles = await db.Vehicles
-            .Where(v => vehicleIds.Contains(v.Id))
-            .Select(v => new { v.Id, v.Name })
-            .ToListAsync();
+        var vehicles = vehicleIds.Any()
+            ? await db.Vehicles
+                .Where(v => vehicleIds.Contains(v.Id))
+                .Select(v => new { v.Id, v.Name })
+                .ToListAsync()
+            : [];
 
-        var jobs = await db.Jobs
-            .Where(j => locationIds.Contains(j.LocationId))
-            .Select(j => new { j.LocationId, j.Name, j.JobType, j.CustomerId })
-            .ToListAsync();
+        var jobs = locationIds.Any()
+            ? await db.Jobs
+                .Where(j => locationIds.Contains(j.LocationId))
+                .Select(j => new { j.LocationId, j.Name, j.JobType, j.CustomerId })
+                .ToListAsync()
+            : [];
 
         var customerIds = jobs.Select(j => j.CustomerId).Distinct().ToList();
         var customers = customerIds.Any()
@@ -62,6 +66,7 @@ public sealed class RouteEnrichmentService(PlannerDbContext db) : IRouteEnrichme
 
         // Create lookup dictionaries
         var vehicleLookup = vehicles.ToDictionary(v => v.Id, v => v.Name);
+        // LocationId is the primary key for jobs, ensuring uniqueness
         var jobLookup = jobs.ToDictionary(j => j.LocationId, j => j);
         var customerLookup = customers.ToDictionary(c => c.CustomerId, c => c.Name);
 
