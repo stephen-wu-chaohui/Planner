@@ -149,7 +149,7 @@ jobs:
                 JwtOptions__Secret="${JWT_SECRET}"            \
                 JwtOptions__ExpirationInMinutes="${EXPIRATION_IN_MINUTES}"  \
                 Firestore__ProjectId="${FIRESTORE_PROJECTID}"      \
-                FIREBASE_CONFIG_JSON=""${FIREBASE_CONFIG_JSON}"     \
+                FIREBASE_CONFIG_JSON="${FIREBASE_CONFIG_JSON}"     \
                 GOOGLE_API_KEY="${GOOGLE_API_KEY}"        \
                 GEMINI_API_KEY="${GEMINI_API_KEY}"          \
                 GEMINI_MODEL="${GEMINI_MODEL}"
