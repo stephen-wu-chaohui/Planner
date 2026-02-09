@@ -27,6 +27,7 @@ jobs:
                 git init
                 git remote add origin https://github.com/stephen-wu-chaohui/Planner
                 git config core.sparseCheckout true
+                echo "src/Planner.AI" >> .git/info/sparse-checkout
                 echo "src/Planner.AI/*" >> .git/info/sparse-checkout
             fi
 

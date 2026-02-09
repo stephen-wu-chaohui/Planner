@@ -1,0 +1,11 @@
+# --- Firebase & Auth ---
+# We loosen these to let pip find a version that satisfies google-genai
+firebase-admin>=6.5.0
+python-dotenv==1.0.1
+
+# --- Google Generative AI (New Unified SDK) ---
+# This package forces google-auth to be >= 2.47.0
+google-genai==1.62.0
+
+# --- Optional: Cloud Storage ---
+google-cloud-storage>=2.14.0
