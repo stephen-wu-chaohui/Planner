@@ -1,0 +1,44 @@
+﻿@using Markdig
+@using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State.Interfaces
+
+@inject IInsightState InsightState
+
+<div class="planner-tab-wrapper">
+    @if (InsightState.LatestInsight != null)
+    {
+        <div class="p-3">
+            <div class="insights-container">
+                @((MarkupString)RenderMarkdown(InsightState.LatestInsight.Analysis))
+            </div>
+            <div class="insights-meta text-muted small mt-3">
+                <span>Generated at: @InsightState.LatestInsight.Timestamp.ToLocalTime().ToString("g")</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="p-3">
+            <div class="alert alert-info">
+                <div class="fw-bold mb-1">No AI insights available yet.</div>
+                <p class="mb-0 mt-2">AI insights will appear here after route optimization is completed and analyzed.</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string RenderMarkdown(string markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+            return "<p>No analysis available.</p>";
+
+        // Build pipeline with advanced extensions but disable HTML
+        var pipeline = new MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .DisableHtml() // Prevent raw HTML from being rendered
+            .Build();
+
+        return Markdown.ToHtml(markdown, pipeline);
+    }
+}

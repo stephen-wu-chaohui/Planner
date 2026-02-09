@@ -45,6 +45,8 @@ builder.Services.AddScoped<IVehicleState>(sp => sp.GetRequiredService<DispatchCe
 builder.Services.AddScoped<ICustomerState>(sp => sp.GetRequiredService<DispatchCenterState>());
 builder.Services.AddScoped<IJobState>(sp => sp.GetRequiredService<DispatchCenterState>());
 builder.Services.AddScoped<IRouteState>(sp => sp.GetRequiredService<DispatchCenterState>());
+builder.Services.AddScoped<IInsightState>(sp => sp.GetRequiredService<DispatchCenterState>());
+
 
 builder.Services.AddScoped<WizardService>();
 

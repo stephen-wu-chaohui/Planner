@@ -1,8 +1,9 @@
-using Planner.BlazorApp.Services;
+﻿using Planner.BlazorApp.Services;
+using Planner.BlazorApp.State.Interfaces;
 
 namespace Planner.BlazorApp.State;
 
-public partial class DispatchCenterState
+public partial class DispatchCenterState : IInsightState
 {
     private RouteInsight? _latestInsight;
     
@@ -34,9 +35,10 @@ public partial class DispatchCenterState
     /// <summary>
     /// Clears the current insight.
     /// </summary>
-    public void ClearInsight()
+    public async Task ClearInsightAsync()
     {
         _latestInsight = null;
         OnInsightsChanged?.Invoke();
     }
 }
+
