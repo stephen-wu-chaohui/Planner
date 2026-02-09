@@ -25,7 +25,7 @@ env:
   AZURE_CONTAINER_APP_NAME: ${{ secrets.AZURE_API_CONTAINER_APP_NAME }} # e.g. planner-api
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_CONTAINERAPPS_ENVIRONMENT: ${{ secrets.AZURE_CONTAINERAPPS_ENVIRONMENT }}
-  Firestore__ProjectId: ${{ secrets.FIRESTORE_PROJECTID }}
+  FIRESTORE_PROJECTID: ${{ secrets.FIRESTORE_PROJECTID }}
   FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
   GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -147,7 +147,14 @@ jobs:
                 JwtOptions__Audience="${JWT_AUDIENCE}"    \
                 JwtOptions__SigningKey="${JWT_SIGNING_KEY}"   \
                 JwtOptions__Secret="${JWT_SECRET}"            \
-                JwtOptions__ExpirationInMinutes="${EXPIRATION_IN_MINUTES}"
+                JwtOptions__ExpirationInMinutes="${EXPIRATION_IN_MINUTES}"  \
+                Firestore__ProjectId="${FIRESTORE_PROJECTID}"      \
+                FIREBASE_CONFIG_JSON=""${FIREBASE_CONFIG_JSON}"     \
+                GOOGLE_API_KEY="${GOOGLE_API_KEY}"        \
+                GEMINI_API_KEY="${GEMINI_API_KEY}"          \
+                GEMINI_MODEL="${GEMINI_MODEL}"
+
+
 
 
 
