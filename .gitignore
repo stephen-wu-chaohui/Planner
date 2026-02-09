@@ -507,3 +507,4 @@ $RECYCLE.BIN/
 *.txt
 /tools/Planner.Tools.DbMigrator/Properties/launchSettings.json
 /src/Credentials
+/docker-compose.yml
