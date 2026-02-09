@@ -1,4 +1,4 @@
-using Google.Cloud.Firestore;
+﻿using Google.Cloud.Firestore;
 
 namespace Planner.BlazorApp.Services;
 
@@ -42,42 +42,34 @@ public sealed class RouteInsightsListenerService : IRouteInsightsListenerService
         _logger = logger;
         
         var projectId = configuration["Firestore:ProjectId"];
-        var credentialsPath = configuration["Firestore:CredentialsPath"];
-        
+        // Look for the raw JSON string in environment variables
+        var base64Json = configuration["FIREBASE_CONFIG_JSON"];
+
         // Firestore is optional - if not configured, service is disabled
-        if (string.IsNullOrEmpty(projectId))
-        {
-            _logger.LogInformation("Firestore not configured. Route insights features disabled.");
+        if (string.IsNullOrEmpty(base64Json)) {
+            _logger.LogInformation("Firestore not configured (missing FIREBASE_CONFIG_JSON). AI analysis features disabled.");
             _isEnabled = false;
             return;
         }
 
-        try
-        {
-            // Set credentials if path is provided
-            if (!string.IsNullOrEmpty(credentialsPath) && File.Exists(credentialsPath))
-            {
-                // Use FirestoreDbBuilder to avoid setting process-wide environment variables
-                var builder = new FirestoreDbBuilder
-                {
-                    ProjectId = projectId,
-                    JsonCredentials = File.ReadAllText(credentialsPath)
-                };
-                _db = builder.Build();
-                _logger.LogInformation("Firestore listener initialized with credentials from file");
+        try {
+            // Use FirestoreDbBuilder to avoid setting process-wide environment variables
+            string finalJson;
+            if (!base64Json.Trim().StartsWith("{")) {
+                var data = Convert.FromBase64String(base64Json);
+                finalJson = System.Text.Encoding.UTF8.GetString(data);
+            } else {
+                finalJson = base64Json;
             }
-            else
-            {
-                // Use default credentials
-                _db = FirestoreDb.Create(projectId);
-                _logger.LogInformation("Firestore listener initialized with default credentials");
-            }
+            var builder = new FirestoreDbBuilder {
+                ProjectId = projectId,
+                JsonCredentials = finalJson
+            };
+            _db = builder.Build();
             _isEnabled = true;
             _logger.LogInformation("Firestore listener initialized for route insights");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize Firestore listener");
+        } catch (Exception ex) {
+            _logger.LogError(ex, "Failed to initialize Firestore listener.");
             _isEnabled = false;
         }
     }

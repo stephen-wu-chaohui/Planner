@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Planner.AI Worker - Route Insights Analysis
 ============================================
@@ -12,10 +12,16 @@ The Blazor application listens to 'route_insights' and displays the analysis to 
 import os
 import sys
 import time
+import base64
+from dotenv import load_dotenv # Only needed for local testing
 import json
 import logging
 from datetime import datetime
 from typing import Dict, Any
+
+
+# Load local .env file if it exists (useful for local development)
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -28,7 +34,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 try:
-    import google.generativeai as genai
     import firebase_admin
     from firebase_admin import credentials, firestore
 except ImportError as e:
@@ -57,18 +62,33 @@ class PlannerAIWorker:
                 logger.info("Firebase already initialized")
             except ValueError:
                 # Initialize Firebase Admin SDK
-                # Support both service account file and default credentials
-                credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+                # Get the config from environment variable
+                firebase_config_raw = os.environ.get('FIREBASE_CONFIG_JSON')
                 
-                if credentials_path and os.path.exists(credentials_path):
-                    cred = credentials.Certificate(credentials_path)
+                if not firebase_config_raw:
+                    logger.error("FIREBASE_CONFIG_JSON environment variable not set.")
+                    return
+                
+                try:
+                    # 1. Determine if the string is Base64 or Raw JSON
+                    if not firebase_config_raw.strip().startswith('{'):
+                        # It's Base64, so decode it
+                        print("Decoding Firebase config from Base64...")
+                        decoded_bytes = base64.b64decode(firebase_config_raw)
+                        config_dict = json.loads(decoded_bytes.decode('utf-8'))
+                    else:
+                        # It's raw JSON string
+                        print("Parsing raw Firebase JSON string...")
+                        config_dict = json.loads(firebase_config_raw)
+
+                    # 2. Initialize the SDK using the dictionary
+                    cred = credentials.Certificate(config_dict)
                     firebase_admin.initialize_app(cred)
-                    logger.info(f"Firebase initialized with credentials from {credentials_path}")
-                else:
-                    # Use default credentials (useful in GCP environments)
-                    firebase_admin.initialize_app()
-                    logger.info("Firebase initialized with default credentials")
-            
+                    print("Firebase Admin SDK initialized successfully.")
+        
+                except Exception as e:
+                    print(f"Failed to initialize Firebase: {e}")
+                    
             # Get Firestore client
             self.db = firestore.client()
             logger.info("Firestore client initialized")
@@ -80,18 +100,17 @@ class PlannerAIWorker:
     def _initialize_gemini(self):
         """Initialize Google Gemini AI model."""
         try:
-            api_key = os.getenv('GEMINI_API_KEY')
-            if not api_key:
-                raise ValueError("GEMINI_API_KEY environment variable not set")
-            
             # Configure the Gemini API
-            genai.configure(api_key=api_key)
-            
+            from google import genai
+            self.client = genai.Client() # It will automatically use the GEMINI_API_KEY from environment variables
             # Initialize the model (gemini-2.0-flash-exp or gemini-2.0-flash)
-            model_name = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-exp')
-            self.model = genai.GenerativeModel(model_name)
-            
-            logger.info(f"Gemini AI model '{model_name}' initialized")
+            self.model_name = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+            response = self.client.models.generate_content(
+                model=self.model_name, 
+                contents="Hello world"
+            )
+            response.text  # Just to confirm the model is working
+            logger.info(f"Gemini AI model '{self.model_name}' initialized")
             
         except Exception as e:
             logger.error(f"Failed to initialize Gemini: {e}")
@@ -129,7 +148,10 @@ Format your response in markdown with clear sections."""
         """
         try:
             prompt = self._construct_analysis_prompt(json_payload)
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             return response.text
             
         except Exception as e:

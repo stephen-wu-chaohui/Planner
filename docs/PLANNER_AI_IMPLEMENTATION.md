@@ -1,4 +1,4 @@
-# Planner.AI Integration - Implementation Summary
+﻿# Planner.AI Integration - Implementation Summary
 
 ## Overview
 This document summarizes the implementation of the AI-powered route insights feature for the Planner application.
@@ -85,7 +85,7 @@ February 8, 2026
 ```json
 "Firestore": {
   "ProjectId": "your-firebase-project-id",
-  "CredentialsPath": "/path/to/firebase-credentials.json"
+  "FIREBASE_CONFIG_JSON": "...."
 }
 ```
 
@@ -93,7 +93,7 @@ February 8, 2026
 ```bash
 GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-2.0-flash-exp  # Optional
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/firebase-credentials.json
+FIREBASE_CONFIG_JSON={ ... }
 ```
 
 ### Graceful Degradation

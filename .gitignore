@@ -506,3 +506,4 @@ $RECYCLE.BIN/
 *.ps1
 *.txt
 /tools/Planner.Tools.DbMigrator/Properties/launchSettings.json
+/src/Credentials

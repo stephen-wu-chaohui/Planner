@@ -1,4 +1,4 @@
-# Planner.AI Worker
+﻿# Planner.AI Worker
 
 This Python worker analyzes vehicle route optimization results using Google Gemini AI and publishes insights to Firestore for consumption by the Blazor application.
 
@@ -16,10 +16,10 @@ The Planner.AI worker is part of a distributed system that processes route optim
 ┌─────────────┐     SignalR      ┌──────────────┐
 │ Planner.API ├─────────────────>│ Blazor App   │
 └──────┬──────┘                  └──────▲───────┘
-       │                                 │
-       │ Firestore Write                 │ Firestore Listen
-       │ (pending_analysis)              │ (route_insights)
-       ▼                                 │
+       │                                │
+       │ Firestore Write                │ Firestore Listen
+       │ (pending_analysis)             │ (route_insights)
+       ▼                                │
 ┌──────────────┐                  ┌─────┴────────┐
 │  Firestore   │<────────────────>│ Planner.AI   │
 │              │   Listen & Write │ Worker       │
@@ -107,7 +107,7 @@ sudo systemctl start planner-ai-worker
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | Yes | - | Google Gemini API key |
-| `GEMINI_MODEL` | No | `gemini-2.0-flash-exp` | Gemini model to use |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model to use |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Yes | - | Path to Firebase service account JSON |
 
 ### Firestore Collections
