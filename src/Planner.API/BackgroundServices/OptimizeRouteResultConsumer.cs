@@ -18,8 +18,11 @@ public sealed class OptimizeRouteResultConsumer(
             async resp => {
                 try {
                     using var scope = scopeFactory.CreateScope();
+                    var enrichmentService = scope.ServiceProvider.GetRequiredService<IRouteEnrichmentService>();
                     var routeService = scope.ServiceProvider.GetRequiredService<IRouteService>();
-                    var dto = resp.ToDto();
+                    
+                    // Enrich the response with database data before creating DTO
+                    var dto = await enrichmentService.EnrichAsync(resp);
                     
                     // Publish to SignalR for real-time updates
                     await routeService.PublishAsync(dto);
