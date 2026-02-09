@@ -25,6 +25,11 @@ env:
   AZURE_CONTAINER_APP_NAME: ${{ secrets.AZURE_API_CONTAINER_APP_NAME }} # e.g. planner-api
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_CONTAINERAPPS_ENVIRONMENT: ${{ secrets.AZURE_CONTAINERAPPS_ENVIRONMENT }}
+  Firestore__ProjectId: ${{FIRESTORE_PROJECTID }}
+  FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
   IMAGE_NAME: planner-api
 
   # Required configuration (match Program.cs)
@@ -40,10 +45,6 @@ env:
   JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
   JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
   JWT_SECRET: ${{ secrets.JWT_SECRET }}
-  FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
-  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
   EXPIRATION_IN_MINUTES: 60
 
 jobs:
