@@ -19,7 +19,16 @@ public sealed class OptimizeRouteResultConsumer(
                 try {
                     using var scope = scopeFactory.CreateScope();
                     var routeService = scope.ServiceProvider.GetRequiredService<IRouteService>();
-                    await routeService.PublishAsync(resp.ToDto());
+                    var dto = resp.ToDto();
+                    
+                    // Publish to SignalR for real-time updates
+                    await routeService.PublishAsync(dto);
+                    
+                    // Publish to Firestore for AI analysis
+                    var firestoreService = scope.ServiceProvider.GetRequiredService<IFirestoreService>();
+                    await firestoreService.PublishForAnalysisAsync(
+                        resp.OptimizationRunId.ToString(),
+                        dto);
                 } catch (Exception ex) {
                     logger.LogError(ex,
                         "[OptimizeRouteResultConsumer] Error forwarding optimization result (RunId={RunId})",

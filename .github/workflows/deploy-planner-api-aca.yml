@@ -40,6 +40,10 @@ env:
   JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
   JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
   JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
   EXPIRATION_IN_MINUTES: 60
 
 jobs:

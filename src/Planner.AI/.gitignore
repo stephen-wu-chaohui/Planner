@@ -1,0 +1,33 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+
+# Environment files with secrets
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Firebase credentials
+*-firebase-adminsdk-*.json
+firebase-credentials.json
+service-account.json

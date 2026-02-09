@@ -2,10 +2,12 @@
 @using Planner.BlazorApp.Services
 @using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.Optimization
+@using Planner.BlazorApp.State
 
 @inject IJobState JobState
 @inject IVehicleState VehicleState
 @inject IRouteState RouteState
+@inject IInsightState InsightState
 
 <div class="planner-tab-wrapper">
 @if (Routes is null || Routes!.Count == 0) {
@@ -163,7 +165,7 @@ else {
 
     private int SafeTickSeconds => Math.Clamp(TickSeconds, 1, 20);
     private int EstimatedTotalSeconds => Math.Max(0, TotalSeconds) * SafeTickSeconds;
-    
+
     private string EstimatedTimeText => EstimatedTotalSeconds switch
     {
         <= 0 => "0 seconds",
@@ -192,13 +194,14 @@ else {
         _elapsedSlots = TotalSeconds;
         _isBuilding = false;
         _expandedRoutes.Clear(); // Clear expansion state when routes change
-        
+
         _ = InvokeAsync(StateHasChanged);
     }
 
     private async Task BuildRoutes(int? searchTimeLimitSeconds)
     {
         if (IsBuilding) return;
+        await InsightState.ClearInsightAsync();
         await RouteState.SolveVrpAsync(searchTimeLimitSeconds);
     }
 
@@ -207,6 +210,7 @@ else {
         if (IsBuilding) return;
         _expandedRoutes.Clear(); // Clear expansion state on reset
         await RouteState.ClearRoutesAsync();
+        await InsightState.ClearInsightAsync();
         StateHasChanged();
     }
 

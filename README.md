@@ -32,12 +32,27 @@ This README reflects the current situation.
 flowchart LR
   UI["Planner.BlazorApp<br/>Blazor Server"] -->|HTTP/JSON| API["Planner.API<br/>ASP.NET Core API"]
   UI -->|SignalR client| API
+  UI -->|Firestore listen| FS[(Firestore)]
 
   API -->|AMQP publish| MQ[(RabbitMQ)]
+  API -->|Firestore write| FS
   MQ -->|AMQP consume| WK["Planner.Optimization.Worker<br/>OR-Tools"]
   WK -->|AMQP publish| MQ
   API -->|SignalR push| UI
+  
+  FS -->|Listen & Analyze| AI["Planner.AI Worker<br/>Python + Gemini"]
+  AI -->|Firestore write| FS
 ```
+
+### AI-Powered Route Insights (New!)
+
+The Planner now includes an **AI-powered route insights** feature:
+
+1. **API** sends optimization results to Firestore (`pending_analysis` collection) after SignalR delivery
+2. **Planner.AI Worker** (Python) listens to Firestore, analyzes results with Google Gemini AI, and writes insights to `route_insights` collection
+3. **BlazorApp** listens to `route_insights` and displays AI-generated markdown insights in a popup modal
+
+**Setup**: See `src/Planner.AI/README.md` for detailed setup instructions.
 
 ## Project architecture summary
 
@@ -96,6 +111,7 @@ Seed scripts are **append-only** and tracked via `__SeedHistory` (see `tools/Pla
 
 - `src/Planner.BlazorApp` - Blazor UI (map + Dispatch Center)
 - `src/Planner.API` - API + SignalR hub + background consumers
+- `src/Planner.AI` - **Python AI worker** for route insights analysis using Google Gemini
 - `src/Planner.Application` - use cases and orchestration services
 - `src/Planner.Domain` - core domain model
 - `src/Planner.Contracts` - API-facing DTO contracts
@@ -116,6 +132,8 @@ Seed scripts are **append-only** and tracked via `__SeedHistory` (see `tools/Pla
 - RabbitMQ (Docker is easiest)
 - SQL Server (LocalDB, SQL Express, or Docker)
 - A Google Maps API key (for the map view)
+- **Optional**: Python 3.9+ for AI insights (see `src/Planner.AI/README.md`)
+- **Optional**: Google Cloud Firestore and Gemini API key for AI insights
 
 ### Start dependencies (Docker)
 
@@ -173,6 +191,9 @@ In separate terminals:
 dotnet run --project src/Planner.API
 dotnet run --project src/Planner.Optimization.Worker
 dotnet run --project src/Planner.BlazorApp
+
+# Optional: AI insights worker (requires Firestore + Gemini setup)
+cd src/Planner.AI && python planner_ai_worker.py
 ```
 
 Typical URLs (from current launch profiles):

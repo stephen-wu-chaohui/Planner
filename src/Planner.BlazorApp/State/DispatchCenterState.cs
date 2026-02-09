@@ -5,7 +5,8 @@ namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState(
     PlannerApiClient api,
-    IOptimizationHubClient hub)
+    IOptimizationHubClient hub,
+    IRouteInsightsListenerService insightsListener)
 {
     public async Task InitializeAsync() {
         IsProcessing = true;
@@ -31,6 +32,10 @@ public partial class DispatchCenterState(
 
         await hub.ConnectAsync();
         hub.OptimizationCompleted += OnOptimizationCompleted;
+        
+        // Subscribe to route insights
+        insightsListener.OnNewInsight += HandleNewInsight;
+        await insightsListener.StartListeningAsync();
     }
 
 }

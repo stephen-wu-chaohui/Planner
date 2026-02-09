@@ -3,7 +3,10 @@
 @using Planner.Application.Messaging
 @using Planner.BlazorApp.Components.DispatchCenter
 @using Planner.BlazorApp.Services
+@using Planner.BlazorApp.State
 @using Planner.BlazorApp.State.Interfaces
+
+@inject DispatchCenterState DispatchState
 
 <div>
     <!-- MAIN ENTITY MODAL -->
@@ -39,6 +42,13 @@
                             <a class="nav-link @(ActiveTab == "Routes" ? "active" : "")"
                                @onclick=@(() => SetTab("Routes"))>Routes</a>
                         </li>
+                        @if (DispatchState.LatestInsight != null)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(ActiveTab == "Insights" ? "active" : "")"
+                                   @onclick=@(() => SetTab("Insights"))>🤖 AI Insights</a>
+                            </li>
+                        }
                     </ul>
 
                     <div class="planner-modal-content-area">
@@ -51,6 +61,10 @@
                         } else if (ActiveTab == "Routes") {
                             <RoutesTab />
                         }
+                        else if (ActiveTab == "Insights")
+                        {
+                            <InsightsTab />
+                        }
                     </div>
                 </div>
 
@@ -61,14 +75,29 @@
 
 
 @code {
-    private bool IsVisible { get; set; }
-    private string ActiveTab { get; set; } = "Jobs";
+private bool IsVisible { get; set; }
+private string ActiveTab { get; set; } = "Jobs";
 
-    public void OpenTab(string tab) {
-        ActiveTab = tab;
-        IsVisible = true;
-        StateHasChanged();
-    }
+protected override void OnInitialized()
+{
+    DispatchState.OnInsightsChanged += HandleInsightsChanged;
+}
+
+public void Dispose()
+{
+    DispatchState.OnInsightsChanged -= HandleInsightsChanged;
+}
+
+private void HandleInsightsChanged()
+{
+    _ = InvokeAsync(StateHasChanged);
+}
+
+public void OpenTab(string tab) {
+    ActiveTab = tab;
+    IsVisible = true;
+    StateHasChanged();
+}
 
     private void SetTab(string tab) {
         ActiveTab = tab;
