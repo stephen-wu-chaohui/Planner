@@ -5,7 +5,7 @@ namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState(
     PlannerApiClient api,
-    IOptimizationHubClient hub,
+    IOptimizationResultsListenerService optimizationResultsListener,
     IRouteInsightsListenerService insightsListener)
 {
     public async Task InitializeAsync() {
@@ -30,10 +30,11 @@ public partial class DispatchCenterState(
             NotifyStatus();
         }
 
-        await hub.ConnectAsync();
-        hub.OptimizationCompleted += OnOptimizationCompleted;
+        // Subscribe to optimization results from Firestore
+        optimizationResultsListener.OnOptimizationCompleted += OnOptimizationCompleted;
+        await optimizationResultsListener.StartListeningAsync();
         
-        // Subscribe to route insights
+        // Subscribe to route insights from Firestore
         insightsListener.OnNewInsight += HandleNewInsight;
         await insightsListener.StartListeningAsync();
     }

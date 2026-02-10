@@ -36,7 +36,7 @@ builder.Services.AddServerSideBlazor()
 builder.Services.AddScoped<PlannerApiClient>();
 
 // App services
-builder.Services.AddScoped<IOptimizationHubClient, OptimizationHubClient>();
+builder.Services.AddScoped<IOptimizationResultsListenerService, OptimizationResultsListenerService>();
 builder.Services.AddScoped<IRouteInsightsListenerService, RouteInsightsListenerService>();
 
 builder.Services.AddScoped<DispatchCenterState>();

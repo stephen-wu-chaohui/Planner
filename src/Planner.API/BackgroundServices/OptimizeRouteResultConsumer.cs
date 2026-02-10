@@ -19,15 +19,11 @@ public sealed class OptimizeRouteResultConsumer(
                 try {
                     using var scope = scopeFactory.CreateScope();
                     var enrichmentService = scope.ServiceProvider.GetRequiredService<IRouteEnrichmentService>();
-                    var routeService = scope.ServiceProvider.GetRequiredService<IRouteService>();
                     
                     // Enrich the response with database data before creating DTO
                     var dto = await enrichmentService.EnrichAsync(resp);
                     
-                    // Publish to SignalR for real-time updates
-                    await routeService.PublishAsync(dto);
-                    
-                    // Publish to Firestore for AI analysis
+                    // Publish to Firestore for both BlazorApp and AI analysis
                     var firestoreService = scope.ServiceProvider.GetRequiredService<IFirestoreService>();
                     await firestoreService.PublishForAnalysisAsync(
                         resp.OptimizationRunId.ToString(),

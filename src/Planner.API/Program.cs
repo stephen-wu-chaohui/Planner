@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.HttpOverrides;
 using Planner.API.BackgroundServices;
 using Planner.API.Middleware;
-using Planner.API.SignalR;
 using Planner.Application;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Auth;
@@ -46,7 +45,6 @@ builder.Services.AddControllers();
 
 // API Services
 builder.Services.AddScoped<Planner.API.Services.IMatrixCalculationService, Planner.API.Services.MatrixCalculationService>();
-builder.Services.AddScoped<Planner.API.Services.IRouteService, Planner.API.Services.RouteService>();
 builder.Services.AddScoped<Planner.API.Services.IRouteEnrichmentService, Planner.API.Services.RouteEnrichmentService>();
 builder.Services.AddSingleton<Planner.API.Services.IFirestoreService, Planner.API.Services.FirestoreService>();
 
@@ -57,9 +55,8 @@ builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
-// Messaging & SignalR
+// Messaging
 builder.Services.AddMessagingBus();
-builder.Services.AddRealtime(builder.Configuration);
 
 // Background consumers / coordinators
 builder.Services.AddHostedService<CoordinatorService>();
@@ -123,9 +120,6 @@ app.UseAuthorization();
 
 app.UseMiddleware<TenantContextMiddleware>();
 
-// Messaging & SignalR
-app.UseRealtime();
-
 app.MapControllers();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
@@ -150,8 +144,6 @@ static void ValidateRequiredConfiguration(IConfiguration config)
         "RabbitMq:Port",
         "RabbitMq:User",
         "RabbitMq:Pass",
-        "SignalR:Client",
-        "SignalR:Route",
         "JwtOptions:Issuer",
         "JwtOptions:Audience",
         "JwtOptions:SigningKey",
