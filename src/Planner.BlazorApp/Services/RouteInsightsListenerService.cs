@@ -1,4 +1,5 @@
 ﻿using Google.Cloud.Firestore;
+using Planner.Messaging.Firestore;
 
 namespace Planner.BlazorApp.Services;
 
@@ -26,111 +27,57 @@ public interface IRouteInsightsListenerService : IAsyncDisposable
 /// <summary>
 /// Implementation of Firestore listener for route insights.
 /// </summary>
-public sealed class RouteInsightsListenerService : IRouteInsightsListenerService
+public sealed class RouteInsightsListenerService(
+    IFirestoreMessageBus firestoreBus,
+    ILogger<RouteInsightsListenerService> logger) : IRouteInsightsListenerService
 {
-    private readonly FirestoreDb? _db;
-    private readonly ILogger<RouteInsightsListenerService> _logger;
-    private readonly bool _isEnabled;
     private FirestoreChangeListener? _listener;
 
     public event Action<RouteInsight>? OnNewInsight;
 
-    public RouteInsightsListenerService(
-        IConfiguration configuration,
-        ILogger<RouteInsightsListenerService> logger)
-    {
-        _logger = logger;
-        
-        var projectId = configuration["Firestore:ProjectId"];
-        // Look for the raw JSON string in environment variables
-        var base64Json = configuration["FIREBASE_CONFIG_JSON"];
-
-        // Firestore is optional - if not configured, service is disabled
-        if (string.IsNullOrEmpty(base64Json)) {
-            _logger.LogInformation("Firestore not configured (missing FIREBASE_CONFIG_JSON). AI analysis features disabled.");
-            _isEnabled = false;
-            return;
-        }
-
-        try {
-            // Use FirestoreDbBuilder to avoid setting process-wide environment variables
-            string finalJson;
-            if (!base64Json.Trim().StartsWith("{")) {
-                var data = Convert.FromBase64String(base64Json);
-                finalJson = System.Text.Encoding.UTF8.GetString(data);
-            } else {
-                finalJson = base64Json;
-            }
-            var builder = new FirestoreDbBuilder {
-                ProjectId = projectId,
-                JsonCredentials = finalJson
-            };
-            _db = builder.Build();
-            _isEnabled = true;
-            _logger.LogInformation("Firestore listener initialized for route insights");
-        } catch (Exception ex) {
-            _logger.LogError(ex, "Failed to initialize Firestore listener.");
-            _isEnabled = false;
-        }
-    }
-
     public async Task StartListeningAsync()
     {
-        if (!_isEnabled || _db == null)
-        {
-            _logger.LogDebug("Firestore not enabled, skipping listener start");
-            return;
-        }
-
         if (_listener != null)
         {
-            _logger.LogDebug("Firestore listener already running");
+            logger.LogDebug("Firestore route insights listener already running");
             return;
         }
 
         try
         {
-            // Listen to all documents in route_insights collection
-            var collectionRef = _db.Collection("route_insights");
-            
-            _listener = collectionRef.Listen(snapshot =>
-            {
-                foreach (var change in snapshot.Changes)
+            // Use the unified IFirestoreMessageBus to listen to the collection
+            _listener = await firestoreBus.SubscribeToCollectionAsync<Dictionary<string, object>>(
+                FirestoreCollections.RouteInsights,
+                async (data, docId) =>
                 {
-                    if (change.ChangeType == DocumentChange.Type.Added)
+                    try
                     {
-                        try
+                        var insight = new RouteInsight
                         {
-                            var doc = change.Document;
-                            var data = doc.ToDictionary();
-                            
-                            var insight = new RouteInsight
-                            {
-                                RequestId = doc.Id,
-                                Analysis = data.GetValueOrDefault("analysis")?.ToString() ?? string.Empty,
-                                Status = data.GetValueOrDefault("status")?.ToString() ?? string.Empty,
-                                Timestamp = data.ContainsKey("timestamp") && data["timestamp"] is Timestamp ts
-                                    ? ts.ToDateTime()
-                                    : DateTime.UtcNow
-                            };
+                            RequestId = docId,
+                            Analysis = data.GetValueOrDefault("analysis")?.ToString() ?? string.Empty,
+                            Status = data.GetValueOrDefault("status")?.ToString() ?? string.Empty,
+                            Timestamp = data.ContainsKey("timestamp") && data["timestamp"] is Timestamp ts
+                                ? ts.ToDateTime()
+                                : DateTime.UtcNow
+                        };
 
-                            _logger.LogInformation("New route insight received: {RequestId}", insight.RequestId);
-                            OnNewInsight?.Invoke(insight);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error processing route insight document");
-                        }
+                        logger.LogInformation("New route insight received: {RequestId}", insight.RequestId);
+                        OnNewInsight?.Invoke(insight);
                     }
-                }
-            });
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error processing route insight document {DocId}", docId);
+                    }
 
-            _logger.LogInformation("Firestore listener started for route_insights collection");
-            await Task.CompletedTask;
+                    await Task.CompletedTask;
+                });
+
+            logger.LogInformation("Firestore listener started for route_insights collection via IFirestoreMessageBus");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start Firestore listener");
+            logger.LogError(ex, "Failed to start Firestore listener for route insights");
             throw;
         }
     }
@@ -141,7 +88,7 @@ public sealed class RouteInsightsListenerService : IRouteInsightsListenerService
         {
             await _listener.StopAsync();
             _listener = null;
-            _logger.LogInformation("Firestore listener stopped");
+            logger.LogInformation("Firestore route insights listener stopped");
         }
     }
 

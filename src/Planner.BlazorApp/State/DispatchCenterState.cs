@@ -1,17 +1,21 @@
-﻿using Planner.BlazorApp.Services;
+using Planner.BlazorApp.Services;
 using Planner.Contracts.API;
 
 namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState(
     PlannerApiClient api,
-    IOptimizationHubClient hub,
-    IRouteInsightsListenerService insightsListener)
+    IOptimizationResultsListenerService optimizationResultsListenerService,
+    IRouteInsightsListenerService routeInsightsListenerService) : IAsyncDisposable
 {
-    public async Task InitializeAsync() {
+    private bool _listenerServicesStarted;
+
+    public async Task InitializeAsync()
+    {
         IsProcessing = true;
         NotifyStatus();
-        try {
+        try
+        {
             await LoadTenantInfo();
 
             var vTask = api.GetFromJsonAsync<List<VehicleDto>>("/api/vehicles");
@@ -25,17 +29,61 @@ public partial class DispatchCenterState(
             OnVehiclesChanged?.Invoke();
             OnCustomersChanged?.Invoke();
             OnJobsChanged?.Invoke();
-        } finally {
+        }
+        finally
+        {
             IsProcessing = false;
             NotifyStatus();
         }
 
-        await hub.ConnectAsync();
-        hub.OptimizationCompleted += OnOptimizationCompleted;
-        
-        // Subscribe to route insights
-        insightsListener.OnNewInsight += HandleNewInsight;
-        await insightsListener.StartListeningAsync();
+        await EnsureListenerServicesStartedAsync();
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_listenerServicesStarted)
+        {
+            optimizationResultsListenerService.OnOptimizationCompleted -= OnOptimizationCompleted;
+            routeInsightsListenerService.OnNewInsight -= HandleNewInsight;
+
+            await Task.WhenAll(
+                optimizationResultsListenerService.StopListeningAsync(),
+                routeInsightsListenerService.StopListeningAsync());
+
+            _listenerServicesStarted = false;
+        }
+
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task EnsureListenerServicesStartedAsync()
+    {
+        if (_listenerServicesStarted)
+        {
+            return;
+        }
+
+        optimizationResultsListenerService.OnOptimizationCompleted += OnOptimizationCompleted;
+        routeInsightsListenerService.OnNewInsight += HandleNewInsight;
+
+        try
+        {
+            await Task.WhenAll(
+                optimizationResultsListenerService.StartListeningAsync(),
+                routeInsightsListenerService.StartListeningAsync());
+
+            _listenerServicesStarted = true;
+        }
+        catch
+        {
+            optimizationResultsListenerService.OnOptimizationCompleted -= OnOptimizationCompleted;
+            routeInsightsListenerService.OnNewInsight -= HandleNewInsight;
+
+            await Task.WhenAll(
+                optimizationResultsListenerService.StopListeningAsync(),
+                routeInsightsListenerService.StopListeningAsync());
+
+            throw;
+        }
+    }
 }

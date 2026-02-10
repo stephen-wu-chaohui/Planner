@@ -10,7 +10,7 @@
 **Clean Architecture • OR-Tools VRP • RabbitMQ • Azure App Config + Key Vault**
 
 Planner is a modular, cloud-ready logistics optimization platform built with **.NET 8**, demonstrating  
-**Clean Architecture**, **asynchronous optimization**, and **real-time visualization** using **Blazor** + **SignalR**.
+**Clean Architecture**, **asynchronous optimization**, and **real-time visualization** using **Blazor** + **Firestore**.
 
 ---
 
@@ -23,13 +23,13 @@ Planner applies Clean Architecture with async messaging and Azure integration.
 flowchart TD
     subgraph UI["🧑‍💻 Planner.BlazorApp (Blazor Server)"]
         A1[Displays routes & jobs]
-        A2[Real-time SignalR updates]
+        A2[Real-time Firestore updates]
     end
     subgraph API["🌐 Planner.API (ASP.NET 8)"]
-        B1[REST + SignalR Hub]
+        B1[REST endpoints]
         B2[Publishes optimization requests]
         B3[Receives solver results]
-        B4[RouteService publishes routing results]
+        B4[Publishes to Firestore]
     end
     subgraph Worker["⚙️ Planner.Optimization.Worker (.NET Background Service)"]
         C1[Consumes RabbitMQ queue]
@@ -45,12 +45,17 @@ flowchart TD
         E2[Azure Key Vault]
         E3[Azure App Services / Container Apps]
     end
-    UI -->|HTTPS / SignalR| API
+    subgraph Firestore["🔥 Google Firestore"]
+        F1[pending_analysis collection]
+        F2[route_insights collection]
+    end
+    UI -->|HTTPS| API
     API -->|AMQP| MQ
     MQ -->|AMQP| Worker
     Worker -->|AMQP| MQ
-    MQ -->|Callback / SignalR| API
-    API -->|SignalR Push| UI
+    MQ -->|Callback| API
+    API -->|Write| Firestore
+    Firestore -->|Listen| UI
     Cloud --- API
     Cloud --- Worker
 ```
@@ -65,6 +70,7 @@ sequenceDiagram
     participant Q as 📬 RabbitMQ
     participant W as ⚙️ Optimization.Worker
     participant O as 🧠 OR-Tools Solver
+    participant F as 🔥 Firestore
     U->>B: Click “Solve VRP”
     B->>B: Validate job & vehicle data
     B->>Q: Publish <VrpRequestMessage>
@@ -73,7 +79,8 @@ sequenceDiagram
     O-->>W: Return optimized routes + cost
     W->>Q: Publish <VrpResultMessage>
     Q-->>B: Deliver result message
-    B->>U: Push <VrpResultDto> via SignalR
+    B->>F: Write to pending_analysis collection
+    F-->>U: Real-time notification of new result
     U->>U: Render routes on Google Map
 ```
 
@@ -83,11 +90,12 @@ sequenceDiagram
 
 | Layer | Technology | Purpose |
 |-------|-------------|----------|
-| **Frontend** | 🧩 Blazor Server (.NET 8) | Interactive web UI with SignalR updates |
-| **Backend API** | 🌐 ASP.NET Core Web API | Exposes REST & SignalR endpoints |
+| **Frontend** | 🧩 Blazor Server (.NET 8) | Interactive web UI with Firestore listeners |
+| **Backend API** | 🌐 ASP.NET Core Web API | Exposes REST endpoints |
 | **Messaging** | 📬 RabbitMQ (AMQP) | Decouples API and Worker |
 | **Optimization** | 🧠 Google OR-Tools | Solves Linear & VRP models |
 | **Background** | ⚙️ Planner.Optimization.Worker | Executes optimization jobs |
+| **Real-time DB** | 🔥 Google Firestore | Real-time data sync for routes & insights |
 | **Config Mgmt** | 🗂️ Azure App Configuration | Central non-secret settings |
 | **Secrets** | 🔒 Azure Key Vault | Secure API keys & credentials |
 | **Hosting** | ☁️ Azure App Service / Container Apps | Runs API, UI, Worker, RabbitMQ |

@@ -1,7 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
-  <img alt="Planner - Clean Architecture / OR-Tools / RabbitMQ / SignalR / Multi-tenant" src="assets/banner-light.svg">
+  <img alt="Planner - Clean Architecture / OR-Tools / RabbitMQ / Firestore / Multi-tenant" src="assets/banner-light.svg">
 </picture>
 
 # Planner
@@ -9,7 +9,7 @@
 Planner is a modular fleet planning / optimization playground built with **.NET 8**:
 
 - **UI**: `Planner.BlazorApp` (Blazor Server) with a map-centric Dispatch Center
-- **API**: `Planner.API` (ASP.NET Core) for CRUD + optimization commands + SignalR hub
+- **API**: `Planner.API` (ASP.NET Core) for CRUD + optimization commands
 - **Worker**: `Planner.Optimization.Worker` (BackgroundService) running **Google OR-Tools**
 - **Messaging**: RabbitMQ decouples API and optimizer
 - **Data**: SQL Server (**EF Core**) with explicit migrate/seed tooling
@@ -31,14 +31,12 @@ This README reflects the current situation.
 ```mermaid
 flowchart LR
   UI["Planner.BlazorApp<br/>Blazor Server"] -->|HTTP/JSON| API["Planner.API<br/>ASP.NET Core API"]
-  UI -->|SignalR client| API
   UI -->|Firestore listen| FS[(Firestore)]
 
   API -->|AMQP publish| MQ[(RabbitMQ)]
   API -->|Firestore write| FS
   MQ -->|AMQP consume| WK["Planner.Optimization.Worker<br/>OR-Tools"]
   WK -->|AMQP publish| MQ
-  API -->|SignalR push| UI
   
   FS -->|Listen & Analyze| AI["Planner.AI Worker<br/>Python + Gemini"]
   AI -->|Firestore write| FS
@@ -48,9 +46,10 @@ flowchart LR
 
 The Planner now includes an **AI-powered route insights** feature:
 
-1. **API** sends optimization results to Firestore (`pending_analysis` collection) after SignalR delivery
-2. **Planner.AI Worker** (Python) listens to Firestore, analyzes results with Google Gemini AI, and writes insights to `route_insights` collection
-3. **BlazorApp** listens to `route_insights` and displays AI-generated markdown insights in a popup modal
+1. **API** sends optimization results to Firestore (`pending_analysis` collection)
+2. **BlazorApp** listens to Firestore and receives optimization results in real-time
+3. **Planner.AI Worker** (Python) listens to Firestore, analyzes results with Google Gemini AI, and writes insights to `route_insights` collection
+4. **BlazorApp** listens to `route_insights` and displays AI-generated markdown insights in a popup modal
 
 **Setup**: See `src/Planner.AI/README.md` for detailed setup instructions.
 
@@ -61,15 +60,15 @@ The Planner now includes an **AI-powered route insights** feature:
 - **User experience**: a Dispatch Center UI for managing fleets/jobs and running an optimization to generate routes and assignments.
 - **System behavior**: “Solve” is asynchronous; the UI requests a solve, the optimizer runs in the background, and the UI receives progress/results via real-time updates.
 - **Scalability**: the optimizer is a separate worker and can scale independently from the API/UI based on optimization load.
-- **Tenant isolation**: multi-tenancy is an end-to-end boundary (JWT → API → database → SignalR → optimization messages).
+- **Tenant isolation**: multi-tenancy is an end-to-end boundary (JWT → API → database → Firestore → optimization messages).
 - **Release safety**: database changes are explicit (migrate/seed tooling and CI/CD) to reduce deployment risk.
 
 ### Senior developer view
 
-- **Runtime topology**: `Planner.BlazorApp` ↔ `Planner.API` (HTTP + SignalR), `Planner.API` ↔ `Planner.Optimization.Worker` (RabbitMQ AMQP).
+- **Runtime topology**: `Planner.BlazorApp` ↔ `Planner.API` (HTTP), `Planner.API` ↔ `Planner.Optimization.Worker` (RabbitMQ AMQP), real-time updates via Firestore.
 - **Layering**: `Planner.Domain` (model), `Planner.Application` (use cases), `Planner.Infrastructure` (EF Core/auth/adapters), with host projects for API/UI/Worker.
 - **Contracts**: `Planner.Contracts` for API DTOs and `Planner.Optimization.Contracts` for queue message payloads to keep boundaries explicit and versionable.
-- **Multi-tenancy**: `tenant_id` claim drives tenant context, EF Core query filters, SignalR group fan-out, and message payload scoping.
+- **Multi-tenancy**: `tenant_id` claim drives tenant context, EF Core query filters, and message payload scoping.
 - **Database lifecycle**: migrations and append-only seed scripts run via `tools/Planner.Tools.DbMigrator`; runtime auto-migrate is intentionally avoided.
 
 ## Multi-tenancy (PaaS boundary)
@@ -79,7 +78,7 @@ Multi-tenancy is enforced across storage, API, and realtime updates:
 - **JWT claim**: tokens include `tenant_id` (see `src/Planner.Infrastructure/Auth/JwtTokenGenerator.cs`).
 - **Request tenant context**: `TenantContextMiddleware` sets `ITenantContext` from the JWT claim (see `src/Planner.API/Middleware/TenantContextMiddleware.cs`).
 - **EF Core query filters**: tenant-scoped entities are filtered by `TenantId` at the DbContext level (see `src/Planner.Infrastructure/Persistence.PlannerDbContext.cs`).
-- **SignalR isolation**: clients join tenant groups (`tenant:{tenantId}`) so results are pushed only to the correct tenant (see `src/Planner.API/SignalR/PlannerHub.cs`).
+- **Firestore isolation**: optimization results are stored with tenant context for proper data isolation.
 - **Optimization messages**: requests/results carry `TenantId` through RabbitMQ and the worker.
 
 ## Authentication & authorization
@@ -110,7 +109,7 @@ Seed scripts are **append-only** and tracked via `__SeedHistory` (see `tools/Pla
 ## Repository layout
 
 - `src/Planner.BlazorApp` - Blazor UI (map + Dispatch Center)
-- `src/Planner.API` - API + SignalR hub + background consumers
+- `src/Planner.API` - API + background consumers
 - `src/Planner.AI` - **Python AI worker** for route insights analysis using Google Gemini
 - `src/Planner.Application` - use cases and orchestration services
 - `src/Planner.Domain` - core domain model
@@ -162,17 +161,18 @@ $env:RabbitMq__Host = "localhost"
 $env:RabbitMq__Port = "5672"
 $env:RabbitMq__User = "guest"
 $env:RabbitMq__Pass = "guest"
-$env:SignalR__Client = "https://localhost:7014"
-$env:SignalR__Route = "/hubs/planner"
 $env:JwtOptions__Issuer = "planner-local"
 $env:JwtOptions__Audience = "planner-local"
 $env:JwtOptions__SigningKey = "dev-signing-key-change-me-dev-signing-key"
 $env:JwtOptions__Secret = "dev-secret-change-me-dev-secret-change-me"
 
 $env:Api__BaseUrl = "https://localhost:7085/"
-$env:SignalR__Server = "https://localhost:7085"
 $env:GoogleMaps__ApiKey = "<your-google-maps-api-key>"
 $env:GoogleMaps__MapId = "<optional-google-map-id>"
+
+# Optional: Firestore configuration for real-time updates
+$env:Firestore__ProjectId = "<your-firebase-project-id>"
+$env:FIREBASE_CONFIG_JSON = "<base64-encoded-firebase-credentials-or-raw-json>"
 ```
 
 ### Prepare the database
@@ -220,7 +220,7 @@ They use **Azure OIDC** (`azure/login@v2`) instead of storing service principal 
   - Has a safety check to refuse running against non-dev targets
 - `deploy-planner-api-aca.yml`
   - Builds and pushes `src/Planner.API/Dockerfile` to ACR
-  - Updates an Azure Container App and injects required env vars (DB, RabbitMQ, SignalR, JWT)
+  - Updates an Azure Container App and injects required env vars (DB, RabbitMQ, Firestore, JWT)
 - `deploy-planner-optimization-worker-aca.yml`
   - Builds and pushes `src/Planner.Optimization.Worker/Dockerfile` to ACR
   - Updates an Azure Container App and injects RabbitMQ env vars

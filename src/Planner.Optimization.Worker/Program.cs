@@ -1,11 +1,11 @@
-﻿using Planner.Messaging.DependencyInjection;
-using Planner.Optimization.Worker.BackgroundServices;
+﻿using Planner.Optimization.Worker.BackgroundServices;
 using Planner.Optimization.Worker.Handlers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using Planner.Optimization;
+using Planner.Messaging;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Configuration

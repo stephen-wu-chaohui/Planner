@@ -21,21 +21,24 @@ February 8, 2026
 
 ### 2. API Integration
 - **Location**: `src/Planner.API/`
-- **Purpose**: Publishes optimization results to Firestore for AI analysis
+- **Purpose**: Publishes optimization results to Firestore for BlazorApp display and AI analysis
 - **Changes**:
   - Added `Services/FirestoreService.cs` - Firestore client wrapper
-  - Updated `BackgroundServices/OptimizeRouteResultConsumer.cs` - Publishes to Firestore after SignalR
+  - Updated `BackgroundServices/OptimizeRouteResultConsumer.cs` - Publishes to Firestore
+  - Removed SignalR infrastructure (replaced with Firestore)
   - Added `Google.Cloud.Firestore` NuGet package (v3.7.0)
   - Added Firestore configuration to `appsettings.json`
 
 ### 3. Blazor App Integration
 - **Location**: `src/Planner.BlazorApp/`
-- **Purpose**: Displays AI-generated insights to users
+- **Purpose**: Receives optimization results and AI-generated insights from Firestore
 - **Changes**:
-  - Added `Services/RouteInsightsListenerService.cs` - Firestore listener for insights
+  - Added `Services/OptimizationResultsListenerService.cs` - Firestore listener for optimization results
+  - Added `Services/RouteInsightsListenerService.cs` - Firestore listener for AI insights
   - Added `State/DispatchCenterState.Insights.cs` - State management for insights
   - Added `Components/DispatchCenter/Models/RouteInsightsModal.razor` - Modal UI component
   - Updated `Components/DispatchCenter/Models/RoutesTab.razor` - Added insights button and modal
+  - Removed SignalR client (replaced with Firestore listeners)
   - Added `Google.Cloud.Firestore` NuGet package (v3.7.0)
   - Added `Markdig` NuGet package (v0.37.0) for markdown rendering
   - Added Firestore configuration to `appsettings.json`
@@ -50,14 +53,15 @@ February 8, 2026
 
 ### Data Flow
 1. **Optimization Complete** → API receives optimization result from worker
-2. **SignalR Publish** → API sends result to Blazor app via SignalR
-3. **Firestore Write** → API writes result to `pending_analysis` collection
+2. **Firestore Write** → API writes result to `pending_analysis` collection
+3. **Blazor Listen** → Blazor app receives optimization result from Firestore and displays routes
 4. **AI Analysis** → Python worker picks up, analyzes with Gemini, writes to `route_insights`
 5. **Firestore Listen** → Blazor app receives insight and displays modal
 
 ### Collections
-- **pending_analysis**: Queue of optimization results waiting for AI analysis
-  - Fields: `json_payload`, `status` ("new"/"processed"), `timestamp`
+- **pending_analysis**: Optimization results for both BlazorApp display and AI analysis
+  - Fields: `json_payload` (RoutingResultDto), `status` ("new"/"processed"), `timestamp`
+  - Used by: BlazorApp (for route display) and AI Worker (for analysis)
 - **route_insights**: AI-generated insights
   - Fields: `analysis` (markdown), `request_id`, `status`, `timestamp`
 
@@ -98,8 +102,8 @@ FIREBASE_CONFIG_JSON={ ... }
 
 ### Graceful Degradation
 The system is designed to work without AI features:
-- If Firestore is not configured, services log and continue
-- If AI worker is not running, optimization still works via SignalR
+- If Firestore is not configured, services log and continue (optimization still works via message bus)
+- If AI worker is not running, optimization still works and BlazorApp receives results via Firestore
 - Blazor app only shows insights button when insights are available
 
 ## Testing

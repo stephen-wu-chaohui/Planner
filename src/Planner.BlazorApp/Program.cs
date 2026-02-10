@@ -4,6 +4,7 @@ using Planner.BlazorApp.Components.WelcomeWizard;
 using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State;
 using Planner.BlazorApp.State.Interfaces;
+using Planner.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,8 +36,11 @@ builder.Services.AddServerSideBlazor()
 
 builder.Services.AddScoped<PlannerApiClient>();
 
+// Shared infrastructure
+builder.Services.AddMessagingBus();
+
 // App services
-builder.Services.AddScoped<IOptimizationHubClient, OptimizationHubClient>();
+builder.Services.AddScoped<IOptimizationResultsListenerService, OptimizationResultsListenerService>();
 builder.Services.AddScoped<IRouteInsightsListenerService, RouteInsightsListenerService>();
 
 builder.Services.AddScoped<DispatchCenterState>();

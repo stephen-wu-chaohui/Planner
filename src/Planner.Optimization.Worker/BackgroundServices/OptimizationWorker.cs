@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Planner.Messaging;
 using Planner.Optimization.Worker.Handlers;
 using Planner.Messaging.RabbitMQ;
 using Planner.Messaging.Messaging;

@@ -44,14 +44,14 @@ public sealed class RouteEnrichmentService(PlannerDbContext db, ITenantContext t
             .ToList();
 
         // Perform database queries
-        var vehicles = vehicleIds.Any()
+        var vehicles = vehicleIds.Count != 0
             ? await db.Vehicles
                 .Where(v => vehicleIds.Contains(v.Id))
                 .Select(v => new { v.Id, v.Name })
                 .ToListAsync()
             : [];
 
-        var jobs = locationIds.Any()
+        var jobs = locationIds.Count != 0
             ? await db.Jobs
                 .Where(j => locationIds.Contains(j.LocationId))
                 .Select(j => new { j.LocationId, j.Name, j.JobType, j.CustomerId })
@@ -59,7 +59,7 @@ public sealed class RouteEnrichmentService(PlannerDbContext db, ITenantContext t
             : [];
 
         var customerIds = jobs.Select(j => j.CustomerId).Distinct().ToList();
-        var customers = customerIds.Any()
+        var customers = customerIds.Count != 0
             ? await db.Customers
                 .Where(c => customerIds.Contains(c.CustomerId))
                 .Select(c => new { c.CustomerId, c.Name })
