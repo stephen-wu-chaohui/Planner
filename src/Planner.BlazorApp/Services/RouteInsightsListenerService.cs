@@ -3,6 +3,23 @@
 namespace Planner.BlazorApp.Services;
 
 /// <summary>
+/// Shared Firestore collection names used across the application.
+/// </summary>
+public static class FirestoreCollections
+{
+    /// <summary>
+    /// Collection for optimization results pending AI analysis.
+    /// Also used by BlazorApp to receive real-time optimization results.
+    /// </summary>
+    public const string PendingAnalysis = "pending_analysis";
+    
+    /// <summary>
+    /// Collection for AI-generated route insights.
+    /// </summary>
+    public const string RouteInsights = "route_insights";
+}
+
+/// <summary>
 /// Model for route insights data from Firestore.
 /// </summary>
 public record RouteInsight
@@ -91,7 +108,7 @@ public sealed class RouteInsightsListenerService : IRouteInsightsListenerService
         try
         {
             // Listen to all documents in route_insights collection
-            var collectionRef = _db.Collection("route_insights");
+            var collectionRef = _db.Collection(FirestoreCollections.RouteInsights);
             
             _listener = collectionRef.Listen(snapshot =>
             {

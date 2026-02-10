@@ -4,6 +4,23 @@ using System.Text.Json;
 namespace Planner.API.Services;
 
 /// <summary>
+/// Shared Firestore collection names used across the application.
+/// </summary>
+public static class FirestoreCollections
+{
+    /// <summary>
+    /// Collection for optimization results pending AI analysis.
+    /// Also used by BlazorApp to receive real-time optimization results.
+    /// </summary>
+    public const string PendingAnalysis = "pending_analysis";
+    
+    /// <summary>
+    /// Collection for AI-generated route insights.
+    /// </summary>
+    public const string RouteInsights = "route_insights";
+}
+
+/// <summary>
 /// Service for writing optimization results to Firestore for AI analysis.
 /// </summary>
 public interface IFirestoreService
@@ -85,7 +102,7 @@ public sealed class FirestoreService : IFirestoreService
                 { "timestamp", FieldValue.ServerTimestamp }
             };
 
-            var docRef = _db.Collection("pending_analysis").Document(requestId);
+            var docRef = _db.Collection(FirestoreCollections.PendingAnalysis).Document(requestId);
             await docRef.SetAsync(document);
 
             _logger.LogInformation("Published optimization result to Firestore for AI analysis: {RequestId}", requestId);

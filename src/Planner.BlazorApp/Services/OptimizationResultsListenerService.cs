@@ -83,12 +83,16 @@ public sealed class OptimizationResultsListenerService : IOptimizationResultsLis
         try
         {
             // Listen to all documents in pending_analysis collection
-            var collectionRef = _db.Collection("pending_analysis");
+            // Note: We only listen for 'Added' changes as we're interested in new optimization results.
+            // The 'status' field (new/processed) is for AI worker tracking and doesn't affect BlazorApp display.
+            var collectionRef = _db.Collection(FirestoreCollections.PendingAnalysis);
             
             _listener = collectionRef.Listen(snapshot =>
             {
                 foreach (var change in snapshot.Changes)
                 {
+                    // Only process newly added documents (new optimization results)
+                    // Modified changes (e.g., status updates by AI worker) are ignored
                     if (change.ChangeType == DocumentChange.Type.Added)
                     {
                         try

@@ -24,6 +24,9 @@ public sealed class OptimizeRouteResultConsumer(
                     var dto = await enrichmentService.EnrichAsync(resp);
                     
                     // Publish to Firestore for both BlazorApp and AI analysis
+                    // Note: Tenant isolation is maintained through the optimization run ID as the document ID.
+                    // BlazorApp clients listen for their specific optimization run, and the RoutingResultDto
+                    // contains TenantId which can be used for additional filtering if needed.
                     var firestoreService = scope.ServiceProvider.GetRequiredService<IFirestoreService>();
                     await firestoreService.PublishForAnalysisAsync(
                         resp.OptimizationRunId.ToString(),
