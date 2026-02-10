@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Planner.Application;
 using Planner.Contracts.Optimization;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging.Optimization.Outputs;
@@ -18,9 +19,10 @@ public interface IRouteEnrichmentService {
 /// <summary>
 /// Scoped service for enriching routing results with database lookups.
 /// </summary>
-public sealed class RouteEnrichmentService(PlannerDbContext db) : IRouteEnrichmentService {
+public sealed class RouteEnrichmentService(PlannerDbContext db, ITenantContext tenantContext) : IRouteEnrichmentService {
     public async Task<RoutingResultDto> EnrichAsync(OptimizeRouteResponse response) {
         ArgumentNullException.ThrowIfNull(response);
+        EnsureTenantContext(response.TenantId);
 
         if (response.Routes.Count == 0) {
             // No routes to enrich, return basic DTO
@@ -112,5 +114,17 @@ public sealed class RouteEnrichmentService(PlannerDbContext db) : IRouteEnrichme
             response.TotalCost,
             response.ErrorMessage
         );
+    }
+
+
+    private void EnsureTenantContext(Guid tenantId) {
+        if (!tenantContext.IsSet) {
+            tenantContext.SetTenant(tenantId);
+            return;
+        }
+
+        if (tenantContext.TenantId != tenantId) {
+            throw new InvalidOperationException("Tenant mismatch for routing result.");
+        }
     }
 }
