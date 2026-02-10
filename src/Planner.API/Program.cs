@@ -6,7 +6,8 @@ using Planner.Application;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Auth;
 using Planner.Infrastructure.Coordinator;
-using Planner.Messaging.DependencyInjection;
+using Planner.API.Services;
+using Planner.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,9 +45,7 @@ builder.Logging.AddConsole();
 builder.Services.AddControllers();
 
 // API Services
-builder.Services.AddScoped<Planner.API.Services.IMatrixCalculationService, Planner.API.Services.MatrixCalculationService>();
-builder.Services.AddScoped<Planner.API.Services.IRouteEnrichmentService, Planner.API.Services.RouteEnrichmentService>();
-builder.Services.AddSingleton<Planner.API.Services.IFirestoreService, Planner.API.Services.FirestoreService>();
+builder.Services.AddScoped<IMatrixCalculationService, MatrixCalculationService>();
 
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -57,6 +56,7 @@ builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // Messaging
 builder.Services.AddMessagingBus();
+builder.Services.AddScoped<IRouteEnrichmentService, RouteEnrichmentService>();
 
 // Background consumers / coordinators
 builder.Services.AddHostedService<CoordinatorService>();

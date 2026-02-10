@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Google.Cloud.Firestore;
+using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Services;
 using Planner.Messaging;
+using Planner.Messaging.Firestore;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Outputs;
 
@@ -19,24 +21,31 @@ public sealed class OptimizeRouteResultConsumer(
                 try {
                     using var scope = scopeFactory.CreateScope();
                     var enrichmentService = scope.ServiceProvider.GetRequiredService<IRouteEnrichmentService>();
-                    
-                    // Enrich the response with database data before creating DTO
-                    var dto = await enrichmentService.EnrichAsync(resp);
-                    
-                    // Publish to Firestore for both BlazorApp and AI analysis
-                    // Note: Tenant isolation is maintained through the optimization run ID as the document ID.
-                    // BlazorApp clients listen for their specific optimization run, and the RoutingResultDto
-                    // contains TenantId which can be used for additional filtering if needed.
-                    var firestoreService = scope.ServiceProvider.GetRequiredService<IFirestoreService>();
-                    await firestoreService.PublishForAnalysisAsync(
+                    var firestoreBus = scope.ServiceProvider.GetRequiredService<IFirestoreMessageBus>();
+
+                    // Enrich the raw response with data from the database
+                    var enrichedDto = await enrichmentService.EnrichAsync(resp);
+
+                    // Maintain the same structure as the old FirestoreService for AI worker compatibility
+                    var jsonPayload = System.Text.Json.JsonSerializer.Serialize(enrichedDto, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+                    // Publish the enriched result to Firestore for the UI and AI worker to consume
+                    await firestoreBus.PublishAsync(
+                        FirestoreCollections.PendingAnalysis,
                         resp.OptimizationRunId.ToString(),
-                        dto);
+                        new Dictionary<string, object>
+                        {
+                            { "json_payload", jsonPayload },
+                            { "status", "new" },
+                            { "timestamp", FieldValue.ServerTimestamp }
+                        });
                 } catch (Exception ex) {
                     logger.LogError(ex,
                         "[OptimizeRouteResultConsumer] Error forwarding optimization result (RunId={RunId})",
                         resp.OptimizationRunId);
                 }
             });
+
 
         try {
             await Task.Delay(Timeout.Infinite, stoppingToken);

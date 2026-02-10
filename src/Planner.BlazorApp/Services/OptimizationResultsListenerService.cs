@@ -1,6 +1,7 @@
-using Google.Cloud.Firestore;
+﻿using Google.Cloud.Firestore;
 using Planner.Contracts.Optimization;
 using System.Text.Json;
+using Planner.Messaging.Firestore;
 
 namespace Planner.BlazorApp.Services;
 
@@ -18,130 +19,69 @@ public interface IOptimizationResultsListenerService : IAsyncDisposable
 /// Implementation of Firestore listener for optimization results.
 /// Monitors the pending_analysis collection and extracts RoutingResultDto from json_payload.
 /// </summary>
-public sealed class OptimizationResultsListenerService : IOptimizationResultsListenerService
+public sealed class OptimizationResultsListenerService(
+    IFirestoreMessageBus firestoreBus,
+    ILogger<OptimizationResultsListenerService> logger) : IOptimizationResultsListenerService
 {
-    private readonly FirestoreDb? _db;
-    private readonly ILogger<OptimizationResultsListenerService> _logger;
-    private readonly bool _isEnabled;
     private FirestoreChangeListener? _listener;
 
     public event Action<RoutingResultDto>? OnOptimizationCompleted;
 
-    public OptimizationResultsListenerService(
-        IConfiguration configuration,
-        ILogger<OptimizationResultsListenerService> logger)
-    {
-        _logger = logger;
-        
-        var projectId = configuration["Firestore:ProjectId"];
-        // Look for the raw JSON string in environment variables
-        var base64Json = configuration["FIREBASE_CONFIG_JSON"];
-
-        // Firestore is optional - if not configured, service is disabled
-        if (string.IsNullOrEmpty(base64Json)) {
-            _logger.LogInformation("Firestore not configured (missing FIREBASE_CONFIG_JSON). Optimization result listener disabled.");
-            _isEnabled = false;
-            return;
-        }
-
-        try {
-            // Use FirestoreDbBuilder to avoid setting process-wide environment variables
-            string finalJson;
-            if (!base64Json.Trim().StartsWith("{")) {
-                var data = Convert.FromBase64String(base64Json);
-                finalJson = System.Text.Encoding.UTF8.GetString(data);
-            } else {
-                finalJson = base64Json;
-            }
-            var builder = new FirestoreDbBuilder {
-                ProjectId = projectId,
-                JsonCredentials = finalJson
-            };
-            _db = builder.Build();
-            _isEnabled = true;
-            _logger.LogInformation("Firestore listener initialized for optimization results");
-        } catch (Exception ex) {
-            _logger.LogError(ex, "Failed to initialize Firestore listener for optimization results.");
-            _isEnabled = false;
-        }
-    }
-
     public async Task StartListeningAsync()
     {
-        if (!_isEnabled || _db == null)
-        {
-            _logger.LogDebug("Firestore not enabled, skipping optimization results listener start");
-            return;
-        }
-
         if (_listener != null)
         {
-            _logger.LogDebug("Firestore optimization results listener already running");
+            logger.LogDebug("Firestore optimization results listener already running");
             return;
         }
 
         try
         {
-            // Listen to all documents in pending_analysis collection
-            // Note: We only listen for 'Added' changes as we're interested in new optimization results.
-            // The 'status' field (new/processed) is for AI worker tracking and doesn't affect BlazorApp display.
-            var collectionRef = _db.Collection(FirestoreCollections.PendingAnalysis);
-            
-            _listener = collectionRef.Listen(snapshot =>
-            {
-                foreach (var change in snapshot.Changes)
+            // Use the unified IFirestoreMessageBus to listen to the collection
+            _listener = await firestoreBus.SubscribeToCollectionAsync<Dictionary<string, object>>(
+                FirestoreCollections.PendingAnalysis,
+                async (data, docId) =>
                 {
-                    // Only process newly added documents (new optimization results)
-                    // Modified changes (e.g., status updates by AI worker) are ignored
-                    if (change.ChangeType == DocumentChange.Type.Added)
+                    try
                     {
-                        try
+                        // Extract json_payload field which contains the RoutingResultDto
+                        if (!data.ContainsKey("json_payload"))
                         {
-                            var doc = change.Document;
-                            var data = doc.ToDictionary();
-                            
-                            // Extract json_payload field which contains the RoutingResultDto
-                            if (!data.ContainsKey("json_payload"))
-                            {
-                                _logger.LogWarning("Document {DocId} missing json_payload field", doc.Id);
-                                continue;
-                            }
+                            logger.LogWarning("Document {DocId} missing json_payload field", docId);
+                            return;
+                        }
 
-                            var jsonPayload = data["json_payload"]?.ToString();
-                            if (string.IsNullOrEmpty(jsonPayload))
-                            {
-                                _logger.LogWarning("Document {DocId} has empty json_payload", doc.Id);
-                                continue;
-                            }
+                        var jsonPayload = data["json_payload"]?.ToString();
+                        if (string.IsNullOrEmpty(jsonPayload))
+                        {
+                            logger.LogWarning("Document {DocId} has empty json_payload", docId);
+                            return;
+                        }
 
-                            // Deserialize the json_payload to RoutingResultDto
-                            var result = JsonSerializer.Deserialize<RoutingResultDto>(
-                                jsonPayload,
-                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        // Deserialize the json_payload to RoutingResultDto
+                        var result = JsonSerializer.Deserialize<RoutingResultDto>(
+                            jsonPayload,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                            if (result == null)
-                            {
-                                _logger.LogWarning("Failed to deserialize json_payload for document {DocId}", doc.Id);
-                                continue;
-                            }
-
-                            _logger.LogInformation("New optimization result received: Run {OptimizationRunId}", result.OptimizationRunId);
+                        if (result != null)
+                        {
+                            logger.LogInformation("New optimization result received: Run {OptimizationRunId}", result.OptimizationRunId);
                             OnOptimizationCompleted?.Invoke(result);
                         }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error processing optimization result document {DocId}", change.Document.Id);
-                        }
                     }
-                }
-            });
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error processing optimization result document {DocId}", docId);
+                    }
 
-            _logger.LogInformation("Firestore listener started for pending_analysis collection");
-            await Task.CompletedTask;
+                    await Task.CompletedTask;
+                });
+
+            logger.LogInformation("Firestore listener started for pending_analysis collection via IFirestoreMessageBus");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start Firestore listener for optimization results");
+            logger.LogError(ex, "Failed to start Firestore listener for optimization results");
             throw;
         }
     }
@@ -152,7 +92,7 @@ public sealed class OptimizationResultsListenerService : IOptimizationResultsLis
         {
             await _listener.StopAsync();
             _listener = null;
-            _logger.LogInformation("Firestore optimization results listener stopped");
+            logger.LogInformation("Firestore optimization results listener stopped");
         }
     }
 
