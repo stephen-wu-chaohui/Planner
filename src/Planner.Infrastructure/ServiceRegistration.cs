@@ -50,6 +50,18 @@ public static class ServiceRegistration {
 
                     ClockSkew = TimeSpan.FromSeconds(5)
                 };
+                
+                // Support reading JWT from cookie as fallback
+                options.Events = new JwtBearerEvents {
+                    OnMessageReceived = context => {
+                        // First check Authorization header (default)
+                        if (string.IsNullOrEmpty(context.Token)) {
+                            // Fallback to cookie if no header present
+                            context.Token = context.Request.Cookies["planner-auth"];
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         services.AddAuthorization(options => {
