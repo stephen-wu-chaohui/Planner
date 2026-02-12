@@ -110,8 +110,8 @@ public partial class DispatchCenterState : IRouteState
             StartWaitingForSolve?.Invoke(settings.SearchTimeLimitSeconds);
         }
 
-        var jobs = await api.GetFromJsonAsync<List<JobDto>>("/api/jobs");
-        if (jobs?.Count > 0) {
+        var jobs = await plannerGraphQLService.GetJobsAsync();
+        if (jobs.Count > 0) {
             _jobs = jobs;
             OnJobsChanged?.Invoke();
         }

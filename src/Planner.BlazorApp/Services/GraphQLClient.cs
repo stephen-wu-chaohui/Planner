@@ -1,5 +1,6 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Planner.BlazorApp.Auth;
 
 namespace Planner.BlazorApp.Services;
@@ -8,6 +9,14 @@ namespace Planner.BlazorApp.Services;
 /// Simple GraphQL client that uses HttpClient to execute GraphQL queries and mutations
 /// </summary>
 public sealed class GraphQLClient {
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web) {
+        PropertyNameCaseInsensitive = true
+    };
+
+    static GraphQLClient() {
+        SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    }
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IJwtTokenStore _tokenStore;
 
@@ -37,16 +46,29 @@ public sealed class GraphQLClient {
         };
 
         using var client = CreateClient();
+        
+        Console.WriteLine($"[GraphQLClient] Sending GraphQL request to {client.BaseAddress}/graphql");
+        Console.WriteLine($"[GraphQLClient] Has Authorization header: {client.DefaultRequestHeaders.Authorization != null}");
+        
         var response = await client.PostAsJsonAsync("/graphql", request, cancellationToken);
+
+        Console.WriteLine($"[GraphQLClient] Response status: {response.StatusCode}");
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
             _tokenStore.Clear();
+            Console.WriteLine("[GraphQLClient] Unauthorized - clearing token");
             return null;
         }
 
         response.EnsureSuccessStatusCode();
-
-        var result = await response.Content.ReadFromJsonAsync<GraphQLResponse<T>>(cancellationToken: cancellationToken);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var result = await JsonSerializer.DeserializeAsync<GraphQLResponse<T>>(stream, SerializerOptions, cancellationToken);
+        
+        if (result?.Errors != null && result.Errors.Length > 0)
+        {
+            Console.WriteLine($"[GraphQLClient] GraphQL errors: {string.Join(", ", result.Errors.Select(e => e.Message))}");
+        }
+        
         return result;
     }
 }
@@ -63,5 +85,5 @@ public class GraphQLResponse<T> {
 
 public class GraphQLError {
     public string Message { get; set; } = string.Empty;
-    public JsonElement[]? Extensions { get; set; }
+    public JsonElement? Extensions { get; set; }
 }

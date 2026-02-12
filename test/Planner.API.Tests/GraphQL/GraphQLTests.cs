@@ -1,14 +1,10 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace Planner.API.Tests.GraphQL;
 
-public class GraphQLTests : IClassFixture<TestWebApplicationFactory> {
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public GraphQLTests(TestWebApplicationFactory factory) {
-        _factory = factory;
-    }
+public class GraphQLTests(TestWebApplicationFactory factory) : IClassFixture<TestWebApplicationFactory> {
+    private readonly WebApplicationFactory<Program> _factory = factory;
 
     [Fact]
     public async Task GraphQL_Endpoint_Returns_Schema() {

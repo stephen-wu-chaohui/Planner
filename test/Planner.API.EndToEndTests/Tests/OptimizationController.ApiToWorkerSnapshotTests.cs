@@ -33,8 +33,7 @@ public sealed class OptimizationControllerApiToWorkerSnapshotTests // Inherit fr
 
         method.Should().NotBeNull();
 
-        int ? searchTimeLimitSeconds = null;
-        var task = (Task<OptimizeRouteRequest>)method!.Invoke(controller, new object?[] { searchTimeLimitSeconds })!;
+        var task = (Task<OptimizeRouteRequest>)method!.Invoke(controller, [null])!;
 
         var request = await task;
 

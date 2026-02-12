@@ -77,7 +77,9 @@ builder.Services.ConfigureApplicationCookie(options => {
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
-    .AddMutationType<Mutation>();
+    .AddMutationType<Mutation>()
+    .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = builder.Environment.IsDevelopment())
+    .AddHttpRequestInterceptor<TenantContextInterceptor>();
 
 //
 // ────────────────────────────────────────────────
