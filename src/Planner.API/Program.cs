@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Planner.API.BackgroundServices;
+using Planner.API.GraphQL;
 using Planner.API.Middleware;
 using Planner.Application;
 using Planner.Infrastructure;
@@ -72,6 +73,12 @@ builder.Services.ConfigureApplicationCookie(options => {
     };
 });
 
+// GraphQL
+builder.Services
+    .AddGraphQLServer()
+    .AddQueryType<Query>()
+    .AddMutationType<Mutation>();
+
 //
 // ────────────────────────────────────────────────
 // Build app
@@ -126,6 +133,8 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = _ => true
 });
+
+app.MapGraphQL("/graphql");
 
 app.Run();
 
