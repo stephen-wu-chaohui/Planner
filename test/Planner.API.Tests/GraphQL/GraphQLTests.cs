@@ -1,79 +1,105 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Xunit;
 
 namespace Planner.API.Tests.GraphQL;
 
-public class GraphQLTests : IClassFixture<WebApplicationFactory<Program>> {
+public class GraphQLTests : IClassFixture<TestWebApplicationFactory> {
     private readonly WebApplicationFactory<Program> _factory;
 
-    public GraphQLTests(WebApplicationFactory<Program> factory) {
+    public GraphQLTests(TestWebApplicationFactory factory) {
         _factory = factory;
     }
 
     [Fact]
     public async Task GraphQL_Endpoint_Returns_Schema() {
-        // Arrange
         var client = _factory.CreateClient();
 
-        // Act
         var response = await client.GetAsync("/graphql?sdl");
 
-        // Assert
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("type Query", content);
+        Assert.Contains("type Mutation", content);
     }
 
     [Fact]
-    public async Task GraphQL_Query_Jobs_Returns_Data() {
-        // Arrange
-        var client = _factory.CreateClient();
-        var request = new {
-            query = "{ jobs { id name } }"
+    public async Task GraphQL_Query_Type_Contains_All_Targets() {
+        var payload = await ExecuteGraphQLAsync(
+            """
+            {
+              __type(name: "Query") {
+                fields {
+                  name
+                }
+              }
+            }
+            """);
+
+        var fields = payload
+            .GetProperty("data")
+            .GetProperty("__type")
+            .GetProperty("fields")
+            .EnumerateArray()
+            .Select(f => f.GetProperty("name").GetString())
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Cast<string>()
+            .ToHashSet(StringComparer.Ordinal);
+
+        var expected = new[] {
+            "jobs", "jobById",
+            "customers", "customerById",
+            "vehicles", "vehicleById",
+            "depots", "depotById",
+            "locations", "locationById",
+            "routes", "routeById",
+            "tasks", "taskById"
         };
 
-        // Act
-        var response = await client.PostAsJsonAsync("/graphql", request);
-
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("\"data\"", content);
+        expected.Should().OnlyContain(name => fields.Contains(name));
     }
 
     [Fact]
-    public async Task GraphQL_Query_Customers_Returns_Data() {
-        // Arrange
-        var client = _factory.CreateClient();
-        var request = new {
-            query = "{ customers { customerId name } }"
+    public async Task GraphQL_Mutation_Type_Contains_All_Targets() {
+        var payload = await ExecuteGraphQLAsync(
+            """
+            {
+              __type(name: "Mutation") {
+                fields {
+                  name
+                }
+              }
+            }
+            """);
+
+        var fields = payload
+            .GetProperty("data")
+            .GetProperty("__type")
+            .GetProperty("fields")
+            .EnumerateArray()
+            .Select(f => f.GetProperty("name").GetString())
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Cast<string>()
+            .ToHashSet(StringComparer.Ordinal);
+
+        var expected = new[] {
+            "createJob", "updateJob", "deleteJob",
+            "createCustomer", "updateCustomer", "deleteCustomer",
+            "createVehicle", "updateVehicle", "deleteVehicle",
+            "createDepot", "updateDepot", "deleteDepot",
+            "createLocation", "updateLocation", "deleteLocation",
+            "createTask", "updateTask", "deleteTask"
         };
 
-        // Act
-        var response = await client.PostAsJsonAsync("/graphql", request);
-
-        // Assert
-        response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("\"data\"", content);
+        expected.Should().OnlyContain(name => fields.Contains(name));
     }
 
-    [Fact]
-    public async Task GraphQL_Query_Vehicles_Returns_Data() {
-        // Arrange
+    private async Task<JsonElement> ExecuteGraphQLAsync(string query) {
         var client = _factory.CreateClient();
-        var request = new {
-            query = "{ vehicles { id name } }"
-        };
+        var response = await client.PostAsJsonAsync("/graphql", new { query });
 
-        // Act
-        var response = await client.PostAsJsonAsync("/graphql", request);
-
-        // Assert
         response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("\"data\"", content);
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.Clone();
     }
 }

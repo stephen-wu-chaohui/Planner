@@ -170,3 +170,5 @@ static void ValidateRequiredConfiguration(IConfiguration config)
         );
     }
 }
+
+public partial class Program { }
