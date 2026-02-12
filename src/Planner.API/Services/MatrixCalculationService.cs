@@ -1,5 +1,5 @@
 ﻿
-using Planner.Domain;
+using DomainLocation = Planner.Domain.Location;
 using Planner.Messaging.Optimization;
 using Planner.Messaging.Optimization.Inputs;
 
@@ -18,7 +18,7 @@ public interface IMatrixCalculationService {
     /// <param name="distanceScale">Scale factor for distance values.</param>
     /// <returns>Tuple containing distance matrix and travel time matrix.</returns>
     (long[] DistanceMatrix, long[] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<Location> locations,
+        IReadOnlyList<DomainLocation> locations,
         OptimizationSettings settings,
         long timeScale = 1,
         long distanceScale = 1);
@@ -28,7 +28,7 @@ public sealed class MatrixCalculationService : IMatrixCalculationService {
     const double kmDegreeConstant = 111.32;   // Approximate conversion factor
 
     public (long[] DistanceMatrix, long[] TravelTimeMatrix) BuildMatrices(
-        IReadOnlyList<Location> locations,
+        IReadOnlyList<DomainLocation> locations,
         OptimizationSettings settings,
         long timeScale = 1,
         long distanceScale = 1) {

@@ -1,23 +1,23 @@
 using Planner.Contracts.API;
-using Planner.Domain;
+using DomainLocation = Planner.Domain.Location;
 
 namespace Planner.API.Mappings;
 
 public static class DomainDtoMappings {
-    public static TenantDto ToDto(this Tenant tenant, long? mainDepotId = null) =>
+    public static TenantDto ToDto(this Planner.Domain.Tenant tenant, long? mainDepotId = null) =>
         new(tenant.Id, tenant.Name, mainDepotId);
 
-    public static LocationDto ToDto(this Location location) =>
+    public static LocationDto ToDto(this DomainLocation location) =>
         new(location.Id, location.Address, location.Latitude, location.Longitude);
 
-    public static Location ToDomain(this LocationDto dto) =>
+    public static DomainLocation ToDomain(this LocationDto dto) =>
         new(dto.Id, dto.Address, dto.Latitude, dto.Longitude);
 
-    public static DepotDto ToDto(this Depot depot) =>
+    public static DepotDto ToDto(this Planner.Domain.Depot depot) =>
         new(depot.Id, depot.Name, depot.Location.ToDto());
 
-    public static Depot ToDomain(this DepotDto dto, Guid tenantId) =>
-        new Depot {
+    public static Planner.Domain.Depot ToDomain(this DepotDto dto, Guid tenantId) =>
+        new Planner.Domain.Depot {
             Id = dto.Id,
             TenantId = tenantId,
             Name = dto.Name,
@@ -25,11 +25,11 @@ public static class DomainDtoMappings {
             Location = dto.Location.ToDomain()
         };
 
-    public static CustomerDto ToDto(this Customer customer) =>
+    public static CustomerDto ToDto(this Planner.Domain.Customer customer) =>
         new(customer.CustomerId, customer.Name, customer.Location.ToDto(), customer.DefaultServiceMinutes, customer.RequiresRefrigeration);
 
-    public static Customer ToDomain(this CustomerDto dto, Guid tenantId) =>
-        new Customer {
+    public static Planner.Domain.Customer ToDomain(this CustomerDto dto, Guid tenantId) =>
+        new Planner.Domain.Customer {
             CustomerId = dto.CustomerId,
             TenantId = tenantId,
             Name = dto.Name,
@@ -39,11 +39,11 @@ public static class DomainDtoMappings {
             RequiresRefrigeration = dto.RequiresRefrigeration
         };
 
-    public static JobDto ToDto(this Job job) =>
+    public static JobDto ToDto(this Planner.Domain.Job job) =>
         new(job.Id, job.Name, job.OrderId, job.CustomerId, job.JobType.ToDto(), job.Reference, job.Location.ToDto(), job.ServiceTimeMinutes, job.PalletDemand, job.WeightDemand, job.ReadyTime, job.DueTime, job.RequiresRefrigeration);
 
-    public static Job ToDomain(this JobDto dto, Guid tenantId) =>
-        new Job {
+    public static Planner.Domain.Job ToDomain(this JobDto dto, Guid tenantId) =>
+        new Planner.Domain.Job {
             Id = dto.Id,
             TenantId = tenantId,
             Name = dto.Name,
@@ -61,11 +61,11 @@ public static class DomainDtoMappings {
             RequiresRefrigeration = dto.RequiresRefrigeration
         };
 
-    public static VehicleDto ToDto(this Vehicle vehicle) =>
+    public static VehicleDto ToDto(this Planner.Domain.Vehicle vehicle) =>
         new(vehicle.Id, vehicle.Name, vehicle.SpeedFactor, vehicle.ShiftLimitMinutes, vehicle.DepotStartId, vehicle.DepotEndId, vehicle.DriverRatePerHour, vehicle.MaintenanceRatePerHour, vehicle.FuelRatePerKm, vehicle.BaseFee, vehicle.MaxPallets, vehicle.MaxWeight, vehicle.RefrigeratedCapacity);
 
-    public static Vehicle ToDomain(this VehicleDto dto, Guid tenantId) =>
-        new Vehicle {
+    public static Planner.Domain.Vehicle ToDomain(this VehicleDto dto, Guid tenantId) =>
+        new Planner.Domain.Vehicle {
             Id = dto.Id,
             TenantId = tenantId,
             Name = dto.Name,
@@ -82,17 +82,17 @@ public static class DomainDtoMappings {
             RefrigeratedCapacity = dto.RefrigeratedCapacity
         };
 
-    public static JobTypeDto ToDto(this JobType jobType) => jobType switch {
-        JobType.Depot => JobTypeDto.Depot,
-        JobType.Pickup => JobTypeDto.Pickup,
-        JobType.Delivery => JobTypeDto.Delivery,
+    public static JobTypeDto ToDto(this Planner.Domain.JobType jobType) => jobType switch {
+        Planner.Domain.JobType.Depot => JobTypeDto.Depot,
+        Planner.Domain.JobType.Pickup => JobTypeDto.Pickup,
+        Planner.Domain.JobType.Delivery => JobTypeDto.Delivery,
         _ => throw new ArgumentOutOfRangeException(nameof(jobType), jobType, "Unknown job type")
     };
 
-    public static JobType ToDomain(this JobTypeDto jobType) => jobType switch {
-        JobTypeDto.Depot => JobType.Depot,
-        JobTypeDto.Pickup => JobType.Pickup,
-        JobTypeDto.Delivery => JobType.Delivery,
+    public static Planner.Domain.JobType ToDomain(this JobTypeDto jobType) => jobType switch {
+        JobTypeDto.Depot => Planner.Domain.JobType.Depot,
+        JobTypeDto.Pickup => Planner.Domain.JobType.Pickup,
+        JobTypeDto.Delivery => Planner.Domain.JobType.Delivery,
         _ => throw new ArgumentOutOfRangeException(nameof(jobType), jobType, "Unknown job type")
     };
 }

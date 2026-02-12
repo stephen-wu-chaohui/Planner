@@ -35,6 +35,8 @@ builder.Services.AddServerSideBlazor()
     });
 
 builder.Services.AddScoped<PlannerApiClient>();
+builder.Services.AddScoped<GraphQLClient>();
+builder.Services.AddScoped<PlannerGraphQLService>();
 
 // Shared infrastructure
 builder.Services.AddMessagingBus();

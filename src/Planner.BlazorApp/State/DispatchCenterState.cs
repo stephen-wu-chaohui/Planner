@@ -5,6 +5,7 @@ namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState(
     PlannerApiClient api,
+    PlannerGraphQLService plannerGraphQLService,
     IOptimizationResultsListenerService optimizationResultsListenerService,
     IRouteInsightsListenerService routeInsightsListenerService) : IAsyncDisposable
 {
@@ -18,13 +19,13 @@ public partial class DispatchCenterState(
         {
             await LoadTenantInfo();
 
-            var vTask = api.GetFromJsonAsync<List<VehicleDto>>("/api/vehicles");
-            var cTask = api.GetFromJsonAsync<List<CustomerDto>>("/api/customers");
-            var jTask = api.GetFromJsonAsync<List<JobDto>>("/api/jobs");
+            var vTask = plannerGraphQLService.GetVehiclesAsync();
+            var cTask = plannerGraphQLService.GetCustomersAsync();
+            var jTask = plannerGraphQLService.GetJobsAsync();
             await Task.WhenAll(vTask, cTask, jTask);
-            _vehicles = vTask.Result ?? [];
-            _customers = cTask.Result ?? [];
-            _jobs = jTask.Result ?? [];
+            _vehicles = vTask.Result;
+            _customers = cTask.Result;
+            _jobs = jTask.Result;
 
             OnVehiclesChanged?.Invoke();
             OnCustomersChanged?.Invoke();
