@@ -23,7 +23,7 @@ query GetJobs {
   jobs {
     id
     name
-    orderID
+    orderId
     customerId
     jobType
     reference

@@ -17,7 +17,7 @@ public sealed class Mutation {
 
     public async Task<JobDto?> UpdateJob(long id, JobDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.Id) {
-            throw new ArgumentException("ID mismatch");
+            throw new ArgumentException($"Job ID in path ({id}) does not match ID in request body ({input.Id})");
         }
 
         var existing = await db.Jobs.FindAsync(id);
@@ -52,7 +52,7 @@ public sealed class Mutation {
 
     public async Task<CustomerDto?> UpdateCustomer(long id, CustomerDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.CustomerId) {
-            throw new ArgumentException("ID mismatch");
+            throw new ArgumentException($"Customer ID in path ({id}) does not match ID in request body ({input.CustomerId})");
         }
 
         var existing = await db.Customers.FindAsync(id);
@@ -87,7 +87,7 @@ public sealed class Mutation {
 
     public async Task<VehicleDto?> UpdateVehicle(long id, VehicleDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.Id) {
-            throw new ArgumentException("ID mismatch");
+            throw new ArgumentException($"Vehicle ID in path ({id}) does not match ID in request body ({input.Id})");
         }
 
         var existing = await db.Set<Planner.Domain.Vehicle>().FindAsync(id);
@@ -122,7 +122,7 @@ public sealed class Mutation {
 
     public async Task<DepotDto?> UpdateDepot(long id, DepotDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.Id) {
-            throw new ArgumentException("ID mismatch");
+            throw new ArgumentException($"Depot ID in path ({id}) does not match ID in request body ({input.Id})");
         }
 
         var existing = await db.Depots.FindAsync(id);
@@ -157,7 +157,7 @@ public sealed class Mutation {
 
     public async Task<LocationDto?> UpdateLocation(long id, LocationDto input, [Service] PlannerDbContext db) {
         if (id != input.Id) {
-            throw new ArgumentException("ID mismatch");
+            throw new ArgumentException($"Location ID in path ({id}) does not match ID in request body ({input.Id})");
         }
 
         var existing = await db.Locations.FindAsync(id);
@@ -191,7 +191,7 @@ public sealed class Mutation {
 
     public async Task<Planner.Domain.TaskItem?> UpdateTask(long id, Planner.Domain.TaskItem input, [Service] PlannerDbContext db) {
         if (id != input.Id) {
-            throw new ArgumentException("ID mismatch");
+            throw new ArgumentException($"Task ID in path ({id}) does not match ID in request body ({input.Id})");
         }
 
         var existing = await db.Tasks.FindAsync(id);
