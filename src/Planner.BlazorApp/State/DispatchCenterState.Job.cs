@@ -26,7 +26,8 @@ public partial class DispatchCenterState : IJobState {
             bool success = await InternalBulkUpdateAsync(dirtyModels);
 
             if (success) {
-                _jobs = await plannerGraphQLService.GetJobsAsync();
+                // ✅ Using REST API endpoint
+                _jobs = await api.GetFromJsonAsync<List<JobDto>>("/api/jobs") ?? [];
                 OnJobsChanged?.Invoke();
                 ClearError();
             }

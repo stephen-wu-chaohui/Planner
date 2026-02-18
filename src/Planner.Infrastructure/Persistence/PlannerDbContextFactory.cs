@@ -53,10 +53,15 @@ public class PlannerDbContextFactory : IDesignTimeDbContextFactory<PlannerDbCont
     /// </summary>
     private class DesignTimeTenantContext : ITenantContext
     {
-        public Guid TenantId { get; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        public Guid TenantId { get; internal set; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        public string UserEmail { get; } = "demo@stephenwu.com";
 
         public bool IsSet => true;
 
-        public void SetTenant(Guid tenantId) { }
+        // Design-time context ignores tenant changes; this is a no-op to avoid exceptions.
+        public void SetTenant(Guid tenantId)
+        {
+            TenantId = tenantId;
+        }
     }
 }

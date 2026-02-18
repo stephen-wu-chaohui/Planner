@@ -7,6 +7,7 @@ internal sealed class DbMigratorTenantContext : ITenantContext {
     public Guid TenantId { get; } =
         Guid.Parse("00000000-0000-0000-0000-000000000001");
 
+    public string UserEmail => throw new NotImplementedException();
     public bool IsSet => true;
 
     public void SetTenant(Guid tenantId) {

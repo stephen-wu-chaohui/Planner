@@ -3,10 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Planner.Application;
 using Planner.Infrastructure;
-using Planner.Infrastructure.Persistence;
 using Planner.Tools.DbMigrator;
 using Planner.Tools.DbMigrator.Db;
 using Microsoft.EntityFrameworkCore;
+using Planner.Infrastructure.Persistence;
 
 var builder = Host.CreateApplicationBuilder(args);
 

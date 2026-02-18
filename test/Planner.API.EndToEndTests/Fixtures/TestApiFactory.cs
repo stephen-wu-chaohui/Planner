@@ -2,11 +2,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Controllers;
 using Planner.API.Services;
-using Planner.Infrastructure.Persistence;
 using Planner.Application;
 using System;
 using Planner.Optimization;
 using Planner.Messaging.Messaging;
+using Planner.Infrastructure.Persistence;
 
 namespace Planner.API.EndToEndTests.Fixtures;
 
@@ -48,6 +48,7 @@ public sealed class TestApiFactory : IDisposable {
 
     public class StaticTenantContext : ITenantContext {
         public Guid TenantId { get; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        public string UserEmail => throw new NotImplementedException();
 
         public bool IsSet => throw new NotImplementedException();
 

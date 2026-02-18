@@ -4,23 +4,22 @@ using System.Net.Http.Headers;
 namespace Planner.BlazorApp.Services;
 
 public sealed class PlannerApiClient(
-    IHttpClientFactory httpClientFactory,
-    IJwtTokenStore tokenStore)
+    IHttpClientFactory httpClientFactory)
 {
     private HttpClient CreateClient()
     {
         var client = httpClientFactory.CreateClient("PlannerApi");
 
-        // Always set/clear auth per request based on the *current* scoped TokenStore
-        if (!string.IsNullOrWhiteSpace(tokenStore.AccessToken) && !tokenStore.IsExpired())
-        {
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", tokenStore.AccessToken);
-        }
-        else
-        {
-            client.DefaultRequestHeaders.Authorization = null;
-        }
+        //// Always set/clear auth per request based on the *current* scoped TokenStore
+        //if (!string.IsNullOrWhiteSpace(tokenStore.AccessToken) && !tokenStore.IsExpired())
+        //{
+        //    client.DefaultRequestHeaders.Authorization =
+        //        new AuthenticationHeaderValue("Bearer", tokenStore.AccessToken);
+        //}
+        //else
+        //{
+        //    client.DefaultRequestHeaders.Authorization = null;
+        //}
 
         return client;
     }
@@ -40,7 +39,7 @@ public sealed class PlannerApiClient(
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
-            tokenStore?.Clear();
+            // tokenStore?.Clear();
             return default;
         }
 
@@ -52,7 +51,7 @@ public sealed class PlannerApiClient(
     {
         var response = await CreateClient().PutAsJsonAsync(requestUri, value, cancellationToken);
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
-            tokenStore?.Clear();
+            // tokenStore?.Clear();
         }
         return response;
     }
@@ -62,7 +61,7 @@ public sealed class PlannerApiClient(
         var response = await CreateClient().DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
-            tokenStore.Clear();
+            // tokenStore.Clear();
             return response;
         }
 

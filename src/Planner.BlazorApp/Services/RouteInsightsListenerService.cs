@@ -20,7 +20,7 @@ public record RouteInsight
 public interface IRouteInsightsListenerService : IAsyncDisposable
 {
     event Action<RouteInsight>? OnNewInsight;
-    Task StartListeningAsync();
+    Task StartListeningAsync(Guid tenantId);
     Task StopListeningAsync();
 }
 
@@ -35,7 +35,7 @@ public sealed class RouteInsightsListenerService(
 
     public event Action<RouteInsight>? OnNewInsight;
 
-    public async Task StartListeningAsync()
+    public async Task StartListeningAsync(Guid tenantId)
     {
         if (_listener != null)
         {

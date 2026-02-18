@@ -1,12 +1,12 @@
-﻿using Planner.Contracts.API;
-
-namespace Planner.Contracts.Optimization;
+﻿namespace Planner.Contracts.Optimization;
 
 /// <summary>
 /// Describes one stop in an optimized vehicle route.
 /// </summary>
 public sealed record TaskAssignmentDto(
     long LocationId,
+    double Latitute,
+    double Longtitute,
     double ArrivalTime,
     double DepartureTime,
     long PalletLoad,

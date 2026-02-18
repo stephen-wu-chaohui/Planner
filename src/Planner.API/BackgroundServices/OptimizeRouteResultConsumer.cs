@@ -1,6 +1,7 @@
 ﻿using Google.Cloud.Firestore;
 using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Services;
+using Planner.Application;
 using Planner.Messaging;
 using Planner.Messaging.Firestore;
 using Planner.Messaging.Messaging;
@@ -20,6 +21,8 @@ public sealed class OptimizeRouteResultConsumer(
             async resp => {
                 try {
                     using var scope = scopeFactory.CreateScope();
+                    var tenantContext = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+                    tenantContext.SetTenant(resp.TenantId);
                     var enrichmentService = scope.ServiceProvider.GetRequiredService<IRouteEnrichmentService>();
                     var firestoreBus = scope.ServiceProvider.GetRequiredService<IFirestoreMessageBus>();
 

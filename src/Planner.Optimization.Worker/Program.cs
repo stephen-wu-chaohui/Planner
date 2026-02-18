@@ -8,15 +8,12 @@ using Planner.Optimization;
 using Planner.Messaging;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Configuration
-    .AddEnvironmentVariables();
+builder.Configuration.AddEnvironmentVariables();
 
-// Try to load shared.appsettings.json only if it exists
 var loggerFactory = LoggerFactory.Create(config => {
     config.AddConsole();
 });
 var logger = loggerFactory.CreateLogger("Startup");
-
 
 // =========================================================
 // SERVICES

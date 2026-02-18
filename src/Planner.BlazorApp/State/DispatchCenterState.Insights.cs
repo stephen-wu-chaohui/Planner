@@ -39,6 +39,7 @@ public partial class DispatchCenterState : IInsightState
     {
         _latestInsight = null;
         OnInsightsChanged?.Invoke();
+        await Task.CompletedTask;
     }
 }
 

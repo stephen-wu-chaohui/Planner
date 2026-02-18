@@ -11,7 +11,7 @@ namespace Planner.BlazorApp.Services;
 public interface IOptimizationResultsListenerService : IAsyncDisposable
 {
     event Action<RoutingResultDto>? OnOptimizationCompleted;
-    Task StartListeningAsync();
+    Task StartListeningAsync(Guid tenantId);
     Task StopListeningAsync();
 }
 
@@ -27,7 +27,7 @@ public sealed class OptimizationResultsListenerService(
 
     public event Action<RoutingResultDto>? OnOptimizationCompleted;
 
-    public async Task StartListeningAsync()
+    public async Task StartListeningAsync(Guid tenantId)
     {
         if (_listener != null)
         {
@@ -63,7 +63,7 @@ public sealed class OptimizationResultsListenerService(
                             jsonPayload,
                             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                        if (result != null)
+                        if (result != null && result.TenantId == tenantId)
                         {
                             logger.LogInformation("New optimization result received: Run {OptimizationRunId}", result.OptimizationRunId);
                             OnOptimizationCompleted?.Invoke(result);

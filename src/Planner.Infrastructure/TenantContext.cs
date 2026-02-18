@@ -1,17 +1,19 @@
-﻿namespace Planner.Application;
+﻿using Microsoft.AspNetCore.Http;
+using Planner.Application;
 
-public sealed class TenantContext : ITenantContext {
-    private Guid? _tenantId;
+namespace Planner.Infrastructure;
 
-    public Guid TenantId =>
-        _tenantId ?? throw new InvalidOperationException("TenantId has not been set.");
+public class TenantContext(IHttpContextAccessor httpContextAccessor) : ITenantContext {
+    public Guid TenantId {
+        get; private set;
+    }
 
-    public bool IsSet => _tenantId.HasValue;
+    public string? UserEmail =>
+        httpContextAccessor.HttpContext?.User?.Identity?.Name;
+
+    public bool IsSet => TenantId != Guid.Empty;
 
     public void SetTenant(Guid tenantId) {
-        if (_tenantId.HasValue)
-            throw new InvalidOperationException("TenantId has already been set for this request.");
-
-        _tenantId = tenantId;
+        TenantId = tenantId;
     }
 }

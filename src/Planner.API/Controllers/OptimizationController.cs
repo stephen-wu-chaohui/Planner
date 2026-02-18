@@ -13,7 +13,7 @@ namespace Planner.API.Controllers;
 
 [ApiController]
 [Route("api/vrp")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize]
 public class OptimizationController(
     IMessageBus bus,
     PlannerDbContext db,

@@ -25,6 +25,8 @@ env:
   AZURE_CONTAINER_APP_NAME: ${{ secrets.AZURE_API_CONTAINER_APP_NAME }} # e.g. planner-api
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_CONTAINERAPPS_ENVIRONMENT: ${{ secrets.AZURE_CONTAINERAPPS_ENVIRONMENT }}
+  AZUREAD_CLIENTID: ${{ secrets.AZUREAD_CLIENTID_API }}
+
   FIRESTORE_PROJECTID: ${{ secrets.FIRESTORE_PROJECTID }}
   FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
   GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
@@ -46,6 +48,7 @@ env:
   JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
   JWT_SECRET: ${{ secrets.JWT_SECRET }}
   EXPIRATION_IN_MINUTES: 60
+
 
 jobs:
   build-and-deploy:
@@ -149,6 +152,10 @@ jobs:
                 JwtOptions__Secret="${JWT_SECRET}"            \
                 JwtOptions__ExpirationInMinutes="${EXPIRATION_IN_MINUTES}"  \
                 Firestore__ProjectId="${FIRESTORE_PROJECTID}"      \
+                AzureAd__Instance="https://login.microsoftonline.com/"        \
+                AzureAd__Domain="plannerdemo.com"               \
+                AzureAd__TenantId="common"         \
+                AzureAd__ClientId="${AZUREAD_CLIENTID}"         \
                 FIREBASE_CONFIG_JSON="${FIREBASE_CONFIG_JSON}"     \
                 GOOGLE_API_KEY="${GOOGLE_API_KEY}"        \
                 GEMINI_API_KEY="${GEMINI_API_KEY}"          \
