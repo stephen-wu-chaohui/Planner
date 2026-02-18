@@ -1,6 +1,7 @@
 ﻿@page "/dispatch-center"
 @rendermode InteractiveServer
 
+@using Microsoft.AspNetCore.Components.Authorization
 @using Planner.BlazorApp.Auth
 @using Planner.BlazorApp.Components.DispatchCenter
 @using Planner.BlazorApp.Components.DispatchCenter.Models
@@ -11,23 +12,36 @@
 @using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.API
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using Planner.BlazorApp.Components.Auth
 
 @inject ICustomerState CustomerState
-@inject IJwtTokenStore TokenStore
 @inject ITenantState TenantState
 @inject NavigationManager Nav
 @inject WizardService Wizard
+@inject AuthenticationStateProvider AuthProvider
 
 <div class="planner-view d-flex flex-column flex-fill">
     <!-- Top toolbar -->
     <div class="toolbar p-2 d-flex align-items-center bg-light border-bottom">
         <div class="d-flex gap-2">
             <button class="btn btn-info" @onclick="ShowWelcomeGuide">Show Welcome Guide</button>
-            @if (TokenStore.IsAuthenticated && TokenStore.AccessToken!.GetRole() == "Admin") {
-                <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Planning Wizard</button>
-            }
+            <button class="btn btn-primary" @onclick=@(() => OpenTab("Customers"))>Planning Wizard</button>
         </div>
-        <h5 class="ms-auto mb-0">@(TenantState.TenantInfo?.TenantName ?? "Dispatch Centre")</h5>
+        <div class="ms-auto mb-0">
+            <AuthorizeView>
+                <Authorized>
+                    <span>@(TenantState.TenantInfo?.TenantName ?? "Dispatch Centre") </span>
+                    <a href="/MicrosoftIdentity/Account/SignOut">Log out</a>
+                </Authorized>
+                <NotAuthorized>
+                    @* Show a button to open the modal instead of the direct login link *@
+                    <button class="btn btn-primary" @onclick="() => showDemoModal = true">
+                        Explore Demo
+                    </button>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+        <DemoLoginModal IsVisible="showDemoModal" />
     </div>
 
     <!-- Map area -->
@@ -43,20 +57,21 @@
 
 @code {
     private bool _subscribed;
+    private bool showDemoModal = false;
 
     private PlannerEntitiesModal? entitiesModal;
     private PlannerMap? mapRef;
     private NewCustomerModal? newCustomerModal;
 
     protected override async Task OnInitializedAsync() {
-        if (!TokenStore.IsAuthenticated || string.IsNullOrWhiteSpace(TokenStore.AccessToken))
-        {
-            Nav.NavigateTo("/login");
-            return;
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+
+        // Only call the API if we actually have a logged-in user!
+        if (authState.User.Identity?.IsAuthenticated == true) {
+            if (_subscribed) return;
+            await CustomerState.InitializeAsync();
+            _subscribed = true;
         }
-        if (_subscribed) return;
-        await CustomerState.InitializeAsync();
-        _subscribed = true;
     }
 
     private async void OnCollectionChanged(string _) {
@@ -77,6 +92,6 @@
     }
 
     private async Task HandleNewCustomer(CustomerFormModel customer) {
-        await CustomerState.SaveChangesAsync([customer]);
+        await CustomerState.SaveChangesAsync(new[] { customer });
     }
 }

@@ -21,7 +21,8 @@ public partial class DispatchCenterState : ICustomerState {
             bool success = await InternalBulkUpdateAsync(dirtyModels);
 
             if (success) {
-                _customers = await plannerGraphQLService.GetCustomersAsync();
+                // ✅ Using REST API endpoint
+                _customers = await api.GetFromJsonAsync<List<CustomerDto>>("/api/customers") ?? [];
                 OnCustomersChanged?.Invoke();
                 ClearError();
             }

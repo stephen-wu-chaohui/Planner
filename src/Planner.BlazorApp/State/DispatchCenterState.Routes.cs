@@ -35,7 +35,7 @@ public partial class DispatchCenterState : IRouteState
         else
         {
             LastErrorMessage = null;
-            _routes = evt.Routes.ToList();
+            _routes = [.. evt.Routes];
             BuildMapRoutes();
             OnRoutesChanged?.Invoke();
         }
@@ -53,51 +53,28 @@ public partial class DispatchCenterState : IRouteState
 
     private void BuildMapRoutes()
     {
-        // 1. Create a lookup map for O(1) access
-        var jobMap = _jobs.ToDictionary(job => job.Location.Id, job => job);
-        var vehicleMap = _vehicles.ToDictionary(vehicle => vehicle.Id, vehicle => vehicle);
-
-        _mapRoutes = _routes.Select(route => {
-            var vehicle = vehicleMap[route.VehicleId];
+        _mapRoutes = [.. _routes.Select(route => {
+            var routeName = route.VehicleName ?? "Unknown";
             return new MapRoute {
-                RouteName = vehicle.Name,
-                Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
-                Points = route.Stops.Select(stop => {
-                    if (TenantInfo != null && stop.LocationId == TenantInfo.MainDepot.Location.Id) {
-                        // Depot stop
-                        return new CustomerMarker {
-                            Lat = TenantInfo.MainDepot.Location.Latitude,
-                            Lng = TenantInfo.MainDepot.Location.Longitude,
-                            RouteName = vehicle.Name,
-                            Arrival = stop.ArrivalTime / 60.0,
-                            Departure = stop.DepartureTime / 60.0,
-                            PalletLoad = stop.PalletLoad,
-                            WeightLoad = stop.WeightLoad,
-                            RefrigeratedLoad = stop.RefrigeratedLoad,
-                            Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
-                            Label = "Depot",
-                            JobType = "Depot"
-                        };
-                    } else if (jobMap.TryGetValue(stop.LocationId, out var job)) {
-                        return new CustomerMarker {
-                            Lat = job.Location.Latitude,
-                            Lng = job.Location.Longitude,
-                            RouteName = vehicle.Name,
-                            Arrival = stop.ArrivalTime / 60.0,
-                            Departure = stop.DepartureTime / 60.0,
-                            PalletLoad = stop.PalletLoad,
-                            WeightLoad = stop.WeightLoad,
-                            RefrigeratedLoad = stop.RefrigeratedLoad,
-                            Color = ColourHelper.ColourFromString(vehicle.Name, 0.95, 0.25) ?? "#FF0000",
-                            Label = job.Name,
-                            JobType = job.JobType.ToString()
-                        };
-                    } else {
-                        throw new KeyNotFoundException($"Job with LocationId {stop.LocationId} not found.");
-                    }
-                }).ToList()
+                RouteName = routeName,
+                Color = ColourHelper.ColourFromString(routeName, 0.95, 0.25) ?? "#FF0000",
+                Points = [.. route.Stops.Select(stop => {
+                    return new CustomerMarker {
+                        Lat = stop.Latitute,
+                        Lng = stop.Longtitute,
+                        RouteName = routeName,
+                        Arrival = stop.ArrivalTime / 60.0,
+                        Departure = stop.DepartureTime / 60.0,
+                        PalletLoad = stop.PalletLoad,
+                        WeightLoad = stop.WeightLoad,
+                        RefrigeratedLoad = stop.RefrigeratedLoad,
+                        Color = ColourHelper.ColourFromString(routeName, 0.95, 0.25) ?? "#FF0000",
+                        Label = stop.JobName ?? "Depot",
+                        JobType = stop.JobType?.ToString() ?? "Depot"
+                    };
+                })]
             };
-        }).ToList();
+        })];
     }
 
     public async Task SolveVrpAsync(int? searchTimeLimitSeconds = null) {
@@ -110,7 +87,8 @@ public partial class DispatchCenterState : IRouteState
             StartWaitingForSolve?.Invoke(settings.SearchTimeLimitSeconds);
         }
 
-        var jobs = await plannerGraphQLService.GetJobsAsync();
+        // ✅ Using REST API endpoint
+        var jobs = await api.GetFromJsonAsync<List<JobDto>>("/api/jobs") ?? [];
         if (jobs.Count > 0) {
             _jobs = jobs;
             OnJobsChanged?.Invoke();

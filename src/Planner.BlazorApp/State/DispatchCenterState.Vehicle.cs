@@ -24,7 +24,8 @@ public partial class DispatchCenterState : IVehicleState {
 
             if (success) {
                 // 3. Refresh the facts from the API to ensure total synchronization
-                _vehicles = await plannerGraphQLService.GetVehiclesAsync();
+                // ✅ Using REST API endpoint
+                _vehicles = await api.GetFromJsonAsync<List<VehicleDto>>("/api/vehicles") ?? [];
                 OnVehiclesChanged?.Invoke();
                 ClearError();
             }

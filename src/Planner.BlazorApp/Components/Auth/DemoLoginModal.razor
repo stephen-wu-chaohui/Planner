@@ -1,0 +1,48 @@
+@if (IsVisible) {
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Planner Demo Login</h5>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted text-center mb-3">Select a city and sign in with its SIT account email.</p>
+
+                    <div class="list-group">
+                        @foreach (var cityAccount in CityAccounts) {
+                            <button @onclick='() => TriggerLogin(cityAccount.Email)'
+                                    class="list-group-item list-group-item-action text-start">
+                                <div class="fw-semibold">@cityAccount.City</div>
+                                <div class="small text-muted">@cityAccount.Email</div>
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <small class="text-secondary">Use the matching SIT account credentials on the Microsoft sign-in page.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private static readonly DemoCityAccount[] CityAccounts =
+    {
+        new("Taipei", "taipei.admin@plannerdemo.com"),
+        new("Perth", "perth.admin@plannerdemo.com"),
+        new("Sydney", "sydney.admin@plannerdemo.com"),
+        new("Melbourne", "melbourne.admin@plannerdemo.com"),
+        new("Auckland", "auckland.admin@plannerdemo.com"),
+        new("Christchurch", "christchurch.admin@plannerdemo.com")
+    };
+
+    private void TriggerLogin(string email) {
+        Nav.NavigateTo($"/demo-login?hint={Uri.EscapeDataString(email)}", forceLoad: true);
+    }
+
+    private sealed record DemoCityAccount(string City, string Email);
+}

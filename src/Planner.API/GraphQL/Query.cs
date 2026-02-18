@@ -2,51 +2,34 @@
 using Planner.API.Mappings;
 using Planner.Application;
 using Planner.Contracts.API;
-using Planner.Infrastructure.Persistence;
+using Planner.Domain;
 using DomainRoute = Planner.Domain.Route;
-using HotChocolate.Resolvers;
+using Planner.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Planner.API.GraphQL;
 
 public sealed class Query {
-    private const string TenantIdKey = "TenantId";
-
-    /// <summary>
-    /// Ensures tenant context is set in the resolver scope by retrieving TenantId from GraphQL context.
-    /// </summary>
-    private static void EnsureTenantContext(IResolverContext context, ITenantContext tenantContext)
-    {
-        if (tenantContext.IsSet)
-            return; // Already set
-
-        if (!context.ContextData.TryGetValue(TenantIdKey, out var tenantIdObj) || tenantIdObj is not Guid tenantId)
-        {
-            throw new UnauthorizedAccessException("Tenant context is not available.");
-        }
-
-        tenantContext.SetTenant(tenantId);
-    }
-
     // Jobs
+    [Authorize]
     public async Task<List<JobDto>> GetJobs(
-        IResolverContext context,
         [Service] PlannerDbContext db, 
         [Service] ITenantContext tenantContext) 
     {
-        EnsureTenantContext(context, tenantContext);
 
         return await db.Jobs
             .AsNoTracking()
+            .Where(j => j.TenantId == tenantContext.TenantId)
             .Include(j => j.Location)
             .Select(j => j.ToDto())
             .ToListAsync();
     }
 
-    public async Task<JobDto?> GetJobById(long id, IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<JobDto?> GetJobById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Jobs
             .AsNoTracking()
+            .Where(j => j.TenantId == tenantContext.TenantId)
             .Include(j => j.Location)
             .FirstOrDefaultAsync(j => j.Id == id);
 
@@ -54,21 +37,21 @@ public sealed class Query {
     }
 
     // Customers
-    public async Task<List<CustomerDto>> GetCustomers(IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<List<CustomerDto>> GetCustomers([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Customers
             .AsNoTracking()
+            .Where(c => c.TenantId == tenantContext.TenantId)
             .Include(c => c.Location)
             .Select(c => c.ToDto())
             .ToListAsync();
     }
 
-    public async Task<CustomerDto?> GetCustomerById(long id, IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<CustomerDto?> GetCustomerById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Customers
             .AsNoTracking()
+            .Where(c => c.TenantId == tenantContext.TenantId)
             .Include(c => c.Location)
             .FirstOrDefaultAsync(c => c.CustomerId == id);
 
@@ -76,22 +59,22 @@ public sealed class Query {
     }
 
     // Vehicles
-    public async Task<List<VehicleDto>> GetVehicles(IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<List<VehicleDto>> GetVehicles([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Set<Planner.Domain.Vehicle>()
             .AsNoTracking()
+            .Where(v => v.TenantId == tenantContext.TenantId)
             .Include(v => v.StartDepot)
             .Include(v => v.EndDepot)
             .Select(v => v.ToDto())
             .ToListAsync();
     }
 
-    public async Task<VehicleDto?> GetVehicleById(long id, IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<VehicleDto?> GetVehicleById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Set<Planner.Domain.Vehicle>()
             .AsNoTracking()
+            .Where(v => v.TenantId == tenantContext.TenantId)
             .Include(v => v.StartDepot)
             .Include(v => v.EndDepot)
             .FirstOrDefaultAsync(v => v.Id == id);
@@ -100,21 +83,22 @@ public sealed class Query {
     }
 
     // Depots
-    public async Task<List<DepotDto>> GetDepots(IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<List<DepotDto>> GetDepots([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Depots
             .AsNoTracking()
+            .Where(d => d.TenantId == tenantContext.TenantId)
             .Include(d => d.Location)
             .Select(d => d.ToDto())
             .ToListAsync();
     }
 
-    public async Task<DepotDto?> GetDepotById(long id, IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
+    [Authorize]
+    public async Task<DepotDto?> GetDepotById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
 
         var entity = await db.Depots
             .AsNoTracking()
+            .Where(d => d.TenantId == tenantContext.TenantId)
             .Include(d => d.Location)
             .FirstOrDefaultAsync(d => d.Id == id);
 
@@ -122,8 +106,7 @@ public sealed class Query {
     }
 
     // Locations
-    public async Task<List<LocationDto>> GetLocations(IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
+    public async Task<List<LocationDto>> GetLocations([Service] PlannerDbContext db) {
 
         return await db.Locations
             .AsNoTracking()
@@ -131,9 +114,7 @@ public sealed class Query {
             .ToListAsync();
     }
 
-    public async Task<LocationDto?> GetLocationById(long id, IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    public async Task<LocationDto?> GetLocationById(long id, [Service] PlannerDbContext db) {
         var entity = await db.Locations
             .AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == id);
@@ -142,36 +123,34 @@ public sealed class Query {
     }
 
     // Routes
-    public async Task<List<DomainRoute>> GetRoutes(IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<List<DomainRoute>> GetRoutes([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Set<DomainRoute>()
             .AsNoTracking()
+            .Where(r => r.TenantId == tenantContext.TenantId)
             .ToListAsync();
     }
 
-    public async Task<DomainRoute?> GetRouteById(long id, IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    [Authorize]
+    public async Task<DomainRoute?> GetRouteById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Set<DomainRoute>()
             .AsNoTracking()
+            .Where(r => r.TenantId == tenantContext.TenantId)
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
     // Tasks
-    public async Task<List<Planner.Domain.TaskItem>> GetTasks(IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    public async Task<List<TaskItem>> GetTasks([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Tasks
             .AsNoTracking()
+            .Where(t => t.TenantId == tenantContext.TenantId)
             .ToListAsync();
     }
 
-    public async Task<Planner.Domain.TaskItem?> GetTaskById(long id, IResolverContext context, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
-        EnsureTenantContext(context, tenantContext);
-
+    public async Task<TaskItem?> GetTaskById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Tasks
             .AsNoTracking()
+            .Where(t => t.TenantId == tenantContext.TenantId)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 }

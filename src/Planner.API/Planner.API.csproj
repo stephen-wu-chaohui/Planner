@@ -2,11 +2,14 @@
 
   <ItemGroup>
     <PackageReference Include="HotChocolate.AspNetCore" Version="15.1.12" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="15.1.12" />
+    <PackageReference Include="HotChocolate.Data.EntityFramework" Version="15.1.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.12">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Google.Cloud.Firestore" Version="3.7.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>

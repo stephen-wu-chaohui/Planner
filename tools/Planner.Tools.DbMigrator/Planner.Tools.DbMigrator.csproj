@@ -11,10 +11,6 @@
     <ProjectReference Include="..\..\src\Planner.Infrastructure\Planner.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Planner.Application\Planner.Application.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="SeedScripts\" />
-  </ItemGroup>
   
   <ItemGroup>
     <EmbeddedResource Include="SeedScripts\*.sql" />

@@ -37,9 +37,10 @@ window.plannerMap = window.plannerMap || {
     initMap: function (centerLat, centerLng, apiMapId) {
         this.map = new google.maps.Map(document.getElementById('map'), {
             center: { lat: centerLat, lng: centerLng },
-            zoom: 12,
             mapId: apiMapId
         });
+        this.map.setZoom(4);
+
         this.directionsService = new google.maps.DirectionsService();
         this.geocoder = new google.maps.Geocoder();
     },
@@ -85,7 +86,7 @@ window.plannerMap = window.plannerMap || {
 
                     const components = response.results[0].address_components;
                     region = components.find(c =>
-                        c.types.includes("locality")
+                        c.types.includes("locality") || c.types.includes("sublocality")
                     )?.long_name;
 
                     const lat = e.latLng.lat();

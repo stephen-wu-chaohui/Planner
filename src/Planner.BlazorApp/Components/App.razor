@@ -23,7 +23,7 @@
 </head>
 
 <body>
-    <Routes @rendermode="interactive" />
+    <Routes @rendermode="RenderMode.InteractiveServer" />
 
     <script src="js/plannerMap.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=@(Config["GoogleMaps:ApiKey"])&libraries=marker,places&callback=mapInteropInit" async defer></script>

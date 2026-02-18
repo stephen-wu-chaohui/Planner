@@ -1,19 +1,29 @@
 ﻿{
   TenantId: Guid_1,
   OptimizationRunId: Guid_2,
-  Jobs: [
+  Stops: [
     {
-      JobId: 11,
+      LocationId: 1001,
       RequiresRefrigeration: false
     },
     {
-      JobId: 12,
+      LocationId: 1002,
+      RequiresRefrigeration: false
+    },
+    {
+      LocationId: 2001,
+      RequiresRefrigeration: false
+    },
+    {
+      LocationId: 2002,
       RequiresRefrigeration: false
     }
   ],
   Vehicles: [
     {
       VehicleId: 1,
+      StartLocationId: 1001,
+      EndLocationId: 1002,
       ShiftLimitMinutes: 480,
       SpeedFactor: 1.0
     }

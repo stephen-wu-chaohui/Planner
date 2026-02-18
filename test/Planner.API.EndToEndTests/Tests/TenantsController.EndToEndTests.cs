@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Planner.API.Controllers;
 using Planner.API.EndToEndTests.Fixtures;
