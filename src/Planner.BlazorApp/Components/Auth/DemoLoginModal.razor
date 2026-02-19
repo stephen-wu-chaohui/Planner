@@ -8,6 +8,15 @@
                 <div class="modal-body p-4">
                     <p class="text-muted text-center mb-3">Select a city and sign in with its SIT account email.</p>
 
+                    <div class="alert alert-info text-center py-3 mb-3" role="alert">
+                        <div class="mb-2">
+                            <strong>Password for all demo admin accounts:</strong>
+                        </div>
+                        <div class="fs-3 fw-bold text-primary">
+                            Planner2026
+                        </div>
+                    </div>
+
                     <div class="list-group">
                         @foreach (var cityAccount in CityAccounts) {
                             <button @onclick='() => TriggerLogin(cityAccount.Email)'
