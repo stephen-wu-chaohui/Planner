@@ -10,7 +10,7 @@ namespace Planner.API.Controllers;
 
 [Route("api/jobs")]
 [Authorize]
-public sealed class JobsController(PlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public sealed class JobsController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<JobDto>>> GetAll() {
         var items = await db.Jobs

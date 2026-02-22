@@ -10,7 +10,7 @@ namespace Planner.API.Controllers;
 
 [Route("api/customers")]
 [Authorize]
-public sealed class CustomersController(PlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public sealed class CustomersController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
 
     [HttpGet]
     public async Task<ActionResult<List<CustomerDto>>> GetAll() {

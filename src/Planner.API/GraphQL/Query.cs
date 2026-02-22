@@ -13,7 +13,7 @@ public sealed class Query {
     // Jobs
     [Authorize]
     public async Task<List<JobDto>> GetJobs(
-        [Service] PlannerDbContext db, 
+        [Service] IPlannerDbContext db, 
         [Service] ITenantContext tenantContext) 
     {
 
@@ -26,7 +26,7 @@ public sealed class Query {
     }
 
     [Authorize]
-    public async Task<JobDto?> GetJobById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<JobDto?> GetJobById(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Jobs
             .AsNoTracking()
             .Where(j => j.TenantId == tenantContext.TenantId)
@@ -38,7 +38,7 @@ public sealed class Query {
 
     // Customers
     [Authorize]
-    public async Task<List<CustomerDto>> GetCustomers([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<List<CustomerDto>> GetCustomers([Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Customers
             .AsNoTracking()
             .Where(c => c.TenantId == tenantContext.TenantId)
@@ -48,7 +48,7 @@ public sealed class Query {
     }
 
     [Authorize]
-    public async Task<CustomerDto?> GetCustomerById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<CustomerDto?> GetCustomerById(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Customers
             .AsNoTracking()
             .Where(c => c.TenantId == tenantContext.TenantId)
@@ -60,7 +60,7 @@ public sealed class Query {
 
     // Vehicles
     [Authorize]
-    public async Task<List<VehicleDto>> GetVehicles([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<List<VehicleDto>> GetVehicles([Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Set<Planner.Domain.Vehicle>()
             .AsNoTracking()
             .Where(v => v.TenantId == tenantContext.TenantId)
@@ -71,7 +71,7 @@ public sealed class Query {
     }
 
     [Authorize]
-    public async Task<VehicleDto?> GetVehicleById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<VehicleDto?> GetVehicleById(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Set<Planner.Domain.Vehicle>()
             .AsNoTracking()
             .Where(v => v.TenantId == tenantContext.TenantId)
@@ -84,7 +84,7 @@ public sealed class Query {
 
     // Depots
     [Authorize]
-    public async Task<List<DepotDto>> GetDepots([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<List<DepotDto>> GetDepots([Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Depots
             .AsNoTracking()
             .Where(d => d.TenantId == tenantContext.TenantId)
@@ -94,7 +94,7 @@ public sealed class Query {
     }
 
     [Authorize]
-    public async Task<DepotDto?> GetDepotById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<DepotDto?> GetDepotById(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
 
         var entity = await db.Depots
             .AsNoTracking()
@@ -106,7 +106,7 @@ public sealed class Query {
     }
 
     // Locations
-    public async Task<List<LocationDto>> GetLocations([Service] PlannerDbContext db) {
+    public async Task<List<LocationDto>> GetLocations([Service] IPlannerDbContext db) {
 
         return await db.Locations
             .AsNoTracking()
@@ -114,7 +114,7 @@ public sealed class Query {
             .ToListAsync();
     }
 
-    public async Task<LocationDto?> GetLocationById(long id, [Service] PlannerDbContext db) {
+    public async Task<LocationDto?> GetLocationById(long id, [Service] IPlannerDbContext db) {
         var entity = await db.Locations
             .AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == id);
@@ -124,7 +124,7 @@ public sealed class Query {
 
     // Routes
     [Authorize]
-    public async Task<List<DomainRoute>> GetRoutes([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<List<DomainRoute>> GetRoutes([Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Set<DomainRoute>()
             .AsNoTracking()
             .Where(r => r.TenantId == tenantContext.TenantId)
@@ -132,7 +132,7 @@ public sealed class Query {
     }
 
     [Authorize]
-    public async Task<DomainRoute?> GetRouteById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<DomainRoute?> GetRouteById(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Set<DomainRoute>()
             .AsNoTracking()
             .Where(r => r.TenantId == tenantContext.TenantId)
@@ -140,14 +140,14 @@ public sealed class Query {
     }
 
     // Tasks
-    public async Task<List<TaskItem>> GetTasks([Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<List<TaskItem>> GetTasks([Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Tasks
             .AsNoTracking()
             .Where(t => t.TenantId == tenantContext.TenantId)
             .ToListAsync();
     }
 
-    public async Task<TaskItem?> GetTaskById(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<TaskItem?> GetTaskById(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         return await db.Tasks
             .AsNoTracking()
             .Where(t => t.TenantId == tenantContext.TenantId)

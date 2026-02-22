@@ -10,7 +10,7 @@ namespace Planner.API.Controllers;
 
 [Route("api/vehicles")]
 [Authorize]
-public sealed class VehiclesController(PlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public sealed class VehiclesController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<VehicleDto>>> GetAll() {
         var items = await db.Vehicles

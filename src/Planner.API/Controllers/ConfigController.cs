@@ -12,7 +12,7 @@ namespace Planner.API.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class ConfigController(PlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public class ConfigController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
 
     [HttpGet("init")]
     public async Task<IActionResult> GetClientConfiguration() {

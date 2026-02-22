@@ -15,7 +15,9 @@ public static class ServiceRegistration {
                 config.GetConnectionString("PlannerDb"),
                 sql => sql.MigrationsAssembly(
                     typeof(PlannerDbContext).Assembly.FullName)));
-        
+
+        services.AddScoped<IPlannerDbContext>(sp => sp.GetRequiredService<PlannerDbContext>());
+
         return services;
     }
 }

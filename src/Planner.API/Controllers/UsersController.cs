@@ -7,7 +7,7 @@ namespace Planner.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController(PlannerDbContext context, ILogger<UsersController> logger) : ControllerBase {
+public class UsersController(IPlannerDbContext context, ILogger<UsersController> logger) : ControllerBase {
     [HttpGet]
     public async Task<IActionResult> GetUsers() {
         var sw = Stopwatch.StartNew();

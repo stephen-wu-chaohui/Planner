@@ -20,7 +20,7 @@ public interface IRouteEnrichmentService {
 /// <summary>
 /// Scoped service for enriching routing results with database lookups.
 /// </summary>
-public sealed class RouteEnrichmentService(PlannerDbContext db, ITenantContext tenantContext) : IRouteEnrichmentService {
+public sealed class RouteEnrichmentService(IPlannerDbContext db, ITenantContext tenantContext) : IRouteEnrichmentService {
     public async Task<RoutingResultDto> EnrichAsync(OptimizeRouteResponse response) {
         ArgumentNullException.ThrowIfNull(response);
 
