@@ -6,27 +6,35 @@
 
 # Planner
 
-Planner is a modular fleet planning / optimization playground built with **.NET 8**:
+Planner is a modular fleet planning / optimization playground built with **.NET 8**. It demonstrates a production-minded **Clean Architecture** approach to:
 
-- **UI**: `Planner.BlazorApp` (Blazor Server) with a map-centric Dispatch Center
-- **API**: `Planner.API` (ASP.NET Core) for CRUD + optimization commands
-- **Worker**: `Planner.Optimization.Worker` (BackgroundService) running **Google OR-Tools**
-- **Messaging**: RabbitMQ decouples API and optimizer
-- **Data**: SQL Server (**EF Core**) with explicit migrate/seed tooling
-- **PaaS-ready**: JWT auth + role-based authorization + **multi-tenant isolation**
+- map-centric dispatching (customers, jobs, vehicles, depots)
+- asynchronous optimization with background workers
+- real-time result delivery (Firestore)
+- multi-tenant isolation and auth boundaries
+- optional AI-powered route insights
 
-## Why the README changed over time
+## Overview
 
-The earlier README focused on the UI (Dispatch Center) and the solver data-flow, and referenced JSON-in-`wwwroot` demo persistence.
-The current repo has moved to:
-- **EF Core + SQL Server** for persistence (with migrations + seed scripts)
-- **JWT authentication/authorization**
-- **Multi-tenancy** as a first-class boundary (TenantId carried end-to-end)
-- **GitHub Actions CI/CD** for Azure deployments
+### What you can do
 
-This README reflects the current situation.
+- Maintain **customers/jobs/vehicles/depots** in a Dispatch Center UI.
+- Run **VRP optimization** asynchronously (API publishes a job, worker solves with OR-Tools).
+- Observe **real-time updates** of optimization progress/results in the UI.
+- View **AI-generated route insights** (optional) produced by a Python worker using Gemini.
 
-## Architecture
+### Why this repo exists
+
+This repo is a learning and experimentation playground for:
+
+- Clean Architecture boundaries in a multi-project .NET solution
+- async messaging patterns (BFF-style API boundary + background worker)
+- practical multi-tenancy (claim → middleware → EF Core filters → messages)
+- “real-time but decoupled” UI updates using Firestore
+
+## Architecture & System Design
+
+### System diagram
 
 ```mermaid
 flowchart LR
@@ -37,91 +45,100 @@ flowchart LR
   API -->|Firestore write| FS
   MQ -->|AMQP consume| WK["Planner.Optimization.Worker<br/>OR-Tools"]
   WK -->|AMQP publish| MQ
-  
+
   FS -->|Listen & Analyze| AI["Planner.AI Worker<br/>Python + Gemini"]
   AI -->|Firestore write| FS
 ```
 
-### AI-Powered Route Insights (New!)
+### Key design choices (from completed work)
 
-The Planner now includes an **AI-powered route insights** feature:
+- **DTO-only API contracts**: API returns/accepts `Planner.Contracts` DTOs (closed: #3).
+- **Solid Blazor state + cache synchronization**: UI state management follows explicit interfaces and refresh-on-change patterns (closed: #5).
+- **Tenant metadata registry**: UI can bootstrap tenant context (name + main depot) after login (closed: #8).
+- **Async optimization pipeline polish**: improved summary endpoints/UI workflows around jobs and optimization UX (closed: #31, #36).
+- **Result delivery evolution**: Firestore is used for real-time results/insights delivery; SignalR usage was replaced for the API→UI result channel in favor of Firestore-based flow (closed: #49).
+- **GraphQL capability**: GraphQL was introduced in `Planner.API` and consumed from the Blazor app for richer queries (closed: #51).
+- **AI worker integration**: Python worker + Firestore collections enable route insights (closed: #43).
+- **Authentication persistence**: HTTP-only cookie/BFF-style persistence was implemented to improve session security and UX (closed: #22).
+- **Identity provider migration**: Entra ID (Azure AD) “External ID” migration work completed (closed: #53).
 
-1. **API** sends optimization results to Firestore (`pending_analysis` collection)
-2. **BlazorApp** listens to Firestore and receives optimization results in real-time
-3. **Planner.AI Worker** (Python) listens to Firestore, analyzes results with Google Gemini AI, and writes insights to `route_insights` collection
-4. **BlazorApp** listens to `route_insights` and displays AI-generated markdown insights in a popup modal
+## Technology Stack
 
-**Setup**: See `src/Planner.AI/README.md` for detailed setup instructions.
-
-## Project architecture summary
-
-### Product manager view
-
-- **User experience**: a Dispatch Center UI for managing fleets/jobs and running an optimization to generate routes and assignments.
-- **System behavior**: “Solve” is asynchronous; the UI requests a solve, the optimizer runs in the background, and the UI receives progress/results via real-time updates.
-- **Scalability**: the optimizer is a separate worker and can scale independently from the API/UI based on optimization load.
-- **Tenant isolation**: multi-tenancy is an end-to-end boundary (JWT → API → database → Firestore → optimization messages).
-- **Release safety**: database changes are explicit (migrate/seed tooling and CI/CD) to reduce deployment risk.
-
-### Senior developer view
-
-- **Runtime topology**: `Planner.BlazorApp` ↔ `Planner.API` (HTTP), `Planner.API` ↔ `Planner.Optimization.Worker` (RabbitMQ AMQP), real-time updates via Firestore.
-- **Layering**: `Planner.Domain` (model), `Planner.Application` (use cases), `Planner.Infrastructure` (EF Core/auth/adapters), with host projects for API/UI/Worker.
-- **Contracts**: `Planner.Contracts` for API DTOs and `Planner.Optimization.Contracts` for queue message payloads to keep boundaries explicit and versionable.
-- **Multi-tenancy**: `tenant_id` claim drives tenant context, EF Core query filters, and message payload scoping.
-- **Database lifecycle**: migrations and append-only seed scripts run via `tools/Planner.Tools.DbMigrator`; runtime auto-migrate is intentionally avoided.
+| Layer | Technology | Notes |
+|------|------------|------|
+| UI | Blazor Server (.NET 8) | Map-centric Dispatch Center |
+| API | ASP.NET Core (.NET 8) | REST + GraphQL (closed: #51) |
+| Auth | JWT + role policies + BFF cookie persistence | Cookie persistence (closed: #22) |
+| Messaging | RabbitMQ (AMQP) | Decouple API and optimizer |
+| Optimization | Google OR-Tools | VRP solving in worker |
+| Persistence | SQL Server + EF Core | Explicit migrate/seed tooling |
+| Real-time | Google Firestore | UI listens for results; pending_analysis + route_insights |
+| AI (optional) | Python worker + Gemini | Route insights (closed: #43) |
+| CI/CD | GitHub Actions | Azure deploy pipelines |
 
 ## Multi-tenancy (PaaS boundary)
 
 Multi-tenancy is enforced across storage, API, and realtime updates:
 
-- **JWT claim**: tokens include `tenant_id` (see `src/Planner.Infrastructure/Auth/JwtTokenGenerator.cs`).
-- **Request tenant context**: `TenantContextMiddleware` sets `ITenantContext` from the JWT claim (see `src/Planner.API/Middleware/TenantContextMiddleware.cs`).
-- **EF Core query filters**: tenant-scoped entities are filtered by `TenantId` at the DbContext level (see `src/Planner.Infrastructure/Persistence.PlannerDbContext.cs`).
-- **Firestore isolation**: optimization results are stored with tenant context for proper data isolation.
-- **Optimization messages**: requests/results carry `TenantId` through RabbitMQ and the worker.
+- **JWT claim**: tokens include `tenant_id`.
+- **Request tenant context**: middleware sets `ITenantContext`.
+- **EF Core query filters**: tenant-scoped entities are filtered by `TenantId` at the DbContext level.
+- **Messaging scoping**: optimization requests/results carry `TenantId` end-to-end.
+- **Realtime isolation**: Firestore documents are written with tenant context.
 
-## Authentication & authorization
+## Features
 
-- **Auth**: JWT Bearer authentication (see `src/Planner.Infrastructure/ServiceRegistration.cs`).
-- **Roles**: role claim is `ClaimTypes.Role` and is used for policies.
-- **Admin policy**: `/api/vrp/solve` is protected by `AdminOnly` (see `src/Planner.API/Controllers/OptimizationController.cs`).
+- Map-based Dispatch Center UI for customers/jobs/vehicles/depots
+- Multi-tenant boundary enforced by claims + middleware + EF Core query filters
+- CRUD APIs using DTO contracts (closed: #3)
+- Async optimization job execution with RabbitMQ + background worker
+- Optimization UX improvements (summary endpoints and UI flows) (closed: #31, #36)
+- Firestore-based real-time results delivery (closed: #49)
+- GraphQL API + Blazor client usage (closed: #51)
+- AI-powered route insights via Python worker + Firestore (closed: #43)
+- BFF / HTTP-only cookie auth persistence (closed: #22)
 
-Demo note: `AuthController` currently uses a demo password check (plain-text comparison). For a real PaaS, replace this with a proper password hashing/identity implementation.
+## Roadmap
 
-## EF Core + database lifecycle
+The high-level direction is to keep Planner as a realistic-but-approachable playground.
 
-- `PlannerDbContext` lives in `src/Planner.Infrastructure/Persistence.PlannerDbContext.cs`.
-- Migrations are in `src/Planner.Infrastructure/Migrations/`.
-- The **API does not migrate or seed at runtime** (see `.github/WORKFLOWS.md`); database changes are explicit.
+- Observability: structured logging + tracing across API/worker
+- More solver strategies: add metaheuristics (ALNS/GA) alongside OR-Tools baselines
+- Better domain modeling for job constraints (time windows, skills, breaks)
+- Multi-tenant ops: tenant admin UX and safer data lifecycle tooling
+- Security hardening: replace demo password checks with identity provider-only login where applicable
 
-### DbMigrator tool (migrate + seed)
+## Changelog (high-level)
 
-Use `tools/Planner.Tools.DbMigrator`:
+> This is a human-readable summary derived from closed issues. For exact details, see each issue.
 
-```bash
-dotnet run --project tools/Planner.Tools.DbMigrator migrate
-dotnet run --project tools/Planner.Tools.DbMigrator seed
-```
+### 2026-02
 
-Seed scripts are **append-only** and tracked via `__SeedHistory` (see `tools/Planner.Tools.DbMigrator/SeedScripts/README.md`).
+- Authentication persistence via BFF / HTTP-only cookies (#22)
+- Firestore-based realtime delivery between API and Blazor app (#49)
+- GraphQL added to `Planner.API` and consumed from `Planner.BlazorApp` (#51)
+- Planner.AI worker added for route insights analysis (#43)
+- Entra ID External ID migration (#53)
+- Demo login UX improvements (default city/email + display demo password) (#45, #55)
 
-## Repository layout
+### 2026-01
 
-- `src/Planner.BlazorApp` - Blazor UI (map + Dispatch Center)
-- `src/Planner.API` - API + background consumers
-- `src/Planner.AI` - **Python AI worker** for route insights analysis using Google Gemini
-- `src/Planner.Application` - use cases and orchestration services
-- `src/Planner.Domain` - core domain model
-- `src/Planner.Contracts` - API-facing DTO contracts
-- `src/Planner.Optimization.Worker` - queue consumer + solver execution
-- `src/Planner.Optimization` - OR-Tools VRP implementation
-- `src/Planner.Optimization.Contracts` - optimizer request/result message contracts
-- `src/Planner.Messaging` - RabbitMQ connection + message bus
-- `src/Planner.Infrastructure` - EF Core, auth, hosted services, cross-cutting wiring
-- `tools/Planner.Tools.DbMigrator` - EF Core migrate + seed runner
-- `test/` - unit/integration/end-to-end test projects
-- `.github/workflows/` - CI/CD pipelines
+- Demo polish and UX fixes around routing build panel and optimization result rendering (#36)
+- RoutingResultDto enrichment + mapping refactor for frontend listing (#34, #47)
+- Optimization contract refactors (units + flattened matrices) (#24, #26)
+- Tenant metadata registry for bootstrap and main depot preference (#8)
+- Blazor state/cache sync improvements (#5)
+- DTO-only API boundaries enforced (#3)
+- Customer maintenance improvements via map interactions (#1)
+- Google Maps loading emergency fix (#13)
+
+## Engineering Philosophy
+
+- **Boundaries first**: contracts (DTOs/messages) are explicit and versionable.
+- **Async by default** for long-running compute: solve requests are jobs, not blocking HTTP calls.
+- **Tenant isolation is non-negotiable**: tenant id is carried end-to-end.
+- **Operational safety**: migrations/seeding are explicit and CI/CD-friendly.
+- **UI resilience**: state management favors refresh-on-change and predictable cache sync.
 
 ## Local development
 
@@ -151,7 +168,7 @@ docker run -d --name planner-sql --restart unless-stopped \
 
 ### Configure required settings
 
-`Planner.API` fails fast if required configuration is missing (see `src/Planner.API/Program.cs`).
+`Planner.API` fails fast if required configuration is missing.
 For local dev, the simplest is environment variables or the Visual Studio launch profiles.
 
 PowerShell example:
@@ -207,96 +224,10 @@ The Blazor login page (`/login`) is pre-filled with a seeded demo admin:
 - Email: `christchurch.admin@demo.local`
 - Password: `admin123`
 
-Other demo tenants: `sydney`, `melbourne`, `taipei`, `auckland`, `perth` (replace the prefix in the email).
-
-## CI/CD (GitHub Actions)
-
-Workflows live in `.github/workflows/` and are designed for an Azure dev environment.
-They use **Azure OIDC** (`azure/login@v2`) instead of storing service principal secrets.
-
-- `db-migrator-dev.yml`
-  - Builds `tools/Planner.Tools.DbMigrator`
-  - Runs `migrate` then `seed`
-  - Has a safety check to refuse running against non-dev targets
-- `deploy-planner-api-aca.yml`
-  - Builds and pushes `src/Planner.API/Dockerfile` to ACR
-  - Updates an Azure Container App and injects required env vars (DB, RabbitMQ, Firestore, JWT)
-- `deploy-planner-optimization-worker-aca.yml`
-  - Builds and pushes `src/Planner.Optimization.Worker/Dockerfile` to ACR
-  - Updates an Azure Container App and injects RabbitMQ env vars
-- `main_planner-blazor-dev.yml`
-  - Builds/publishes `Planner.BlazorApp`
-  - Deploys to Azure App Service (`azure/webapps-deploy@v3`)
-
 ## Screenshots
 
 ![VRP schematic](docs/1.png)
 ![VRP schematic](docs/2.png)
-
-## Solved Issues
-
-This section summarizes the key issues that have been resolved in the Planner project:
-
-### 1. [EMERGENCY] Fix broken Google Map loading (#13)
-**Type:** Bug  
-**Status:** Closed  
-**Solution:** Fixed a race condition in Google Map loading by:
-- Moving map loading to App level
-- Using TaskCompletionSource as a mutex for all Google Maps operations
-- Implementing googleMapsPromise as a JS level mutex
-
-This resolved critical issues where the Google Map failed to load or display properly, restoring core functionality for map-based features.
-
-### 2. Implement Tenant Metadata Registry (#8)
-**Type:** Enhancement  
-**Status:** Closed  
-**Solution:** Implemented a comprehensive tenant metadata registry with:
-- `TenantDto` contract with tenant ID, name, and main depot reference
-- `/api/tenants/metadata` endpoint for retrieving tenant metadata
-- `ITenantState` interface following existing state management patterns
-- `DispatchCenterState.Tenant.cs` partial class implementation
-- Auto-load tenant metadata during initialization before fetching entities
-- Depot selection now prefers tenant's main depot
-
-This enhancement enables automatic retrieval of tenant details after login and proper initialization of tenant-scoped entities (vehicles, customers, jobs).
-
-### 3. Make BlazorApp Implementation Solid (#5)
-**Type:** Enhancement  
-**Status:** Closed  
-**Solution:** Improved BlazorApp resilience and clarity through:
-- Synchronized cache of vehicles, customers, jobs, and depots with CRUD APIs
-- Separated interface injections for domain entities
-- DataChanges notifications sent to both dashboard and editor modules
-- Robust error handling with entity refresh and clear error messages
-- Clean separation of concerns for various domain entities
-
-These changes prevent stale data, improve user experience, and ensure actionable feedback for API failures.
-
-### 4. Refactor API Controllers to Use DTOs (#3)
-**Type:** Enhancement  
-**Status:** Closed  
-**Solution:** Enforced architectural best practices by:
-- Defining DTO records in `Planner.Contracts`
-- Creating mapping classes in `Planner.API` and `Planner.BlazorApp`
-- Ensuring API and BlazorApp no longer directly access Domain objects
-- All API endpoints exclusively accept/return DTOs
-
-This refactoring promotes:
-- Separation of Concerns (SoC)
-- Encapsulation (Information Hiding)
-- Single Responsibility Principle (SRP)
-
-### 5. Improve Customer Maintenance (#1)
-**Type:** Enhancement  
-**Status:** Closed  
-**Solution:** Enhanced customer maintenance workflow with map-based interactions:
-- Add new customers via Ctrl+Click on map locations
-- Delete customers by selecting the marker and choosing delete from context menu
-- Edit customers by selecting the marker and choosing edit from context menu
-- API integration with proper notifications via NotifyCustomerChanged
-- Automatic marker creation for new customers
-
-This streamlines customer management and reduces navigation steps, making common operations accessible directly from the map interface.
 
 ## License
 
