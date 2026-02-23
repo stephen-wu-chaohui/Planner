@@ -4,7 +4,7 @@ using Planner.Domain;
 
 namespace Planner.Infrastructure.Persistence;
 
-public class PlannerDbContext(DbContextOptions<PlannerDbContext> options, ITenantContext tenant) : DbContext(options) {
+public class PlannerDbContext(DbContextOptions<PlannerDbContext> options, ITenantContext tenant) : DbContext(options), IPlannerDbContext {
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<SystemEvent> SystemEvents => Set<SystemEvent>();

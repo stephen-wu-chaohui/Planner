@@ -9,7 +9,7 @@ namespace Planner.API.GraphQL;
 
 public sealed class Mutation {
     // Job Mutations
-    public async Task<JobDto> CreateJob(JobDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<JobDto> CreateJob(JobDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
 
         var entity = input.ToDomain(tenant.TenantId);
         db.Jobs.Add(entity);
@@ -17,7 +17,7 @@ public sealed class Mutation {
         return entity.ToDto();
     }
 
-    public async Task<JobDto?> UpdateJob(long id, JobDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<JobDto?> UpdateJob(long id, JobDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
 
         if (id != input.Id) {
             throw new ArgumentException($"Job ID in path ({id}) does not match ID in request body ({input.Id})");
@@ -35,7 +35,7 @@ public sealed class Mutation {
         return existing.ToDto();
     }
 
-    public async Task<bool> DeleteJob(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<bool> DeleteJob(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         var entity = await db.Jobs.Where(j => j.TenantId == tenant.TenantId).FirstOrDefaultAsync(j => j.Id == id);
         if (entity is null)
             return false;
@@ -46,14 +46,14 @@ public sealed class Mutation {
     }
 
     // Customer Mutations
-    public async Task<CustomerDto> CreateCustomer(CustomerDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<CustomerDto> CreateCustomer(CustomerDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         var entity = input.ToDomain(tenant.TenantId);
         db.Customers.Add(entity);
         await db.SaveChangesAsync();
         return entity.ToDto();
     }
 
-    public async Task<CustomerDto?> UpdateCustomer(long id, CustomerDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<CustomerDto?> UpdateCustomer(long id, CustomerDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.CustomerId) {
             throw new ArgumentException($"Customer ID in path ({id}) does not match ID in request body ({input.CustomerId})");
         }
@@ -70,7 +70,7 @@ public sealed class Mutation {
         return existing.ToDto();
     }
 
-    public async Task<bool> DeleteCustomer(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<bool> DeleteCustomer(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         var entity = await db.Customers.Where(c => c.TenantId == tenant.TenantId).FirstOrDefaultAsync(c => c.CustomerId == id);
         if (entity is null)
             return false;
@@ -81,14 +81,14 @@ public sealed class Mutation {
     }
 
     // Vehicle Mutations
-    public async Task<VehicleDto> CreateVehicle(VehicleDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<VehicleDto> CreateVehicle(VehicleDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         var entity = input.ToDomain(tenant.TenantId);
         db.Set<Planner.Domain.Vehicle>().Add(entity);
         await db.SaveChangesAsync();
         return entity.ToDto();
     }
 
-    public async Task<VehicleDto?> UpdateVehicle(long id, VehicleDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<VehicleDto?> UpdateVehicle(long id, VehicleDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.Id) {
             throw new ArgumentException($"Vehicle ID in path ({id}) does not match ID in request body ({input.Id})");
         }
@@ -105,7 +105,7 @@ public sealed class Mutation {
         return existing.ToDto();
     }
 
-    public async Task<bool> DeleteVehicle(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<bool> DeleteVehicle(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Set<Planner.Domain.Vehicle>().Where(v => v.TenantId == tenantContext.TenantId).FirstOrDefaultAsync(v => v.Id == id);
         if (entity is null)
             return false;
@@ -116,14 +116,14 @@ public sealed class Mutation {
     }
 
     // Depot Mutations
-    public async Task<DepotDto> CreateDepot(DepotDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<DepotDto> CreateDepot(DepotDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         var entity = input.ToDomain(tenant.TenantId);
         db.Depots.Add(entity);
         await db.SaveChangesAsync();
         return entity.ToDto();
     }
 
-    public async Task<DepotDto?> UpdateDepot(long id, DepotDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<DepotDto?> UpdateDepot(long id, DepotDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.Id) {
             throw new ArgumentException($"Depot ID in path ({id}) does not match ID in request body ({input.Id})");
         }
@@ -140,7 +140,7 @@ public sealed class Mutation {
         return existing.ToDto();
     }
 
-    public async Task<bool> DeleteDepot(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<bool> DeleteDepot(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Depots.Where(d => d.TenantId == tenantContext.TenantId).FirstOrDefaultAsync(d => d.Id == id);
         if (entity is null)
             return false;
@@ -151,14 +151,14 @@ public sealed class Mutation {
     }
 
     // Location Mutations
-    public async Task<LocationDto> CreateLocation(LocationDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<LocationDto> CreateLocation(LocationDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = input.ToDomain();
         db.Locations.Add(entity);
         await db.SaveChangesAsync();
         return entity.ToDto();
     }
 
-    public async Task<LocationDto?> UpdateLocation(long id, LocationDto input, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<LocationDto?> UpdateLocation(long id, LocationDto input, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         if (id != input.Id) {
             throw new ArgumentException($"Location ID in path ({id}) does not match ID in request body ({input.Id})");
         }
@@ -175,7 +175,7 @@ public sealed class Mutation {
         return existing.ToDto();
     }
 
-    public async Task<bool> DeleteLocation(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<bool> DeleteLocation(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Locations.FirstOrDefaultAsync(l => l.Id == id);
         if (entity is null)
             return false;
@@ -186,13 +186,13 @@ public sealed class Mutation {
     }
 
     // Task Mutations
-    public async Task<TaskItem> CreateTask(TaskItem input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<TaskItem> CreateTask(TaskItem input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         db.Tasks.Add(input);
         await db.SaveChangesAsync();
         return input;
     }
 
-    public async Task<TaskItem?> UpdateTask(long id, TaskItem input, [Service] PlannerDbContext db, [Service] ITenantContext tenant) {
+    public async Task<TaskItem?> UpdateTask(long id, TaskItem input, [Service] IPlannerDbContext db, [Service] ITenantContext tenant) {
         if (id != input.Id) {
             throw new ArgumentException($"Task ID in path ({id}) does not match ID in request body ({input.Id})");
         }
@@ -208,7 +208,7 @@ public sealed class Mutation {
         return existing;
     }
 
-    public async Task<bool> DeleteTask(long id, [Service] PlannerDbContext db, [Service] ITenantContext tenantContext) {
+    public async Task<bool> DeleteTask(long id, [Service] IPlannerDbContext db, [Service] ITenantContext tenantContext) {
         var entity = await db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
         if (entity is null)
             return false;

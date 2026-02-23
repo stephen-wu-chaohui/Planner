@@ -8,7 +8,7 @@ using System.Security;
 namespace Planner.API.Middleware;
 
 public sealed class TenantContextMiddleware(RequestDelegate next, ILogger<TenantContextMiddleware> logger) {
-    public async Task InvokeAsync(HttpContext context, ITenantContext tenantContext, IMemoryCache cache, PlannerDbContext db) {
+    public async Task InvokeAsync(HttpContext context, ITenantContext tenantContext, IMemoryCache cache, IPlannerDbContext db) {
         if (context.User.Identity?.IsAuthenticated == true) {
             var email = context.User.Identity?.Name;
             if (!string.IsNullOrEmpty(email)) {

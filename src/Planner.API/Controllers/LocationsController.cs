@@ -9,7 +9,7 @@ namespace Planner.API.Controllers;
 
 [Route("api/locations")]
 [Authorize]
-public sealed class LocationsController(PlannerDbContext db) : ControllerBase {
+public sealed class LocationsController(IPlannerDbContext db) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<LocationDto>>> GetAll() {
         var items = await db.Locations

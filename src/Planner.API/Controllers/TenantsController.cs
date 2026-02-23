@@ -10,7 +10,7 @@ namespace Planner.API.Controllers;
 
 [Route("api/tenants")]
 [Authorize]
-public sealed class TenantsController(PlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public sealed class TenantsController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
     /// <summary>
     /// Get tenant metadata including tenant name and main depot.
     /// </summary>

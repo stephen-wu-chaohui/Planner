@@ -16,7 +16,7 @@ namespace Planner.API.Controllers;
 [Authorize]
 public class OptimizationController(
     IMessageBus bus,
-    PlannerDbContext db,
+    IPlannerDbContext db,
     ITenantContext tenant,
     IMatrixCalculationService matrixService) : ControllerBase {
     /// <summary>

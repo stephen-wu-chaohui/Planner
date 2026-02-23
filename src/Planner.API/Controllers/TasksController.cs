@@ -8,7 +8,7 @@ namespace Planner.API.Controllers;
 
 [Route("api/tasks")]
 [Authorize]
-public sealed class TasksController(PlannerDbContext db) : ControllerBase {
+public sealed class TasksController(IPlannerDbContext db) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<TaskItem>>> GetAll() {
         var items = await db.Tasks
