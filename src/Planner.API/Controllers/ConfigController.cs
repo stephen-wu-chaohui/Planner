@@ -5,24 +5,24 @@ using Planner.API.Mappings;
 using Planner.Application;
 using Planner.Contracts.API;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure;
 
 namespace Planner.API.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class ConfigController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public class ConfigController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
 
     [HttpGet("init")]
     public async Task<IActionResult> GetClientConfiguration() {
-        var mainDepot = await db.Depots
+        var mainDepot = await dataCenter.DbContext.Depots
             .AsNoTracking()
             .Include(d => d.Location)
             .FirstOrDefaultAsync();
         if (mainDepot == null) return NotFound("Main depot not found.");
 
-        var tenantData = await db.Tenants
+        var tenantData = await dataCenter.DbContext.Tenants
                     .Where(t => t.Id == tenant.TenantId)
                     .Select(t => new TenantInfo(t.Id, t.Name, mainDepot!.ToDto()))
                     .FirstOrDefaultAsync();

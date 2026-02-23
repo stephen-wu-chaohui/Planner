@@ -5,6 +5,7 @@ using Planner.API.EndToEndTests.Fixtures;
 using Planner.Application;
 using Planner.Contracts.API;
 using Planner.Domain;
+using Planner.Infrastructure;
 using Planner.Infrastructure.Persistence;
 using Planner.Testing;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ public sealed class TenantsControllerEndToEndTests {
         using var factory = new TestApiFactory();
         var tenant = factory.Get<ITenantContext>();
         var db = factory.Get<PlannerDbContext>();
+        var dataCenter = factory.Get<IPlannerDataCenter>();
         
         // Seed test data
         var testTenant = new Tenant { Id = tenant.TenantId, Name = "Test Tenant" };
@@ -36,8 +38,8 @@ public sealed class TenantsControllerEndToEndTests {
         db.Depots.Add(testDepot);
         await db.SaveChangesAsync();
 
-        // Create controller with the same DbContext
-        var controller = new TenantsController(db, tenant);
+        // Create controller with the same DataCenter
+        var controller = new TenantsController(dataCenter, tenant);
         controller.MockUserContext();
 
         // Act
@@ -58,10 +60,10 @@ public sealed class TenantsControllerEndToEndTests {
         // Arrange
         using var factory = new TestApiFactory();
         var tenant = factory.Get<ITenantContext>();
-        var db = factory.Get<PlannerDbContext>();
+        var dataCenter = factory.Get<IPlannerDataCenter>();
 
         // Create controller without seeding tenant
-        var controller = new TenantsController(db, tenant);
+        var controller = new TenantsController(dataCenter, tenant);
         controller.MockUserContext();
 
         // Act

@@ -4,17 +4,17 @@ using Microsoft.EntityFrameworkCore;
 using Planner.Application;
 using Planner.Contracts.API;
 using Planner.API.Mappings;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure;
 
 namespace Planner.API.Controllers;
 
 [Route("api/customers")]
 [Authorize]
-public sealed class CustomersController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public sealed class CustomersController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
 
     [HttpGet]
     public async Task<ActionResult<List<CustomerDto>>> GetAll() {
-        var items = await db.Customers
+        var items = await dataCenter.DbContext.Customers
             .AsNoTracking()
             .Include(c => c.Location)
             .ToListAsync();
@@ -24,7 +24,7 @@ public sealed class CustomersController(IPlannerDbContext db, ITenantContext ten
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<CustomerDto>> GetById(long id) {
-        var entity = await db.Customers
+        var entity = await dataCenter.DbContext.Customers
             .AsNoTracking()
             .Include(c => c.Location)
             .FirstOrDefaultAsync(c => c.CustomerId == id);
@@ -35,8 +35,8 @@ public sealed class CustomersController(IPlannerDbContext db, ITenantContext ten
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CustomerDto dto) {
         var entity = dto.ToDomain(tenant.TenantId);
-        db.Customers.Add(entity);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Customers.Add(entity);
+        await dataCenter.DbContext.SaveChangesAsync();
         return Created($"/api/customers/{entity.CustomerId}", entity.ToDto());
     }
 
@@ -46,27 +46,27 @@ public sealed class CustomersController(IPlannerDbContext db, ITenantContext ten
             return BadRequest("ID mismatch");
         }
 
-        var existing = await db.Customers.FindAsync(id);
+        var existing = await dataCenter.DbContext.Customers.FindAsync(id);
         if (existing == null) {
             return NotFound();
         }
 
         // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
-        db.Entry(existing).CurrentValues.SetValues(updated);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
+        await dataCenter.DbContext.SaveChangesAsync();
 
         return NoContent();
     }
 
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id) {
-        var entity = await db.Customers.FirstOrDefaultAsync(c => c.CustomerId == id);
+        var entity = await dataCenter.DbContext.Customers.FirstOrDefaultAsync(c => c.CustomerId == id);
         if (entity is null)
             return NotFound();
 
-        db.Customers.Remove(entity);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Customers.Remove(entity);
+        await dataCenter.DbContext.SaveChangesAsync();
         return NoContent();
     }
 }

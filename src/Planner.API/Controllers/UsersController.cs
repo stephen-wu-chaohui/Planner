@@ -1,13 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure;
 using System.Diagnostics;
 
 namespace Planner.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController(IPlannerDbContext context, ILogger<UsersController> logger) : ControllerBase {
+public class UsersController(IPlannerDataCenter dataCenter, ILogger<UsersController> logger) : ControllerBase {
     [HttpGet]
     public async Task<IActionResult> GetUsers() {
         var sw = Stopwatch.StartNew();
@@ -15,7 +15,7 @@ public class UsersController(IPlannerDbContext context, ILogger<UsersController>
 
         try {
             // This specifically tests the new 'Role' column and the DB connection
-            var users = await context.Users
+            var users = await dataCenter.DbContext.Users
                 .Select(u => new { u.Email, u.Role, u.CreatedAt })
                 .ToListAsync();
 
