@@ -36,6 +36,7 @@ env:
 
   # Required configuration (match Program.cs)
   PLANNERDB_CONNECTION: ${{ secrets.PLANNERDB_CONNECTION }}
+  REDIS_CONNECTION: ${{ secrets.REDIS_CONNECTION }}
   RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}     # should be 'rabbitmq' (the container app name)
   RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}     # usually 5672
   RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}     # NOT guest in Azure
@@ -140,6 +141,7 @@ jobs:
                 ASPNETCORE_ENVIRONMENT=Production  \
                 ASPNETCORE_URLS="http://+:8080" \
                 ConnectionStrings__PlannerDb="${PLANNERDB_CONNECTION}" \
+                ConnectionStrings__Redis="${REDIS_CONNECTION}" \
                 RabbitMq__Host="${RABBITMQ_HOST}" \
                 RabbitMq__Port="${RABBITMQ_PORT}" \
                 RabbitMq__User="${RABBITMQ_USER}" \
