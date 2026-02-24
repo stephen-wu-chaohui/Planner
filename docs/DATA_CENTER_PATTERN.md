@@ -7,12 +7,12 @@
 | Tier | Name | Technology | Role |
 |------|------|-----------|------|
 | Long-Term Memory | **The Vault** | SQL Server via EF Core (`IPlannerDbContext`) | Authoritative, durable storage |
-| Short-Term Memory | **The Workbench** | Redis via `ICache` | Fast cache for frequently-read data |
+| Short-Term Memory | **The Workbench** | Redis via `IDistributedCache` | Fast cache for frequently-read data |
 
 ```
 REST Controllers  ──┐
-                    ├──► IPlannerDataCenter ──► IPlannerDbContext  (The Vault)
-GraphQL Resolvers ──┘                     └──► ICache             (The Workbench)
+                    ├──► IPlannerDataCenter ──► IPlannerDbContext   (The Vault)
+GraphQL Resolvers ──┘                     └──► IDistributedCache   (The Workbench)
 ```
 
 ---
@@ -25,7 +25,7 @@ public interface IPlannerDataCenter {
     IPlannerDbContext DbContext { get; }
 
     /// The Workbench – Redis short-term memory
-    ICache Cache { get; }
+    IDistributedCache Cache { get; }
 
     /// Cache-Aside helper (see pattern below)
     Task<T?> GetOrFetchAsync<T>(
@@ -62,27 +62,11 @@ var customers = await dataCenter.GetOrFetchAsync(
 
 ---
 
-## ICache Interface
-
-```csharp
-public interface ICache {
-    Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default);
-    Task SetAsync<T>(string key, T value, TimeSpan? expiry = null, CancellationToken cancellationToken = default);
-    Task RemoveAsync(string key, CancellationToken cancellationToken = default);
-}
-```
-
-`RedisCache` is the production implementation, backed by `IDistributedCache` with JSON serialization.  
-Default cache entry lifetime is **5 minutes**.
-
----
-
 ## Dependency Injection Lifetimes
 
 | Service | Lifetime | Reason |
 |---------|---------|--------|
 | `IDistributedCache` | Singleton | Registered by `AddStackExchangeRedisCache` / `AddDistributedMemoryCache` |
-| `ICache` (`RedisCache`) | Singleton | Matches `IDistributedCache` lifetime |
 | `IPlannerDataCenter` (`PlannerDataCenter`) | Scoped | Must match `IPlannerDbContext` which is scoped per request |
 
 ---
@@ -128,8 +112,6 @@ docker run -d --name planner-redis -p 6379:6379 redis:7-alpine
 |------|---------|
 | `src/Planner.Infrastructure/IPlannerDataCenter.cs` | Interface definition |
 | `src/Planner.Infrastructure/PlannerDataCenter.cs` | Implementation (Cache-Aside logic) |
-| `src/Planner.Infrastructure/Cache/ICache.cs` | Cache abstraction |
-| `src/Planner.Infrastructure/Cache/RedisCache.cs` | Redis implementation via `IDistributedCache` |
 | `src/Planner.Infrastructure/ServiceRegistration.cs` | DI registration |
 | `test/Planner.Infrastructure.Tests/InfrastructureTests.cs` | Unit tests |
 
@@ -142,8 +124,8 @@ The two-tier model mirrors established distributed-systems vocabulary:
 - **The Vault** (SQL) = durable, transactional, multi-tenant truth. Always consistent; relatively slow.
 - **The Workbench** (Redis) = fast ephemeral scratch space. Data here is disposable and can always be regenerated from The Vault on a cache miss.
 
-Using `IPlannerDataCenter` as the single injection point (rather than injecting `IPlannerDbContext` and `ICache` separately) means:
+Using `IPlannerDataCenter` as the single injection point (rather than injecting `IPlannerDbContext` and `IDistributedCache` separately) means:
 
 1. Controllers and resolvers stay clean — one dependency, not two.
 2. Caching strategy is transparent to call sites that use `GetOrFetchAsync`.
-3. It is easy to swap or extend the caching implementation without changing any controller.
+3. It is easy to swap or extend the caching provider without changing any controller.

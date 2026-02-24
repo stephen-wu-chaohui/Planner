@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Planner.Infrastructure.Cache;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.Infrastructure;
@@ -28,7 +27,6 @@ public static class ServiceRegistration {
             services.AddDistributedMemoryCache();
         }
 
-        services.AddSingleton<ICache, RedisCache>();
         services.AddScoped<IPlannerDataCenter, PlannerDataCenter>();
 
         return services;

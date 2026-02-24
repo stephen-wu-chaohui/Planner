@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using Planner.Application;
 using Planner.Domain;
 using Planner.Infrastructure;
-using Planner.Infrastructure.Cache;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.Infrastructure.Tests;
@@ -55,12 +54,11 @@ public class PlannerDataCenterTests
     public void DataCenter_exposes_DbContext_and_Cache() {
         var tenantId = Guid.NewGuid();
         var (db, distributedCache) = CreateInfrastructure(tenantId);
-        var cache = new RedisCache(distributedCache);
 
-        var dataCenter = new PlannerDataCenter(db, cache);
+        var dataCenter = new PlannerDataCenter(db, distributedCache);
 
         dataCenter.DbContext.Should().BeSameAs(db);
-        dataCenter.Cache.Should().BeSameAs(cache);
+        dataCenter.Cache.Should().BeSameAs(distributedCache);
     }
 
     [Fact]
@@ -71,8 +69,7 @@ public class PlannerDataCenterTests
         db.Customers.Add(new Customer { Name = "Alice", TenantId = tenantId, LocationId = 1 });
         await db.SaveChangesAsync();
 
-        var cache = new RedisCache(distributedCache);
-        var dataCenter = new PlannerDataCenter(db, cache);
+        var dataCenter = new PlannerDataCenter(db, distributedCache);
 
         var result = await dataCenter.GetOrFetchAsync(
             "customers:alice",
@@ -90,8 +87,7 @@ public class PlannerDataCenterTests
         db.Customers.Add(new Customer { Name = "Bob", TenantId = tenantId, LocationId = 1 });
         await db.SaveChangesAsync();
 
-        var cache = new RedisCache(distributedCache);
-        var dataCenter = new PlannerDataCenter(db, cache);
+        var dataCenter = new PlannerDataCenter(db, distributedCache);
 
         const string key = "customers:bob";
 
@@ -118,8 +114,7 @@ public class PlannerDataCenterTests
     public async Task GetOrFetchAsync_returns_null_when_not_found_in_db_or_cache() {
         var tenantId = Guid.NewGuid();
         var (db, distributedCache) = CreateInfrastructure(tenantId);
-        var cache = new RedisCache(distributedCache);
-        var dataCenter = new PlannerDataCenter(db, cache);
+        var dataCenter = new PlannerDataCenter(db, distributedCache);
 
         var result = await dataCenter.GetOrFetchAsync<Customer>(
             "customers:nobody",
@@ -132,13 +127,12 @@ public class PlannerDataCenterTests
     public async Task Cache_RemoveAsync_evicts_entry() {
         var tenantId = Guid.NewGuid();
         var (db, distributedCache) = CreateInfrastructure(tenantId);
-        var cache = new RedisCache(distributedCache);
 
-        await cache.SetAsync("my-key", "hello");
-        var before = await cache.GetAsync<string>("my-key");
+        await distributedCache.SetStringAsync("my-key", "hello");
+        var before = distributedCache.GetString("my-key");
 
-        await cache.RemoveAsync("my-key");
-        var after = await cache.GetAsync<string>("my-key");
+        await distributedCache.RemoveAsync("my-key");
+        var after = distributedCache.GetString("my-key");
 
         before.Should().Be("hello");
         after.Should().BeNull();

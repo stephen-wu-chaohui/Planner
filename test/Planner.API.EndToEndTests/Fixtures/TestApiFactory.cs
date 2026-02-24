@@ -7,7 +7,6 @@ using System;
 using Planner.Optimization;
 using Planner.Messaging.Messaging;
 using Planner.Infrastructure;
-using Planner.Infrastructure.Cache;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.API.EndToEndTests.Fixtures;
@@ -38,7 +37,6 @@ public sealed class TestApiFactory : IDisposable {
 
         // --- Cache & DataCenter ---
         services.AddDistributedMemoryCache();
-        services.AddSingleton<ICache, RedisCache>();
         services.AddScoped<IPlannerDataCenter, PlannerDataCenter>();
 
         // --- Controller ---

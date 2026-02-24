@@ -1,4 +1,4 @@
-using Planner.Infrastructure.Cache;
+using Microsoft.Extensions.Caching.Distributed;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.Infrastructure;
@@ -11,8 +11,8 @@ namespace Planner.Infrastructure;
 ///     authoritative source of truth).
 ///   </description></item>
 ///   <item><description>
-///     <b>The Workbench</b> – Redis via <see cref="ICache"/> (short-term memory, fast
-///     in-flight cache for frequently-read data).
+///     <b>The Workbench</b> – Redis via <see cref="IDistributedCache"/> (short-term memory,
+///     fast in-flight cache for frequently-read data).
 ///   </description></item>
 /// </list>
 /// Both REST controllers and GraphQL resolvers inject this interface as their single point of
@@ -28,7 +28,7 @@ public interface IPlannerDataCenter {
     /// <summary>
     /// The Workbench – Redis short-term memory for fast, low-latency cached data access.
     /// </summary>
-    ICache Cache { get; }
+    IDistributedCache Cache { get; }
 
     /// <summary>
     /// Applies the <b>Cache-Aside Pattern</b>:
