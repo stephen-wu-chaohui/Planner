@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 using Planner.Application;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure;
 
 namespace Planner.API.Controllers;
 
 [Route("api/tenants")]
 [Authorize]
-public sealed class TenantsController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public sealed class TenantsController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
     /// <summary>
     /// Get tenant metadata including tenant name and main depot.
     /// </summary>
@@ -20,7 +20,7 @@ public sealed class TenantsController(IPlannerDbContext db, ITenantContext tenan
     /// </remarks>
     [HttpGet("metadata")]
     public async Task<ActionResult<TenantDto>> GetMetadata() {
-        var tenantEntity = await db.Tenants
+        var tenantEntity = await dataCenter.DbContext.Tenants
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == tenant.TenantId);
 
@@ -28,7 +28,7 @@ public sealed class TenantsController(IPlannerDbContext db, ITenantContext tenan
             return NotFound("Tenant not found.");
 
         // Find the first depot for this tenant to use as main depot
-        var mainDepot = await db.Depots
+        var mainDepot = await dataCenter.DbContext.Depots
             .AsNoTracking()
             .Where(d => d.TenantId == tenant.TenantId)
             .FirstOrDefaultAsync();

@@ -2,16 +2,16 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure;
 
 namespace Planner.API.Controllers;
 
 [Route("api/tasks")]
 [Authorize]
-public sealed class TasksController(IPlannerDbContext db) : ControllerBase {
+public sealed class TasksController(IPlannerDataCenter dataCenter) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<TaskItem>>> GetAll() {
-        var items = await db.Tasks
+        var items = await dataCenter.DbContext.Tasks
             .AsNoTracking()
             .ToListAsync();
 
@@ -20,7 +20,7 @@ public sealed class TasksController(IPlannerDbContext db) : ControllerBase {
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<TaskItem>> GetById(long id) {
-        var entity = await db.Tasks
+        var entity = await dataCenter.DbContext.Tasks
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id);
 
@@ -29,30 +29,30 @@ public sealed class TasksController(IPlannerDbContext db) : ControllerBase {
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] TaskItem entity) {
-        db.Tasks.Add(entity);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Tasks.Add(entity);
+        await dataCenter.DbContext.SaveChangesAsync();
         return Created($"/api/tasks/{entity.Id}", entity);
     }
 
     [HttpPut("{id:long}")]
     public async Task<IActionResult> Update(long id, [FromBody] TaskItem updated) {
-        var existing = await db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
+        var existing = await dataCenter.DbContext.Tasks.FirstOrDefaultAsync(t => t.Id == id);
         if (existing is null)
             return NotFound();
 
-        db.Entry(existing).CurrentValues.SetValues(updated);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
+        await dataCenter.DbContext.SaveChangesAsync();
         return NoContent();
     }
 
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id) {
-        var entity = await db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
+        var entity = await dataCenter.DbContext.Tasks.FirstOrDefaultAsync(t => t.Id == id);
         if (entity is null)
             return NotFound();
 
-        db.Tasks.Remove(entity);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Tasks.Remove(entity);
+        await dataCenter.DbContext.SaveChangesAsync();
         return NoContent();
     }
 }

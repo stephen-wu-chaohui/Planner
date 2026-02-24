@@ -6,6 +6,7 @@ using Planner.Application;
 using System;
 using Planner.Optimization;
 using Planner.Messaging.Messaging;
+using Planner.Infrastructure;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.API.EndToEndTests.Fixtures;
@@ -20,6 +21,8 @@ public sealed class TestApiFactory : IDisposable {
         services.AddDbContext<PlannerDbContext>(o =>
             o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
 
+        services.AddScoped<IPlannerDbContext>(sp => sp.GetRequiredService<PlannerDbContext>());
+
         // --- Tenant context ---
         services.AddScoped<ITenantContext, StaticTenantContext>();
 
@@ -31,6 +34,10 @@ public sealed class TestApiFactory : IDisposable {
 
         // --- Matrix Calculation Service ---
         services.AddScoped<IMatrixCalculationService, MatrixCalculationService>();
+
+        // --- Cache & DataCenter ---
+        services.AddDistributedMemoryCache();
+        services.AddScoped<IPlannerDataCenter, PlannerDataCenter>();
 
         // --- Controller ---
         services.AddScoped<OptimizationController>();

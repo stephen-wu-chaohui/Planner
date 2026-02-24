@@ -4,16 +4,16 @@ using Microsoft.EntityFrameworkCore;
 using Planner.Application;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure;
 
 namespace Planner.API.Controllers;
 
 [Route("api/vehicles")]
 [Authorize]
-public sealed class VehiclesController(IPlannerDbContext db, ITenantContext tenant) : ControllerBase {
+public sealed class VehiclesController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<VehicleDto>>> GetAll() {
-        var items = await db.Vehicles
+        var items = await dataCenter.DbContext.Vehicles
             .AsNoTracking()
             .Include(v => v.StartDepot)
             .ThenInclude(d => d.Location)
@@ -36,7 +36,7 @@ public sealed class VehiclesController(IPlannerDbContext db, ITenantContext tena
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<VehicleDto>> GetById(long id) {
-        var entity = await db.Vehicles
+        var entity = await dataCenter.DbContext.Vehicles
             .AsNoTracking()
             .Include(v => v.StartDepot)
             .ThenInclude(d => d.Location)
@@ -50,8 +50,8 @@ public sealed class VehiclesController(IPlannerDbContext db, ITenantContext tena
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] VehicleDto dto) {
         var entity = dto.ToDomain(tenant.TenantId);
-        db.Vehicles.Add(entity);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Vehicles.Add(entity);
+        await dataCenter.DbContext.SaveChangesAsync();
         return Created($"/api/vehicles/{entity.Id}", entity.ToDto());
     }
 
@@ -61,27 +61,27 @@ public sealed class VehiclesController(IPlannerDbContext db, ITenantContext tena
             return BadRequest("ID mismatch");
         }
 
-        var existing = await db.Vehicles.FindAsync(id);
+        var existing = await dataCenter.DbContext.Vehicles.FindAsync(id);
         if (existing == null) {
             return NotFound();
         }
 
         // Map DTO to Entity (Full replacement)
         var updated = dto.ToDomain(tenant.TenantId);
-        db.Entry(existing).CurrentValues.SetValues(updated);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
+        await dataCenter.DbContext.SaveChangesAsync();
 
         return NoContent();
     }
 
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id) {
-        var entity = await db.Vehicles.FirstOrDefaultAsync(v => v.Id == id);
+        var entity = await dataCenter.DbContext.Vehicles.FirstOrDefaultAsync(v => v.Id == id);
         if (entity is null)
             return NotFound();
 
-        db.Vehicles.Remove(entity);
-        await db.SaveChangesAsync();
+        dataCenter.DbContext.Vehicles.Remove(entity);
+        await dataCenter.DbContext.SaveChangesAsync();
         return NoContent();
     }
 }

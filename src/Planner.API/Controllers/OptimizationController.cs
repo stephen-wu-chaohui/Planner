@@ -5,7 +5,7 @@ using Planner.API.Services;
 using Planner.Application;
 using Planner.Contracts.Optimization;
 using Planner.Domain;
-using Planner.Infrastructure.Persistence;
+using Planner.Infrastructure;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
 
@@ -16,7 +16,7 @@ namespace Planner.API.Controllers;
 [Authorize]
 public class OptimizationController(
     IMessageBus bus,
-    IPlannerDbContext db,
+    IPlannerDataCenter dataCenter,
     ITenantContext tenant,
     IMatrixCalculationService matrixService) : ControllerBase {
     /// <summary>
@@ -46,11 +46,11 @@ public class OptimizationController(
 
         EnsureJobsForAllCustomers();
 
-        var jobs = await db.Jobs
+        var jobs = await dataCenter.DbContext.Jobs
             .Include(j => j.Location)
             .ToListAsync();
 
-        var vehicles = await db.Vehicles
+        var vehicles = await dataCenter.DbContext.Vehicles
             .Include(v => v.StartDepot)
                 .ThenInclude(d => d.Location)
             .Include(v => v.EndDepot)
@@ -103,13 +103,13 @@ public class OptimizationController(
     }
 
     private void EnsureJobsForAllCustomers() {
-        var jobsWithNoCustomers = db.Jobs
-            .Where(j => !db.Customers.Any(c => c.CustomerId == j.CustomerId))
+        var jobsWithNoCustomers = dataCenter.DbContext.Jobs
+            .Where(j => !dataCenter.DbContext.Customers.Any(c => c.CustomerId == j.CustomerId))
             .ToList();
-        db.Jobs.RemoveRange(jobsWithNoCustomers);
+        dataCenter.DbContext.Jobs.RemoveRange(jobsWithNoCustomers);
 
-        var customersWithNoJobs = db.Customers
-            .Where(c => !db.Jobs.Any(j => j.CustomerId == c.CustomerId))
+        var customersWithNoJobs = dataCenter.DbContext.Customers
+            .Where(c => !dataCenter.DbContext.Jobs.Any(j => j.CustomerId == c.CustomerId))
             .ToList();
         // 1. Create a list of new Job objects for each customer found
         var newJobs = customersWithNoJobs.Select(c => new Job {
@@ -128,10 +128,10 @@ public class OptimizationController(
         }).ToList();
 
         // 2. Add the entire collection to the Stops DbSet
-        db.Jobs.AddRange(newJobs);
+        dataCenter.DbContext.Jobs.AddRange(newJobs);
 
         // 3. Save changes to the database
-        db.SaveChanges();
+        dataCenter.DbContext.SaveChanges();
     }
 }
 

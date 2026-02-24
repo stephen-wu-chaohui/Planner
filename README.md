@@ -72,6 +72,7 @@ flowchart LR
 | Messaging | RabbitMQ (AMQP) | Decouple API and optimizer |
 | Optimization | Google OR-Tools | VRP solving in worker |
 | Persistence | SQL Server + EF Core | Explicit migrate/seed tooling |
+| Cache | Redis (optional) + `IPlannerDataCenter` | Cache-Aside Pattern; falls back to in-process memory cache |
 | Real-time | Google Firestore | UI listens for results; pending_analysis + route_insights |
 | AI (optional) | Python worker + Gemini | Route insights (closed: #43) |
 | CI/CD | GitHub Actions | Azure deploy pipelines |
@@ -83,6 +84,7 @@ Multi-tenancy is enforced across storage, API, and realtime updates:
 - **JWT claim**: tokens include `tenant_id`.
 - **Request tenant context**: middleware sets `ITenantContext`.
 - **EF Core query filters**: tenant-scoped entities are filtered by `TenantId` at the DbContext level.
+- **`IPlannerDataCenter`**: unified data-access facade used by all REST controllers and GraphQL resolvers. Exposes `IPlannerDbContext` (The Vault – SQL long-term memory) and `ICache` (The Workbench – Redis short-term memory), and applies the Cache-Aside Pattern automatically via `GetOrFetchAsync<T>`.
 - **Messaging scoping**: optimization requests/results carry `TenantId` end-to-end.
 - **Realtime isolation**: Firestore documents are written with tenant context.
 
@@ -91,6 +93,7 @@ Multi-tenancy is enforced across storage, API, and realtime updates:
 - Map-based Dispatch Center UI for customers/jobs/vehicles/depots
 - Multi-tenant boundary enforced by claims + middleware + EF Core query filters
 - CRUD APIs using DTO contracts (closed: #3)
+- Two-tier data access via `IPlannerDataCenter` (SQL Vault + Redis Workbench) with Cache-Aside Pattern
 - Async optimization job execution with RabbitMQ + background worker
 - Optimization UX improvements (summary endpoints and UI flows) (closed: #31, #36)
 - Firestore-based real-time results delivery (closed: #49)
@@ -120,6 +123,7 @@ The high-level direction is to keep Planner as a realistic-but-approachable play
 - Planner.AI worker added for route insights analysis (#43)
 - Entra ID External ID migration (#53)
 - Demo login UX improvements (default city/email + display demo password) (#45, #55)
+- Introduced `IPlannerDataCenter` with two-tier data access (SQL **Vault** + Redis **Workbench**) and Cache-Aside Pattern
 
 ### 2026-01
 
