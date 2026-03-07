@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.API.Caching;
 using Planner.Domain;
 using Planner.Infrastructure;
 
@@ -11,18 +12,22 @@ namespace Planner.API.Controllers;
 public sealed class TasksController(IPlannerDataCenter dataCenter) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<TaskItem>>> GetAll() {
-        var items = await dataCenter.DbContext.Tasks
-            .AsNoTracking()
-            .ToListAsync();
+        var items = await dataCenter.GetOrFetchAsync(
+            CacheKeys.TasksList(),
+            async () => await dataCenter.DbContext.Tasks
+                .AsNoTracking()
+                .ToListAsync());
 
-        return Ok(items);
+        return Ok(items ?? []);
     }
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<TaskItem>> GetById(long id) {
-        var entity = await dataCenter.DbContext.Tasks
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var entity = await dataCenter.GetOrFetchAsync(
+            CacheKeys.TaskById(id),
+            async () => await dataCenter.DbContext.Tasks
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == id));
 
         return entity is null ? NotFound() : Ok(entity);
     }
@@ -31,6 +36,10 @@ public sealed class TasksController(IPlannerDataCenter dataCenter) : ControllerB
     public async Task<IActionResult> Create([FromBody] TaskItem entity) {
         dataCenter.DbContext.Tasks.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.TasksList(),
+            CacheKeys.TaskById(entity.Id));
         return Created($"/api/tasks/{entity.Id}", entity);
     }
 
@@ -42,6 +51,10 @@ public sealed class TasksController(IPlannerDataCenter dataCenter) : ControllerB
 
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.TasksList(),
+            CacheKeys.TaskById(id));
         return NoContent();
     }
 
@@ -53,6 +66,10 @@ public sealed class TasksController(IPlannerDataCenter dataCenter) : ControllerB
 
         dataCenter.DbContext.Tasks.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.TasksList(),
+            CacheKeys.TaskById(id));
         return NoContent();
     }
 }

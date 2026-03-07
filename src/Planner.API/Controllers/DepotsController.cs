@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Application;
+using Planner.API.Caching;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
 using Planner.Infrastructure;
@@ -13,22 +14,29 @@ namespace Planner.API.Controllers;
 public sealed class DepotsController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<DepotDto>>> GetAll() {
-        var items = await dataCenter.DbContext.Depots
-            .AsNoTracking()
-            .Include(d => d.Location)
-            .ToListAsync();
+        var items = await dataCenter.GetOrFetchAsync(
+            CacheKeys.DepotsList(tenant.TenantId),
+            async () => await dataCenter.DbContext.Depots
+                .AsNoTracking()
+                .Include(d => d.Location)
+                .Select(d => d.ToDto())
+                .ToListAsync());
 
-        return Ok(items.Select(d => d.ToDto()).ToList());
+        return Ok(items ?? []);
     }
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<DepotDto>> GetById(long id) {
-        var entity = await dataCenter.DbContext.Depots
-            .AsNoTracking()
-            .Include(d => d.Location)
-            .FirstOrDefaultAsync(d => d.Id == id);
+        var entity = await dataCenter.GetOrFetchAsync(
+            CacheKeys.DepotById(id, tenant.TenantId),
+            async () => await dataCenter.DbContext.Depots
+                .AsNoTracking()
+                .Include(d => d.Location)
+                .Where(d => d.Id == id)
+                .Select(d => d.ToDto())
+                .FirstOrDefaultAsync());
 
-        return entity is null ? NotFound() : Ok(entity.ToDto());
+        return entity is null ? NotFound() : Ok(entity);
     }
 
     [HttpPost]
@@ -36,6 +44,13 @@ public sealed class DepotsController(IPlannerDataCenter dataCenter, ITenantConte
         var entity = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Depots.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.DepotsList(tenant.TenantId),
+            CacheKeys.DepotById(entity.Id, tenant.TenantId),
+            CacheKeys.ConfigInit(tenant.TenantId),
+            CacheKeys.TenantMetadata(tenant.TenantId),
+            CacheKeys.VehiclesList(tenant.TenantId));
         return Created($"/api/depots/{entity.Id}", entity.ToDto());
     }
 
@@ -48,6 +63,13 @@ public sealed class DepotsController(IPlannerDataCenter dataCenter, ITenantConte
         var updated = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.DepotsList(tenant.TenantId),
+            CacheKeys.DepotById(id, tenant.TenantId),
+            CacheKeys.ConfigInit(tenant.TenantId),
+            CacheKeys.TenantMetadata(tenant.TenantId),
+            CacheKeys.VehiclesList(tenant.TenantId));
         return NoContent();
     }
 
@@ -59,6 +81,13 @@ public sealed class DepotsController(IPlannerDataCenter dataCenter, ITenantConte
 
         dataCenter.DbContext.Depots.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.DepotsList(tenant.TenantId),
+            CacheKeys.DepotById(id, tenant.TenantId),
+            CacheKeys.ConfigInit(tenant.TenantId),
+            CacheKeys.TenantMetadata(tenant.TenantId),
+            CacheKeys.VehiclesList(tenant.TenantId));
         return NoContent();
     }
 }

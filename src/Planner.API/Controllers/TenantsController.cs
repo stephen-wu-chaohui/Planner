@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Application;
+using Planner.API.Caching;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
 using Planner.Infrastructure;
@@ -20,19 +21,28 @@ public sealed class TenantsController(IPlannerDataCenter dataCenter, ITenantCont
     /// </remarks>
     [HttpGet("metadata")]
     public async Task<ActionResult<TenantDto>> GetMetadata() {
-        var tenantEntity = await dataCenter.DbContext.Tenants
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == tenant.TenantId);
+        var metadata = await dataCenter.GetOrFetchAsync(
+            CacheKeys.TenantMetadata(tenant.TenantId),
+            async () => {
+                var tenantEntity = await dataCenter.DbContext.Tenants
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.Id == tenant.TenantId);
 
-        if (tenantEntity is null)
+                if (tenantEntity is null) {
+                    return null;
+                }
+
+                var mainDepot = await dataCenter.DbContext.Depots
+                    .AsNoTracking()
+                    .Where(d => d.TenantId == tenant.TenantId)
+                    .FirstOrDefaultAsync();
+
+                return tenantEntity.ToDto(mainDepot?.Id);
+            });
+
+        if (metadata is null)
             return NotFound("Tenant not found.");
 
-        // Find the first depot for this tenant to use as main depot
-        var mainDepot = await dataCenter.DbContext.Depots
-            .AsNoTracking()
-            .Where(d => d.TenantId == tenant.TenantId)
-            .FirstOrDefaultAsync();
-
-        return Ok(tenantEntity.ToDto(mainDepot?.Id));
+        return Ok(metadata);
     }
 }

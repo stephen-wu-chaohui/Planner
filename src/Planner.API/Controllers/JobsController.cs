@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Application;
+using Planner.API.Caching;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
 using Planner.Infrastructure;
@@ -13,22 +14,29 @@ namespace Planner.API.Controllers;
 public sealed class JobsController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<JobDto>>> GetAll() {
-        var items = await dataCenter.DbContext.Jobs
-            .AsNoTracking()
-            .Include(j => j.Location)
-            .ToListAsync();
+        var items = await dataCenter.GetOrFetchAsync(
+            CacheKeys.JobsList(tenant.TenantId),
+            async () => await dataCenter.DbContext.Jobs
+                .AsNoTracking()
+                .Include(j => j.Location)
+                .Select(j => j.ToDto())
+                .ToListAsync());
 
-        return Ok(items.Select(j => j.ToDto()).ToList());
+        return Ok(items ?? []);
     }
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<JobDto>> GetById(long id) {
-        var entity = await dataCenter.DbContext.Jobs
-            .AsNoTracking()
-            .Include(j => j.Location)
-            .FirstOrDefaultAsync(j => j.Id == id);
+        var entity = await dataCenter.GetOrFetchAsync(
+            CacheKeys.JobById(id, tenant.TenantId),
+            async () => await dataCenter.DbContext.Jobs
+                .AsNoTracking()
+                .Include(j => j.Location)
+                .Where(j => j.Id == id)
+                .Select(j => j.ToDto())
+                .FirstOrDefaultAsync());
 
-        return entity is null ? NotFound() : Ok(entity.ToDto());
+        return entity is null ? NotFound() : Ok(entity);
     }
 
     [HttpPost]
@@ -36,6 +44,10 @@ public sealed class JobsController(IPlannerDataCenter dataCenter, ITenantContext
         var entity = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Jobs.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.JobsList(tenant.TenantId),
+            CacheKeys.JobById(entity.Id, tenant.TenantId));
         return Created($"/api/jobs/{entity.Id}", entity.ToDto());
     }
 
@@ -54,6 +66,10 @@ public sealed class JobsController(IPlannerDataCenter dataCenter, ITenantContext
         var updated = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.JobsList(tenant.TenantId),
+            CacheKeys.JobById(id, tenant.TenantId));
 
         return NoContent();
     }
@@ -66,6 +82,10 @@ public sealed class JobsController(IPlannerDataCenter dataCenter, ITenantContext
 
         dataCenter.DbContext.Jobs.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.JobsList(tenant.TenantId),
+            CacheKeys.JobById(id, tenant.TenantId));
         return NoContent();
     }
 }

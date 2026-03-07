@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.API.Caching;
 using Planner.API.Services;
 using Planner.Application;
 using Planner.Contracts.Optimization;
@@ -44,26 +45,38 @@ public class OptimizationController(
 
     private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync(int? searchTimeLimitSeconds = null) {
 
-        EnsureJobsForAllCustomers();
+        await EnsureJobsForAllCustomersAsync();
 
-        var jobs = await dataCenter.DbContext.Jobs
-            .Include(j => j.Location)
-            .ToListAsync();
+        var jobs = await dataCenter.GetOrFetchAsync(
+            CacheKeys.JobsList(tenant.TenantId),
+            async () => await dataCenter.DbContext.Jobs
+                .Include(j => j.Location)
+                .ToListAsync()) ?? [];
 
-        var vehicles = await dataCenter.DbContext.Vehicles
-            .Include(v => v.StartDepot)
-                .ThenInclude(d => d.Location)
-            .Include(v => v.EndDepot)
-                .ThenInclude(d => d.Location)
-            .ToListAsync();
+        var vehicles = await dataCenter.GetOrFetchAsync(
+            CacheKeys.VehiclesList(tenant.TenantId),
+            async () => await dataCenter.DbContext.Vehicles
+                .Include(v => v.StartDepot)
+                    .ThenInclude(d => d.Location)
+                .Include(v => v.EndDepot)
+                    .ThenInclude(d => d.Location)
+                .ToListAsync()) ?? [];
+
+        var routableVehicles = vehicles
+            .Where(v =>
+                v.StartDepot is not null &&
+                v.EndDepot is not null &&
+                v.StartDepot.Location is not null &&
+                v.EndDepot.Location is not null)
+            .ToList();
 
         var settings = new OptimizationSettings(
             SearchTimeLimitSeconds: searchTimeLimitSeconds ?? (1 * jobs.Count) // Use provided value or default to 1 second per job
         );
 
         // Build location list in the same order as solver expects: depots first, then jobs
-        var depotLocations = vehicles
-            .SelectMany(v => new[] { v.StartDepot.Location, v.EndDepot.Location })
+        var depotLocations = routableVehicles
+            .SelectMany(v => new[] { v.StartDepot!.Location!, v.EndDepot!.Location! })
             .GroupBy(l => l.Id)
             .Select(g => g.First())
             .ToList();
@@ -86,9 +99,9 @@ public class OptimizationController(
             return ToInput.FromDepotLocation(1); // Fallback, should not happen
         }).ToArray();
 
-        var vs = vehicles.Select(ToInput.FromVehicle).ToArray();
+        var vs = routableVehicles.Select(ToInput.FromVehicle).ToArray();
 
-        var request =  new OptimizeRouteRequest(
+        var request = new OptimizeRouteRequest(
             TenantId: tenant.TenantId,
             OptimizationRunId: Guid.NewGuid(),
             RequestedAt: DateTime.UtcNow,
@@ -102,7 +115,7 @@ public class OptimizationController(
         return request;
     }
 
-    private void EnsureJobsForAllCustomers() {
+    private async Task EnsureJobsForAllCustomersAsync() {
         var jobsWithNoCustomers = dataCenter.DbContext.Jobs
             .Where(j => !dataCenter.DbContext.Customers.Any(c => c.CustomerId == j.CustomerId))
             .ToList();
@@ -111,7 +124,7 @@ public class OptimizationController(
         var customersWithNoJobs = dataCenter.DbContext.Customers
             .Where(c => !dataCenter.DbContext.Jobs.Any(j => j.CustomerId == c.CustomerId))
             .ToList();
-        // 1. Create a list of new Job objects for each customer found
+
         var newJobs = customersWithNoJobs.Select(c => new Job {
             CustomerId = c.CustomerId,
             TenantId = tenant.TenantId,
@@ -127,11 +140,12 @@ public class OptimizationController(
             RequiresRefrigeration = false
         }).ToList();
 
-        // 2. Add the entire collection to the Stops DbSet
         dataCenter.DbContext.Jobs.AddRange(newJobs);
+        await dataCenter.DbContext.SaveChangesAsync();
 
-        // 3. Save changes to the database
-        dataCenter.DbContext.SaveChanges();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.JobsList(tenant.TenantId),
+            CacheKeys.CustomersList(tenant.TenantId));
     }
 }
-

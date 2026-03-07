@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.API.Caching;
 using Planner.Domain;
 using Planner.Infrastructure;
 using Route = Planner.Domain.Route;
@@ -12,18 +13,22 @@ namespace Planner.API.Controllers;
 public sealed class RoutesController(IPlannerDataCenter dataCenter) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<Route>>> GetAll() {
-        var items = await dataCenter.DbContext.Set<Route>()
-            .AsNoTracking()
-            .ToListAsync();
+        var items = await dataCenter.GetOrFetchAsync(
+            CacheKeys.RoutesList(),
+            async () => await dataCenter.DbContext.Set<Route>()
+                .AsNoTracking()
+                .ToListAsync());
 
-        return Ok(items);
+        return Ok(items ?? []);
     }
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<Route>> GetById(long id) {
-        var entity = await dataCenter.DbContext.Set<Route>()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == id);
+        var entity = await dataCenter.GetOrFetchAsync(
+            CacheKeys.RouteById(id),
+            async () => await dataCenter.DbContext.Set<Route>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id));
 
         return entity is null ? NotFound() : Ok(entity);
     }
@@ -32,6 +37,10 @@ public sealed class RoutesController(IPlannerDataCenter dataCenter) : Controller
     public async Task<IActionResult> Create([FromBody] Route entity) {
         dataCenter.DbContext.Set<Route>().Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.RoutesList(),
+            CacheKeys.RouteById(entity.Id));
         return Created($"/api/routes/{entity.Id}", entity);
     }
 
@@ -43,6 +52,10 @@ public sealed class RoutesController(IPlannerDataCenter dataCenter) : Controller
 
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.RoutesList(),
+            CacheKeys.RouteById(id));
         return NoContent();
     }
 
@@ -54,6 +67,10 @@ public sealed class RoutesController(IPlannerDataCenter dataCenter) : Controller
 
         dataCenter.DbContext.Set<Route>().Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.RoutesList(),
+            CacheKeys.RouteById(id));
         return NoContent();
     }
 }

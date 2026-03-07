@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Application;
+using Planner.API.Caching;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
 using Planner.Infrastructure;
@@ -13,38 +14,60 @@ namespace Planner.API.Controllers;
 public sealed class VehiclesController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<VehicleDto>>> GetAll() {
-        var items = await dataCenter.DbContext.Vehicles
-            .AsNoTracking()
-            .Include(v => v.StartDepot)
-            .ThenInclude(d => d.Location)
-            .Include(v => v.EndDepot)
-            .ThenInclude(d => d.Location)
-            .ToListAsync();
+        var payload = await dataCenter.GetOrFetchAsync(
+            CacheKeys.VehiclesList(tenant.TenantId),
+            async () => {
+                var items = await dataCenter.DbContext.Vehicles
+                    .AsNoTracking()
+                    .Include(v => v.StartDepot)
+                    .ThenInclude(d => d.Location)
+                    .Include(v => v.EndDepot)
+                    .ThenInclude(d => d.Location)
+                    .ToListAsync();
 
-        var valid = items
-            .Where(v => v.StartDepot is not null && v.EndDepot is not null)
-            .ToList();
+                var valid = items
+                    .Where(v =>
+                        v.StartDepot is not null &&
+                        v.EndDepot is not null &&
+                        v.StartDepot.Location is not null &&
+                        v.EndDepot.Location is not null)
+                    .Select(v => v.ToDto())
+                    .ToList();
 
-        if (valid.Count != items.Count) {
+                return new VehicleListPayload(valid, items.Count - valid.Count);
+            });
+
+        var result = payload ?? new VehicleListPayload([], 0);
+
+        if (result.OmittedCount > 0) {
             Response.Headers.Append(
                 "X-Warning",
-                $"{items.Count - valid.Count} vehicle(s) omitted due to missing StartDepot/EndDepot navigation.");
+                $"{result.OmittedCount} vehicle(s) omitted due to missing StartDepot/EndDepot navigation.");
         }
 
-        return Ok(valid.Select(v => v.ToDto()).ToList());
+        return Ok(result.Items);
     }
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<VehicleDto>> GetById(long id) {
-        var entity = await dataCenter.DbContext.Vehicles
-            .AsNoTracking()
-            .Include(v => v.StartDepot)
-            .ThenInclude(d => d.Location)
-            .Include(v => v.EndDepot)
-            .ThenInclude(d => d.Location)
-            .FirstOrDefaultAsync(v => v.Id == id);
+        var entity = await dataCenter.GetOrFetchAsync(
+            CacheKeys.VehicleById(id, tenant.TenantId),
+            async () => await dataCenter.DbContext.Vehicles
+                .AsNoTracking()
+                .Include(v => v.StartDepot)
+                .ThenInclude(d => d.Location)
+                .Include(v => v.EndDepot)
+                .ThenInclude(d => d.Location)
+                .Where(v =>
+                    v.Id == id &&
+                    v.StartDepot != null &&
+                    v.EndDepot != null &&
+                    v.StartDepot.Location != null &&
+                    v.EndDepot.Location != null)
+                .Select(v => v.ToDto())
+                .FirstOrDefaultAsync());
 
-        return entity is null ? NotFound() : Ok(entity.ToDto());
+        return entity is null ? NotFound() : Ok(entity);
     }
 
     [HttpPost]
@@ -52,6 +75,10 @@ public sealed class VehiclesController(IPlannerDataCenter dataCenter, ITenantCon
         var entity = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Vehicles.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.VehiclesList(tenant.TenantId),
+            CacheKeys.VehicleById(entity.Id, tenant.TenantId));
         return Created($"/api/vehicles/{entity.Id}", entity.ToDto());
     }
 
@@ -70,6 +97,10 @@ public sealed class VehiclesController(IPlannerDataCenter dataCenter, ITenantCon
         var updated = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.VehiclesList(tenant.TenantId),
+            CacheKeys.VehicleById(id, tenant.TenantId));
 
         return NoContent();
     }
@@ -82,6 +113,12 @@ public sealed class VehiclesController(IPlannerDataCenter dataCenter, ITenantCon
 
         dataCenter.DbContext.Vehicles.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.VehiclesList(tenant.TenantId),
+            CacheKeys.VehicleById(id, tenant.TenantId));
         return NoContent();
     }
+
+    private sealed record VehicleListPayload(List<VehicleDto> Items, int OmittedCount);
 }

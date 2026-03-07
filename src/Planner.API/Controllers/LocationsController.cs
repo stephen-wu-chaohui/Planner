@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Planner.API.Caching;
 using Planner.API.Mappings;
 using Planner.Contracts.API;
 using Planner.Infrastructure;
@@ -12,20 +13,27 @@ namespace Planner.API.Controllers;
 public sealed class LocationsController(IPlannerDataCenter dataCenter) : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<List<LocationDto>>> GetAll() {
-        var items = await dataCenter.DbContext.Locations
-            .AsNoTracking()
-            .ToListAsync();
+        var items = await dataCenter.GetOrFetchAsync(
+            CacheKeys.LocationsList(),
+            async () => await dataCenter.DbContext.Locations
+                .AsNoTracking()
+                .Select(l => l.ToDto())
+                .ToListAsync());
 
-        return Ok(items.Select(l => l.ToDto()).ToList());
+        return Ok(items ?? []);
     }
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<LocationDto>> GetById(long id) {
-        var entity = await dataCenter.DbContext.Locations
-            .AsNoTracking()
-            .FirstOrDefaultAsync(l => l.Id == id);
+        var entity = await dataCenter.GetOrFetchAsync(
+            CacheKeys.LocationById(id),
+            async () => await dataCenter.DbContext.Locations
+                .AsNoTracking()
+                .Where(l => l.Id == id)
+                .Select(l => l.ToDto())
+                .FirstOrDefaultAsync());
 
-        return entity is null ? NotFound() : Ok(entity.ToDto());
+        return entity is null ? NotFound() : Ok(entity);
     }
 
     [HttpPost]
@@ -33,6 +41,10 @@ public sealed class LocationsController(IPlannerDataCenter dataCenter) : Control
         var entity = dto.ToDomain();
         dataCenter.DbContext.Locations.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.LocationsList(),
+            CacheKeys.LocationById(entity.Id));
         return Created($"/api/locations/{entity.Id}", entity.ToDto());
     }
 
@@ -45,6 +57,10 @@ public sealed class LocationsController(IPlannerDataCenter dataCenter) : Control
         var updated = dto.ToDomain();
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.LocationsList(),
+            CacheKeys.LocationById(id));
         return NoContent();
     }
 
@@ -56,6 +72,10 @@ public sealed class LocationsController(IPlannerDataCenter dataCenter) : Control
 
         dataCenter.DbContext.Locations.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.LocationsList(),
+            CacheKeys.LocationById(id));
         return NoContent();
     }
 }

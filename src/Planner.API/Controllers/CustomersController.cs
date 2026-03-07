@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Planner.Application;
 using Planner.Contracts.API;
+using Planner.API.Caching;
 using Planner.API.Mappings;
 using Planner.Infrastructure;
 
@@ -14,22 +15,29 @@ public sealed class CustomersController(IPlannerDataCenter dataCenter, ITenantCo
 
     [HttpGet]
     public async Task<ActionResult<List<CustomerDto>>> GetAll() {
-        var items = await dataCenter.DbContext.Customers
-            .AsNoTracking()
-            .Include(c => c.Location)
-            .ToListAsync();
+        var items = await dataCenter.GetOrFetchAsync(
+            CacheKeys.CustomersList(tenant.TenantId),
+            async () => await dataCenter.DbContext.Customers
+                .AsNoTracking()
+                .Include(c => c.Location)
+                .Select(c => c.ToDto())
+                .ToListAsync());
 
-        return Ok(items.Select(c => c.ToDto()).ToList());
+        return Ok(items ?? []);
     }
 
     [HttpGet("{id:long}")]
     public async Task<ActionResult<CustomerDto>> GetById(long id) {
-        var entity = await dataCenter.DbContext.Customers
-            .AsNoTracking()
-            .Include(c => c.Location)
-            .FirstOrDefaultAsync(c => c.CustomerId == id);
+        var entity = await dataCenter.GetOrFetchAsync(
+            CacheKeys.CustomerById(id, tenant.TenantId),
+            async () => await dataCenter.DbContext.Customers
+                .AsNoTracking()
+                .Include(c => c.Location)
+                .Where(c => c.CustomerId == id)
+                .Select(c => c.ToDto())
+                .FirstOrDefaultAsync());
 
-        return entity is null ? NotFound() : Ok(entity.ToDto());
+        return entity is null ? NotFound() : Ok(entity);
     }
 
     [HttpPost]
@@ -37,6 +45,10 @@ public sealed class CustomersController(IPlannerDataCenter dataCenter, ITenantCo
         var entity = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Customers.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.CustomersList(tenant.TenantId),
+            CacheKeys.CustomerById(entity.CustomerId, tenant.TenantId));
         return Created($"/api/customers/{entity.CustomerId}", entity.ToDto());
     }
 
@@ -55,6 +67,10 @@ public sealed class CustomersController(IPlannerDataCenter dataCenter, ITenantCo
         var updated = dto.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.CustomersList(tenant.TenantId),
+            CacheKeys.CustomerById(id, tenant.TenantId));
 
         return NoContent();
     }
@@ -67,6 +83,10 @@ public sealed class CustomersController(IPlannerDataCenter dataCenter, ITenantCo
 
         dataCenter.DbContext.Customers.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            HttpContext.RequestAborted,
+            CacheKeys.CustomersList(tenant.TenantId),
+            CacheKeys.CustomerById(id, tenant.TenantId));
         return NoContent();
     }
 }

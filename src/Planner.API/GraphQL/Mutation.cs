@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Planner.API.Caching;
 using Planner.API.Mappings;
 using Planner.Application;
 using Planner.Contracts.API;
@@ -14,6 +15,10 @@ public sealed class Mutation {
         var entity = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Jobs.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.JobsList(tenant.TenantId),
+            CacheKeys.JobById(entity.Id, tenant.TenantId));
         return entity.ToDto();
     }
 
@@ -31,6 +36,10 @@ public sealed class Mutation {
         var updated = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.JobsList(tenant.TenantId),
+            CacheKeys.JobById(id, tenant.TenantId));
 
         return existing.ToDto();
     }
@@ -42,6 +51,10 @@ public sealed class Mutation {
 
         dataCenter.DbContext.Jobs.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.JobsList(tenant.TenantId),
+            CacheKeys.JobById(id, tenant.TenantId));
         return true;
     }
 
@@ -50,6 +63,10 @@ public sealed class Mutation {
         var entity = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Customers.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.CustomersList(tenant.TenantId),
+            CacheKeys.CustomerById(entity.CustomerId, tenant.TenantId));
         return entity.ToDto();
     }
 
@@ -66,6 +83,10 @@ public sealed class Mutation {
         var updated = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.CustomersList(tenant.TenantId),
+            CacheKeys.CustomerById(id, tenant.TenantId));
 
         return existing.ToDto();
     }
@@ -77,6 +98,10 @@ public sealed class Mutation {
 
         dataCenter.DbContext.Customers.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.CustomersList(tenant.TenantId),
+            CacheKeys.CustomerById(id, tenant.TenantId));
         return true;
     }
 
@@ -85,6 +110,10 @@ public sealed class Mutation {
         var entity = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Set<Planner.Domain.Vehicle>().Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.VehiclesList(tenant.TenantId),
+            CacheKeys.VehicleById(entity.Id, tenant.TenantId));
         return entity.ToDto();
     }
 
@@ -101,6 +130,10 @@ public sealed class Mutation {
         var updated = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.VehiclesList(tenant.TenantId),
+            CacheKeys.VehicleById(id, tenant.TenantId));
 
         return existing.ToDto();
     }
@@ -112,6 +145,10 @@ public sealed class Mutation {
 
         dataCenter.DbContext.Set<Planner.Domain.Vehicle>().Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.VehiclesList(tenantContext.TenantId),
+            CacheKeys.VehicleById(id, tenantContext.TenantId));
         return true;
     }
 
@@ -120,6 +157,13 @@ public sealed class Mutation {
         var entity = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Depots.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.DepotsList(tenant.TenantId),
+            CacheKeys.DepotById(entity.Id, tenant.TenantId),
+            CacheKeys.ConfigInit(tenant.TenantId),
+            CacheKeys.TenantMetadata(tenant.TenantId),
+            CacheKeys.VehiclesList(tenant.TenantId));
         return entity.ToDto();
     }
 
@@ -136,6 +180,13 @@ public sealed class Mutation {
         var updated = input.ToDomain(tenant.TenantId);
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.DepotsList(tenant.TenantId),
+            CacheKeys.DepotById(id, tenant.TenantId),
+            CacheKeys.ConfigInit(tenant.TenantId),
+            CacheKeys.TenantMetadata(tenant.TenantId),
+            CacheKeys.VehiclesList(tenant.TenantId));
 
         return existing.ToDto();
     }
@@ -147,6 +198,13 @@ public sealed class Mutation {
 
         dataCenter.DbContext.Depots.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.DepotsList(tenantContext.TenantId),
+            CacheKeys.DepotById(id, tenantContext.TenantId),
+            CacheKeys.ConfigInit(tenantContext.TenantId),
+            CacheKeys.TenantMetadata(tenantContext.TenantId),
+            CacheKeys.VehiclesList(tenantContext.TenantId));
         return true;
     }
 
@@ -155,6 +213,10 @@ public sealed class Mutation {
         var entity = input.ToDomain();
         dataCenter.DbContext.Locations.Add(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.LocationsList(),
+            CacheKeys.LocationById(entity.Id));
         return entity.ToDto();
     }
 
@@ -171,6 +233,10 @@ public sealed class Mutation {
         var updated = input.ToDomain();
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.LocationsList(),
+            CacheKeys.LocationById(id));
 
         return existing.ToDto();
     }
@@ -182,6 +248,10 @@ public sealed class Mutation {
 
         dataCenter.DbContext.Locations.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.LocationsList(),
+            CacheKeys.LocationById(id));
         return true;
     }
 
@@ -189,6 +259,10 @@ public sealed class Mutation {
     public async Task<TaskItem> CreateTask(TaskItem input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
         dataCenter.DbContext.Tasks.Add(input);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.TasksList(tenant.TenantId),
+            CacheKeys.TaskById(input.Id, tenant.TenantId));
         return input;
     }
 
@@ -204,6 +278,10 @@ public sealed class Mutation {
 
         dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(input);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.TasksList(tenant.TenantId),
+            CacheKeys.TaskById(id, tenant.TenantId));
 
         return existing;
     }
@@ -215,6 +293,10 @@ public sealed class Mutation {
 
         dataCenter.DbContext.Tasks.Remove(entity);
         await dataCenter.DbContext.SaveChangesAsync();
+        await dataCenter.RemoveCacheKeysAsync(
+            default,
+            CacheKeys.TasksList(tenantContext.TenantId),
+            CacheKeys.TaskById(id, tenantContext.TenantId));
         return true;
     }
 }
