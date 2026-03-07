@@ -110,13 +110,18 @@
         // Execution will PAUSE here until SetResult(true) is called above
         await _mapReadySource.Task;
 
-        customers = CustomerState.Customers.Select(c => new CustomerMarker
+        customers = CustomerState.Customers?.Select(c => new CustomerMarker
         {
             Label = c.Name,
             Lat = c.Location.Latitude,
             Lng = c.Location.Longitude
         }).ToList();
 
+        if (customers is null)
+        {
+            Logger.LogWarning("CustomerState.Customers is null when updating map markers");
+            return;
+        }
         await JS.InvokeVoidAsync("plannerMap.updateCustomers", customers);
     }
 
@@ -126,6 +131,11 @@
         await _mapReadySource.Task;
 
         var routes = RouteState.MapRoutes;
+        if (routes is null)
+        {
+            Logger.LogWarning("RouteState.MapRoutes is null when updating map routes");
+            return;
+        }
         await JS.InvokeVoidAsync("plannerMap.updateRoutes", routes);
     }
 
@@ -137,7 +147,12 @@
         // Wait for Google Maps API to be loaded
         await _mapReadySource.Task;
         
-        var mapCenter = TenantState.TenantInfo?.MainDepot?.Location ?? new LocationDto(Id: 0, Address: "Brisbane", Latitude: -27.381754, Longitude: 152.6628713);
+        var mapCenter = TenantState.TenantInfo?.MainDepot?.Location;
+        if (mapCenter is null)
+        {
+            Logger.LogWarning("TenantInfo.MainDepot.Location is null when recentering map");
+            return;
+        }
         
         await JS.InvokeVoidAsync("plannerMap.recenter", mapCenter.Latitude, mapCenter.Longitude, 10);
     }
