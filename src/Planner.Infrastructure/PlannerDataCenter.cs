@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using Planner.Infrastructure.Persistence;
 
@@ -28,18 +28,29 @@ public sealed class PlannerDataCenter(IPlannerDbContext dbContext, IDistributedC
         // Step 1 – Try The Workbench (Redis short-term memory)
         var bytes = await cache.GetAsync(cacheKey, cancellationToken);
         if (bytes is not null) {
-            return JsonSerializer.Deserialize<T>(bytes);
+            try {
+                // Added explicit options for better compatibility
+                return JsonSerializer.Deserialize<T>(bytes, new JsonSerializerOptions {
+                    PropertyNameCaseInsensitive = true
+                });
+            } catch (JsonException) {
+                // If deserialization fails, treat it as a cache miss
+                // rather than crashing the entire request.
+                await cache.RemoveAsync(cacheKey, cancellationToken);
+            }
         }
 
-        // Step 2 – Cache miss: fetch from The Vault (SQL long-term memory)
+        // Step 2 – Cache miss (or corruption): fetch from The Vault
         var result = await fetchFromDb();
 
-        // Step 3 – Populate The Workbench for subsequent requests
+        // Step 3 – Populate The Workbench
         if (result is not null) {
             var options = new DistributedCacheEntryOptions {
                 AbsoluteExpirationRelativeToNow = expiry ?? DefaultExpiry
             };
-            await cache.SetAsync(cacheKey, JsonSerializer.SerializeToUtf8Bytes(result), options, cancellationToken);
+            // Serialize with the same options used for deserialization
+            var serializedData = JsonSerializer.SerializeToUtf8Bytes(result);
+            await cache.SetAsync(cacheKey, serializedData, options, cancellationToken);
         }
 
         return result;
