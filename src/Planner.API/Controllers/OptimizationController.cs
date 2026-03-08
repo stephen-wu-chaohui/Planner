@@ -143,8 +143,9 @@ public class OptimizationController(
         dataCenter.DbContext.Jobs.AddRange(newJobs);
         await dataCenter.DbContext.SaveChangesAsync();
 
+        var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
         await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
+            cancellationToken,
             CacheKeys.JobsList(tenant.TenantId),
             CacheKeys.CustomersList(tenant.TenantId));
     }
