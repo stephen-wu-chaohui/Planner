@@ -1,31 +1,35 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Planner.Infrastructure.Persistence;
+using Planner.API.Caching;
+using Planner.Infrastructure;
 using System.Diagnostics;
 
 namespace Planner.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController(IPlannerDbContext context, ILogger<UsersController> logger) : ControllerBase {
+public class UsersController(IPlannerDataCenter dataCenter, ILogger<UsersController> logger) : ControllerBase {
     [HttpGet]
     public async Task<IActionResult> GetUsers() {
         var sw = Stopwatch.StartNew();
         logger.LogInformation("Testing DB connectivity for Users table...");
 
         try {
-            // This specifically tests the new 'Role' column and the DB connection
-            var users = await context.Users
-                .Select(u => new { u.Email, u.Role, u.CreatedAt })
-                .ToListAsync();
+            var users = await dataCenter.GetOrFetchAsync(
+                CacheKeys.UsersList(),
+                async () => await dataCenter.DbContext.Users
+                    .Select(u => new UserSummary(u.Email, u.Role, u.CreatedAt))
+                    .ToListAsync());
+
+            var result = users ?? [];
 
             sw.Stop();
-            logger.LogInformation("Successfully fetched {Count} users in {Elapsed}ms", users.Count, sw.ElapsedMilliseconds);
+            logger.LogInformation("Successfully fetched {Count} users in {Elapsed}ms", result.Count, sw.ElapsedMilliseconds);
 
             return Ok(new {
-                Count = users.Count,
+                Count = result.Count,
                 ElapsedMs = sw.ElapsedMilliseconds,
-                Data = users
+                Data = result
             });
         } catch (Exception ex) {
             sw.Stop();
@@ -39,4 +43,6 @@ public class UsersController(IPlannerDbContext context, ILogger<UsersController>
             });
         }
     }
+
+    private sealed record UserSummary(string Email, string Role, DateTime CreatedAt);
 }
