@@ -69,8 +69,13 @@
         // Only call the API if we actually have a logged-in user!
         if (authState.User.Identity?.IsAuthenticated == true) {
             if (_subscribed) return;
-            await CustomerState.InitializeAsync();
-            _subscribed = true;
+            try {
+                await CustomerState.InitializeAsync();
+                _subscribed = true;
+            } catch (UnauthorizedAccessException) {
+                // Token cache may be missing after app restart even when an auth cookie exists.
+                Nav.NavigateTo("/MicrosoftIdentity/Account/SignIn?redirectUri=/dispatch-center", forceLoad: true);
+            }
         }
     }
 

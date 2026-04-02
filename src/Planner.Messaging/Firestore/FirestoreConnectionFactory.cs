@@ -1,7 +1,8 @@
-﻿using Google.Cloud.Firestore;
+using System;
+using System.Text.Json;
+using Google.Cloud.Firestore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
 
 namespace Planner.Messaging.Firestore;
 
@@ -49,6 +50,24 @@ public sealed class FirestoreConnectionFactory(IConfiguration configuration, ILo
                     finalJson = base64Json;
                 }
 
+                if (string.IsNullOrWhiteSpace(projectId))
+                {
+                    projectId = TryGetProjectIdFromCredentials(finalJson);
+                    if (!string.IsNullOrWhiteSpace(projectId))
+                    {
+                        logger.LogInformation(
+                            "Firestore:ProjectId was not set; using project_id from FIREBASE_CONFIG_JSON: {ProjectId}.",
+                            projectId);
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(projectId))
+                {
+                    logger.LogWarning(
+                        "Firestore not configured (missing Firestore:ProjectId and project_id in FIREBASE_CONFIG_JSON). Firestore-based services will be disabled.");
+                    return null;
+                }
+
                 var builder = new FirestoreDbBuilder
                 {
                     ProjectId = projectId,
@@ -64,5 +83,23 @@ public sealed class FirestoreConnectionFactory(IConfiguration configuration, ILo
                 return null;
             }
         }
+    }
+
+    private static string? TryGetProjectIdFromCredentials(string credentialsJson)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(credentialsJson);
+            if (doc.RootElement.TryGetProperty("project_id", out var projectIdElement))
+            {
+                return projectIdElement.GetString();
+            }
+        }
+        catch
+        {
+            // Ignored intentionally; caller handles null as "not configured".
+        }
+
+        return null;
     }
 }

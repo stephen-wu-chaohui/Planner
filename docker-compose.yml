@@ -72,6 +72,7 @@ services:
       - AzureAd__Instance=https://login.microsoftonline.com/
       - AzureAd__TenantId=common
       - AzureAd__ClientId=8621f365-5e51-4b25-931a-1c717ead22ac
+      - Firestore__ProjectId=${FIRESTORE_PROJECT_ID}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - FIREBASE_CONFIG_JSON=${FIREBASE_CONFIG_JSON}
     restart: unless-stopped
