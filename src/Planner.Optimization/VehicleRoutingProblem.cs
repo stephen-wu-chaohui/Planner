@@ -113,8 +113,18 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         rt.AddDimensionWithVehicleTransits(timeCbs, settings.MaxSlackMinutes, settings.HorizonMinutes, true, "Time");
         var timeDim = rt.GetMutableDimension("Time");
 
-        for (int i = 0; i < locs.Length; i++)
-            timeDim.CumulVar(mgr.NodeToIndex(i)).SetRange(locs[i].ReadyTime, locs[i].DueTime > 0? locs[i].DueTime : settings.HorizonMinutes);
+        for (int i = 0; i < locs.Length; i++) {
+            var index = mgr.NodeToIndex(i);
+            if (index < 0) {
+                continue;
+            }
+
+            var upper = locs[i].DueTime > 0 ? locs[i].DueTime : settings.HorizonMinutes;
+            upper = Math.Min(upper, settings.HorizonMinutes);
+            var lower = Math.Min(locs[i].ReadyTime, upper);
+
+            timeDim.CumulVar(index).SetRange(lower, upper);
+        }
 
         double DistanceScale = request.Settings?.DistanceScale ?? 1.0;
         // Costs

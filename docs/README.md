@@ -9,7 +9,7 @@
 # 🧭 Planner  
 **Clean Architecture • OR-Tools VRP • RabbitMQ • Azure App Config + Key Vault**
 
-Planner is a modular, cloud-ready logistics optimization platform built with **.NET 8**, demonstrating  
+Planner is a modular, cloud-ready logistics optimization platform built with **.NET 10**, demonstrating  
 **Clean Architecture**, **asynchronous optimization**, and **real-time visualization** using **Blazor** + **Firestore**.
 
 ---
@@ -25,7 +25,7 @@ flowchart TD
         A1[Displays routes & jobs]
         A2[Real-time Firestore updates]
     end
-    subgraph API["🌐 Planner.API (ASP.NET 8)"]
+    subgraph API["🌐 Planner.API (ASP.NET 10)"]
         B1[REST endpoints]
         B2[Publishes optimization requests]
         B3[Receives solver results]
@@ -90,7 +90,7 @@ sequenceDiagram
 
 | Layer | Technology | Purpose |
 |-------|-------------|----------|
-| **Frontend** | 🧩 Blazor Server (.NET 8) | Interactive web UI with Firestore listeners |
+| **Frontend** | 🧩 Blazor Server (.NET 10) | Interactive web UI with Firestore listeners |
 | **Backend API** | 🌐 ASP.NET Core Web API | Exposes REST endpoints |
 | **Messaging** | 📬 RabbitMQ (AMQP) | Decouples API and Worker |
 | **Optimization** | 🧠 Google OR-Tools | Solves Linear & VRP models |
@@ -210,3 +210,4 @@ Planner is a great sandbox for experimentation.
 ---
 
 © 2025 Stephen Wu — Planner Project (Frank & Stephen Collaboration)
+

@@ -1,7 +1,7 @@
-﻿# ============================
+# ============================
 # Build stage
 # ============================
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution (for reference only, not restore)
@@ -37,12 +37,12 @@ RUN dotnet publish \
 # ============================
 # Runtime stage
 # ============================
-FROM mcr.microsoft.com/dotnet/runtime:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
 WORKDIR /app
-
-RUN adduser --disabled-password --home /app appuser
-USER appuser
+# Rely on the built-in Microsoft user
+USER app
 
 COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "Planner.Optimization.Worker.dll"]
+

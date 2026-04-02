@@ -1,4 +1,4 @@
-﻿name: Database Migrate & Seed (dev)
+name: Database Migrate & Seed (dev)
 
 on:
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore DbMigrator
         run: |
@@ -40,7 +40,7 @@ jobs:
             --configuration Release \
             --no-restore
 
-      - name: Safety check – dev database only
+      - name: Safety check � dev database only
         env:
           ConnectionStrings__PlannerDb: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
         run: |
@@ -65,3 +65,4 @@ jobs:
             --project tools/Planner.Tools.DbMigrator/Planner.Tools.DbMigrator.csproj \
             --configuration Release \
             -- seed
+

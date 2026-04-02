@@ -6,7 +6,7 @@
 
 # Planner
 
-Planner is a modular fleet planning / optimization playground built with **.NET 8**. It demonstrates a production-minded **Clean Architecture** approach to:
+Planner is a modular fleet planning / optimization playground built with **.NET 10**. It demonstrates a production-minded **Clean Architecture** approach to:
 
 - map-centric dispatching (customers, jobs, vehicles, depots)
 - asynchronous optimization with background workers
@@ -66,8 +66,8 @@ flowchart LR
 
 | Layer | Technology | Notes |
 |------|------------|------|
-| UI | Blazor Server (.NET 8) | Map-centric Dispatch Center |
-| API | ASP.NET Core (.NET 8) | REST + GraphQL (closed: #51) |
+| UI | Blazor Server (.NET 10) | Map-centric Dispatch Center |
+| API | ASP.NET Core (.NET 10) | REST + GraphQL (closed: #51) |
 | Auth | JWT + role policies + BFF cookie persistence | Cookie persistence (closed: #22) |
 | Messaging | RabbitMQ (AMQP) | Decouple API and optimizer |
 | Optimization | Google OR-Tools | VRP solving in worker |
@@ -148,7 +148,7 @@ The high-level direction is to keep Planner as a realistic-but-approachable play
 
 ### Prerequisites
 
-- .NET SDK `8.0.x`
+- .NET SDK `10.0.x`
 - RabbitMQ (Docker is easiest)
 - SQL Server (LocalDB, SQL Express, or Docker)
 - A Google Maps API key (for the map view)
