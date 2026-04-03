@@ -1,24 +1,29 @@
 ﻿namespace Planner.BlazorApp.Services;
 
-using System;
-using System.Security.Cryptography;
-using System.Text;
-
 public static class ColourHelper {
     public static string ColourFromString(string input, double saturation, double lightness) {
         if (string.IsNullOrEmpty(input))
             input = "default";
 
-        // Compute a simple deterministic hash
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(input));
+        // Compute a deterministic hash compatible with Blazor WebAssembly (no MD5 in browser)
+        var hash = ComputeHash(input);
 
-        // Combine several bytes to get a wide-ranging hue
-        int hue = (hash[0] << 8 | hash[1]) % 360;
-
-        // Use HSL to create bright and contrasting colors
+        // Combine bytes to get a wide-ranging hue
+        int hue = (int)((hash & 0xFFFF) % 360);
 
         return HslToHex(hue, saturation, lightness);
+    }
+
+    /// <summary>
+    /// Computes a simple, stable, browser-compatible hash for a string.
+    /// Uses the djb2 algorithm which produces consistent 32-bit values.
+    /// </summary>
+    private static uint ComputeHash(string input) {
+        uint hash = 5381;
+        foreach (char c in input) {
+            hash = ((hash << 5) + hash) + c;
+        }
+        return hash;
     }
 
     private static string HslToHex(double h, double s, double l) {
