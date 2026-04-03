@@ -7,10 +7,8 @@ using Planner.Application;
 using Planner.Contracts.Optimization;
 using Planner.Domain;
 using Planner.Infrastructure;
-using Planner.Messaging.Firestore;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
-using System.Text.Json;
 
 namespace Planner.API.Controllers;
 
@@ -21,8 +19,7 @@ public class OptimizationController(
     IMessageBus bus,
     IPlannerDataCenter dataCenter,
     ITenantContext tenant,
-    IMatrixCalculationService matrixService,
-    IFirestoreMessageBus firestoreBus) : ControllerBase {
+    IMatrixCalculationService matrixService) : ControllerBase {
     /// <summary>
     /// Accept a route optimization request and dispatch it to the optimization worker.
     /// </summary>
@@ -44,40 +41,6 @@ public class OptimizationController(
             request.Settings?.SearchTimeLimitSeconds ?? 60
         );
         return Ok(summary);
-    }
-
-    /// <summary>
-    /// Poll for the result of an optimization run by its run ID.
-    /// Returns 204 No Content if the result is not yet available.
-    /// </summary>
-    [HttpGet("results/{runId:guid}")]
-    public async Task<IActionResult> GetResult(Guid runId) {
-        var document = await firestoreBus.GetDocumentAsync<Dictionary<string, object>>(
-            FirestoreCollections.PendingAnalysis,
-            runId.ToString());
-
-        if (document == null)
-            return NoContent();
-
-        if (!document.TryGetValue("json_payload", out var payload) || payload == null)
-            return NoContent();
-
-        var jsonPayload = payload.ToString();
-        if (string.IsNullOrEmpty(jsonPayload))
-            return NoContent();
-
-        var result = JsonSerializer.Deserialize<RoutingResultDto>(
-            jsonPayload,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        if (result == null)
-            return NoContent();
-
-        // Security: only return results for the authenticated tenant
-        if (result.TenantId != tenant.TenantId)
-            return Forbid();
-
-        return Ok(result);
     }
 
     private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync(int? searchTimeLimitSeconds = null) {

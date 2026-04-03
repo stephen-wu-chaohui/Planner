@@ -10,7 +10,6 @@ public interface IFirestoreMessageBus
     Task PublishAsync<T>(string topic, string documentId, T message);
     Task<FirestoreChangeListener> SubscribeAsync<T>(string topic, Func<T, Task> onMessage, string documentId);
     Task<FirestoreChangeListener> SubscribeToCollectionAsync<T>(string topic, Func<T, string, Task> onMessage);
-    Task<T?> GetDocumentAsync<T>(string collection, string documentId);
 }
 
 public sealed class FirestoreMessageBus(IFirestoreConnectionFactory connectionFactory, ILogger<FirestoreMessageBus> logger) : IFirestoreMessageBus
@@ -126,32 +125,6 @@ public sealed class FirestoreMessageBus(IFirestoreConnectionFactory connectionFa
 
         logger.LogInformation("Subscribed to Firestore collection '{Topic}'.", topic);
         return await Task.FromResult(listener);
-    }
-
-    public async Task<T?> GetDocumentAsync<T>(string collection, string documentId)
-    {
-        if (_db == null)
-        {
-            logger.LogWarning("Firestore is not configured. Cannot get document '{DocumentId}' from collection '{Collection}'.", documentId, collection);
-            return default;
-        }
-
-        try
-        {
-            var docRef = _db.Collection(collection).Document(documentId);
-            var snapshot = await docRef.GetSnapshotAsync();
-            if (!snapshot.Exists)
-            {
-                return default;
-            }
-
-            return FromSnapshot<T>(snapshot);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error reading document '{DocumentId}' from Firestore collection '{Collection}'.", documentId, collection);
-            return default;
-        }
     }
 
     private static Dictionary<string, object> ToDictionary<T>(T message)

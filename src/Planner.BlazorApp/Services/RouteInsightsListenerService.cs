@@ -23,6 +23,10 @@ public interface IRouteInsightsListenerService : IAsyncDisposable
     Task StartListeningAsync(Guid tenantId);
     Task StopListeningAsync();
 }
+
+/// <summary>
+/// Implementation of Firestore listener for route insights.
+/// </summary>
 public sealed class RouteInsightsListenerService(
     IFirestoreMessageBus firestoreBus,
     ILogger<RouteInsightsListenerService> logger) : IRouteInsightsListenerService
@@ -92,20 +96,4 @@ public sealed class RouteInsightsListenerService(
     {
         await StopListeningAsync();
     }
-}
-
-/// <summary>
-/// Blazor WebAssembly-compatible no-op implementation of <see cref="IRouteInsightsListenerService"/>.
-/// Route insights require AI infrastructure not exposed via a public REST endpoint.
-/// A future enhancement can replace this with a SignalR-based or polling-based implementation.
-/// </summary>
-public sealed class NoOpRouteInsightsListenerService : IRouteInsightsListenerService
-{
-#pragma warning disable CS0067  // Event is never used – intentional for no-op implementation
-    public event Action<RouteInsight>? OnNewInsight;
-#pragma warning restore CS0067
-
-    public Task StartListeningAsync(Guid tenantId) => Task.CompletedTask;
-    public Task StopListeningAsync() => Task.CompletedTask;
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

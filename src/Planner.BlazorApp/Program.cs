@@ -1,30 +1,56 @@
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
 using Planner.BlazorApp.Auth;
 using Planner.BlazorApp.Components;
 using Planner.BlazorApp.Components.WelcomeWizard;
 using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State;
 using Planner.BlazorApp.State.Interfaces;
+using Planner.Messaging;
 
-var builder = WebAssemblyHostBuilder.CreateDefault(args);
-builder.RootComponents.Add<App>("#app");
-builder.RootComponents.Add<HeadOutlet>("head::after");
+var builder = WebApplication.CreateBuilder(args);
 
-// Azure AD authentication via MSAL
-builder.Services.AddMsalAuthentication(options => {
-    builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables();
 
-    var scope = builder.Configuration["Api:Scope"];
-    if (!string.IsNullOrWhiteSpace(scope))
-        options.ProviderOptions.DefaultAccessTokenScopes.Add(scope);
+// Add Authentication
+builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApp(options => {
+        builder.Configuration.GetSection("AzureAd").Bind(options);
+        // Map the 'name' claim from Azure AD to the Identity.Name property
+        options.TokenValidationParameters.NameClaimType = "name";
+    })
+    .EnableTokenAcquisitionToCallDownstreamApi()
+    .AddInMemoryTokenCaches();
 
-    options.ProviderOptions.LoginMode = "redirect";
-});
+// Add this to enable the Login/Logout controller views
+builder.Services.AddRazorPages().AddMicrosoftIdentityUI();
 
-// API client with MSAL bearer token handler
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents(options => options.DetailedErrors = true);
+
+builder.Services.AddServerSideBlazor()
+    .AddHubOptions(options => {
+        options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+        options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    });
+
+// API client (keep named client for BaseAddress with auth handler)
 builder.Services.AddTransient<AuthorizationMessageHandler>();
-builder.Services.AddHttpClient("PlannerApi", client => {
+builder.Services.AddHttpClient("PlannerApi", client =>
+{
     client.BaseAddress = new Uri(
         builder.Configuration["Api:BaseUrl"]
         ?? throw new InvalidOperationException("Api:BaseUrl not configured")
@@ -33,9 +59,12 @@ builder.Services.AddHttpClient("PlannerApi", client => {
 
 builder.Services.AddScoped<PlannerApiClient>();
 
-// App services – WASM-compatible implementations replace server-side Firestore listeners
-builder.Services.AddScoped<IOptimizationResultsListenerService, PollingOptimizationResultsListenerService>();
-builder.Services.AddScoped<IRouteInsightsListenerService, NoOpRouteInsightsListenerService>();
+// Shared infrastructure
+builder.Services.AddMessagingBus();
+
+// App services
+builder.Services.AddScoped<IOptimizationResultsListenerService, OptimizationResultsListenerService>();
+builder.Services.AddScoped<IRouteInsightsListenerService, RouteInsightsListenerService>();
 
 builder.Services.AddScoped<DispatchCenterState>();
 builder.Services.AddScoped<ITenantState>(sp => sp.GetRequiredService<DispatchCenterState>());
@@ -47,4 +76,35 @@ builder.Services.AddScoped<IInsightState>(sp => sp.GetRequiredService<DispatchCe
 
 builder.Services.AddScoped<WizardService>();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseHsts();
+}
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAntiforgery();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
+app.MapControllers(); // Required for the Login/Logout routes
+app.MapGet("/", () => Results.Redirect("/dispatch-center"));
+
+app.MapGet("/demo-login", (string hint, HttpContext context) => {
+    var properties = new AuthenticationProperties { RedirectUri = "/" };
+
+    // This is the magic: it tells Entra ID which user is trying to log in
+    properties.Items["login_hint"] = hint;
+
+    // Triggers the Microsoft challenge with the hint attached
+    return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
+});
+app.Run();

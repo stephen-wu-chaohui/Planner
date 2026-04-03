@@ -87,11 +87,6 @@ public partial class DispatchCenterState : IRouteState
             StartWaitingForSolve?.Invoke(settings.SearchTimeLimitSeconds);
         }
 
-        // Notify the listener service so that polling implementations can start polling for this run's result
-        if (settings?.OptimizationRunId is Guid runId && runId != Guid.Empty) {
-            await optimizationResultsListenerService.NotifyOptimizationRunStartedAsync(runId);
-        }
-
         // ✅ Using REST API endpoint
         var jobs = await api.GetFromJsonAsync<List<JobDto>>("/api/jobs") ?? [];
         if (jobs.Count > 0) {
