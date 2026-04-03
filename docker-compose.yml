@@ -1,0 +1,119 @@
+services:
+  # SQL Server
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=PlannerDevPass123
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  # The Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5673:5672"   # External Port: 5673 | Internal Port: 5672
+      - "15673:15672" # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=planner
+      - RABBITMQ_DEFAULT_PASS=planner
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  # .NET Core API
+  planner-api:
+    build:
+      context: .
+      dockerfile: src/Planner.API/Dockerfile
+    container_name: planner-api
+    ports:
+      - "5000:5000"
+      - "7085:7085"
+    depends_on:
+      sqlserver:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000;http://+:7085 
+      - ConnectionStrings__PlannerDb=Server=sqlserver,1433;Database=PlannerDB;User Id=sa;Password=PlannerDevPass123;Encrypt=False;TrustServerCertificate=True;
+      - ConnectionStrings__Redis=redis:6379
+      - SignalR__Server=http://planner-api:7085
+      - SignalR__Client=http://localhost:7014
+      - SignalR__Route=/hubs/planner
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__User=planner
+      - RabbitMq__Pass=planner
+      - RabbitMq__Port=5672
+      - AzureAd__Instance=https://login.microsoftonline.com/
+      - AzureAd__TenantId=common
+      - AzureAd__ClientId=8621f365-5e51-4b25-931a-1c717ead22ac
+      - Firestore__ProjectId=${FIRESTORE_PROJECT_ID}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - FIREBASE_CONFIG_JSON=${FIREBASE_CONFIG_JSON}
+    restart: unless-stopped
+
+  # .NET Optimization Worker
+  planner-optimization-worker:
+    build:
+      context: .
+      dockerfile: src/Planner.Optimization.Worker/Dockerfile
+    container_name: planner-optimization-worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      planner-api:
+        condition: service_started
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__User=planner
+      - RabbitMq__Pass=planner
+      - RabbitMq__Port=5672
+      - SignalR__Server=http://planner-api:7085
+      - SignalR__Client=http://localhost:7014
+      - SignalR__Route=/hubs/planner
+    restart: unless-stopped
+
+  # Python AI Worker - No RabbitMQ dependency
+  planner-ai-worker:
+    build:
+      context: src/Planner.AI/
+      dockerfile: Dockerfile
+    container_name: planner-ai-worker
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GOOGLE_API_KEY}
+      - FIREBASE_CONFIG_JSON=${FIREBASE_CONFIG_JSON}
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+  redis_data:
+  rabbitmq_data:
+  

@@ -1,5 +1,5 @@
-﻿# -------- Build stage --------
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# -------- Build stage --------
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution
@@ -15,7 +15,7 @@ RUN dotnet publish src/Planner.API/Planner.API.csproj \
     /p:UseAppHost=false
 
 # -------- Runtime stage --------
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
 # Azure Container Apps listens on 8080 by convention
@@ -25,3 +25,4 @@ EXPOSE 8080
 COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "Planner.API.dll"]
+

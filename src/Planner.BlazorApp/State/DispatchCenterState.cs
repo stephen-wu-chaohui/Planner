@@ -33,6 +33,10 @@ public partial class DispatchCenterState(
             OnCustomersChanged?.Invoke();
             OnJobsChanged?.Invoke();
         } 
+        catch (UnauthorizedAccessException) {
+            // Allow UI layer to trigger a fresh sign-in when token acquisition is not possible.
+            throw;
+        }
         catch (Exception ex) {
             Console.WriteLine($"API FETCH FAILED: {ex.Message}");
             if (ex.InnerException != null) {

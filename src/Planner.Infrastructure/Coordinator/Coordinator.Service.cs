@@ -19,25 +19,31 @@ public class CoordinatorService(ILogger<CoordinatorService> logger, IServiceProv
         LoadConfig();
         WatchXml();
         _logger.LogInformation("Coordinator running...");
-        while (!token.IsCancellationRequested) {
-            if (_config == null) { await Task.Delay(60000, token); continue; }
-            foreach (var group in _config.TaskGroups)
-                foreach (var task in group.Tasks) {
-                    bool run = false;
-                    var now = DateTime.UtcNow;
-                    if (task.RunTime.HasValue) {
-                        var target = DateTime.UtcNow.Date + task.RunTime.Value;
-                        if (Math.Abs((now - target).TotalMinutes) < 1) run = true;
+        
+        try {
+            while (!token.IsCancellationRequested) {
+                if (_config == null) { await Task.Delay(60000, token); continue; }
+                foreach (var group in _config.TaskGroups)
+                    foreach (var task in group.Tasks) {
+                        bool run = false;
+                        var now = DateTime.UtcNow;
+                        if (task.RunTime.HasValue) {
+                            var target = DateTime.UtcNow.Date + task.RunTime.Value;
+                            if (Math.Abs((now - target).TotalMinutes) < 1) run = true;
+                        }
+                        if (task.IntervalMinutes.HasValue &&
+                            (!task.LastRunUtc.HasValue || (now - task.LastRunUtc.Value).TotalMinutes >= task.IntervalMinutes.Value))
+                            run = true;
+                        if (run) {
+                            await ExecuteTaskAsync(task);
+                            task.LastRunUtc = DateTime.UtcNow;
+                        }
                     }
-                    if (task.IntervalMinutes.HasValue &&
-                        (!task.LastRunUtc.HasValue || (now - task.LastRunUtc.Value).TotalMinutes >= task.IntervalMinutes.Value))
-                        run = true;
-                    if (run) {
-                        await ExecuteTaskAsync(task);
-                        task.LastRunUtc = DateTime.UtcNow;
-                    }
-                }
-            await Task.Delay(60000, token);
+                await Task.Delay(60000, token);
+            }
+        } catch (OperationCanceledException) {
+            // Expected when the service is stopping
+            _logger.LogInformation("Coordinator service is stopping.");
         }
     }
 

@@ -23,13 +23,70 @@ window.loadGoogleMaps = (apiKey) => {
     return googleMapsPromise;
 };
 
+function getMidpointFromPath(path) {
+    if (!Array.isArray(path) || path.length === 0) {
+        return null;
+    }
+
+    const midpoint = path[Math.floor(path.length / 2)];
+    if (!midpoint) {
+        return null;
+    }
+
+    if (typeof midpoint.lat === "function" && typeof midpoint.lng === "function") {
+        return { lat: midpoint.lat(), lng: midpoint.lng() };
+    }
+
+    return { lat: midpoint.lat, lng: midpoint.lng };
+}
+
+function createRouteLabel(routeName, color) {
+    const labelDiv = document.createElement("div");
+    labelDiv.innerHTML = `
+        <div style="
+            background:${color};
+            color:white;
+            padding:2px 6px;
+            border-radius:4px;
+            font-size:10px;
+            box-shadow:0 0 2px rgba(0,0,0,0.5);
+            white-space:nowrap;">
+            ${routeName}
+        </div>`;
+    return labelDiv;
+}
+
+async function computeRoutePath(points) {
+    if (google.maps.routes && google.maps.routes.Route && typeof google.maps.routes.Route.computeRoutes === "function") {
+        const response = await google.maps.routes.Route.computeRoutes({
+            origin: { lat: points[0].lat, lng: points[0].lng },
+            destination: { lat: points[points.length - 1].lat, lng: points[points.length - 1].lng },
+            intermediates: points.slice(1, points.length - 1).map(p => ({ lat: p.lat, lng: p.lng })),
+            travelMode: google.maps.TravelMode.DRIVING,
+            optimizeWaypointOrder: false
+        });
+
+        const route = response && response.routes && response.routes[0];
+        if (route && Array.isArray(route.path) && route.path.length > 0) {
+            return route.path;
+        }
+
+        if (route && route.polyline && route.polyline.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
+            return google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+        }
+
+        return null;
+    }
+
+    return null;
+}
+
 /* global google */
 window.plannerMap = window.plannerMap || {
     map: null,
     markers: [],
     directionsRenderers: [],
     routeLabels: [],
-    directionsService: null,
     geocoder: null,
     activeRoute: null,
 
@@ -40,8 +97,6 @@ window.plannerMap = window.plannerMap || {
             mapId: apiMapId
         });
         this.map.setZoom(4);
-
-        this.directionsService = new google.maps.DirectionsService();
         this.geocoder = new google.maps.Geocoder();
     },
 
@@ -166,63 +221,40 @@ window.plannerMap = window.plannerMap || {
     },
 
     // --- Draw route along roads ---
-    drawRoute: function (routeName, color, points) {
+    drawRoute: async function (routeName, color, points) {
         if (!this.map || points.length < 2) return;
 
-        const waypoints = points.slice(1, points.length - 1).map(p => ({
-            location: { lat: p.lat, lng: p.lng },
-            stopover: true
-        }));
+        try {
+            const path = await computeRoutePath(points);
 
-        const request = {
-            origin: { lat: points[0].lat, lng: points[0].lng },
-            destination: { lat: points[points.length - 1].lat, lng: points[points.length - 1].lng },
-            waypoints: waypoints,
-            travelMode: google.maps.TravelMode.DRIVING,
-            optimizeWaypoints: false
-        };
+            if (!path || path.length === 0) {
+                console.warn("Unable to compute route path.");
+                return;
+            }
 
-        this.directionsService.route(request, (result, status) => {
-            if (status === "OK" && result) {
-                const renderer = new google.maps.DirectionsRenderer({
-                    map: this.map,
-                    suppressMarkers: true,
-                    preserveViewport: true,
-                    polylineOptions: {
-                        strokeColor: color,
-                        strokeOpacity: 0.9,
-                        strokeWeight: 4
-                    }
-                });
-                renderer.setDirections(result);
-                renderer.routeName = routeName;
-                renderer.routeColor = color;
-                this.directionsRenderers.push(renderer);
+            const routeLine = new google.maps.Polyline({
+                map: this.map,
+                path: path,
+                strokeColor: color,
+                strokeOpacity: 0.9,
+                strokeWeight: 4
+            });
+            routeLine.routeName = routeName;
+            routeLine.routeColor = color;
+            this.directionsRenderers.push(routeLine);
 
-                const midLeg = result.routes[0].legs[Math.floor(result.routes[0].legs.length / 2)];
-                const midPoint = midLeg.steps[Math.floor(midLeg.steps.length / 2)].end_location;
-                const labelDiv = document.createElement("div");
-                labelDiv.innerHTML = `
-                    <div style="
-                        background:${color};
-                        color:white;
-                        padding:2px 6px;
-                        border-radius:4px;
-                        font-size:10px;
-                        box-shadow:0 0 2px rgba(0,0,0,0.5);
-                        white-space:nowrap;">
-                        ${routeName}
-                    </div>`;
+            const midPoint = getMidpointFromPath(path);
+            if (midPoint) {
                 const label = new google.maps.marker.AdvancedMarkerElement({
                     position: midPoint,
                     map: this.map,
-                    content: labelDiv
+                    content: createRouteLabel(routeName, color)
                 });
                 this.routeLabels.push(label);
-            } else {
-                console.warn("DirectionsService failed:", status);
             }
-        });
+        } catch (error) {
+            console.warn("Route computation failed:", error);
+        }
     },
 
     // --- Highlight / Reset ---
@@ -231,11 +263,9 @@ window.plannerMap = window.plannerMap || {
         this.directionsRenderers.forEach(r => {
             const isTarget = (r.routeName === routeName);
             r.setOptions({
-                polylineOptions: {
-                    strokeColor: isTarget ? "#FF4081" : r.routeColor,
-                    strokeOpacity: isTarget ? 1.0 : 0.3,
-                    strokeWeight: isTarget ? 6 : 3
-                }
+                strokeColor: isTarget ? "#FF4081" : r.routeColor,
+                strokeOpacity: isTarget ? 1.0 : 0.3,
+                strokeWeight: isTarget ? 6 : 3
             });
         });
         this.activeRoute = routeName;
@@ -245,11 +275,9 @@ window.plannerMap = window.plannerMap || {
         if (!this.map) return;
         this.directionsRenderers.forEach(r => {
             r.setOptions({
-                polylineOptions: {
-                    strokeColor: r.routeColor,
-                    strokeOpacity: 0.9,
-                    strokeWeight: 4
-                }
+                strokeColor: r.routeColor,
+                strokeOpacity: 0.9,
+                strokeWeight: 4
             });
         });
         this.activeRoute = null;
