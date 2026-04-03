@@ -13,6 +13,12 @@ public interface IOptimizationResultsListenerService : IAsyncDisposable
     event Action<RoutingResultDto>? OnOptimizationCompleted;
     Task StartListeningAsync(Guid tenantId);
     Task StopListeningAsync();
+
+    /// <summary>
+    /// Notifies the service that a new optimization run has started so it can poll for the result.
+    /// Used by polling-based implementations (e.g. Blazor WebAssembly).
+    /// </summary>
+    Task NotifyOptimizationRunStartedAsync(Guid runId);
 }
 
 /// <summary>
@@ -85,6 +91,10 @@ public sealed class OptimizationResultsListenerService(
             throw;
         }
     }
+
+    /// <inheritdoc />
+    /// The Firestore-based implementation is event-driven and does not need explicit run notification.
+    public Task NotifyOptimizationRunStartedAsync(Guid runId) => Task.CompletedTask;
 
     public async Task StopListeningAsync()
     {

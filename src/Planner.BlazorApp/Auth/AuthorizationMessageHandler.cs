@@ -1,28 +1,33 @@
 using System.Net.Http.Headers;
-using Microsoft.Identity.Client;
-using Microsoft.Identity.Web;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 
 namespace Planner.BlazorApp.Auth;
 
-public class AuthorizationMessageHandler(ITokenAcquisition tokenAcquisition, IConfiguration configuration) : DelegatingHandler {
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) {
-        // Define the scope your API requires.
-        // Usually something like "api://<your-api-client-id>/access_as_user"
-        var scope = configuration["Api:Scope"]
-            ?? throw new InvalidOperationException("Api:Scope is missing in appsettings.");
+/// <summary>
+/// Delegating handler that attaches a Bearer token to outgoing API requests using
+/// the MSAL-based <see cref="IAccessTokenProvider"/> provided by Blazor WebAssembly.
+/// </summary>
+public class AuthorizationMessageHandler(
+    IAccessTokenProvider tokenProvider,
+    NavigationManager navigationManager) : DelegatingHandler
+{
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var tokenResult = await tokenProvider.RequestAccessToken();
 
-        try {
-            // This pulls from the cache if valid, or securely fetches a new one using the ClientSecret
-            var accessToken = await tokenAcquisition.GetAccessTokenForUserAsync([scope]);
-
-            // Attach the Bearer token to the outgoing HTTP request
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        } catch (MsalUiRequiredException ex) {
-            // Happens when the auth cookie exists but token/account state is missing (e.g., app restart).
-            throw new UnauthorizedAccessException("User needs to re-authenticate.", ex);
-        } catch (MicrosoftIdentityWebChallengeUserException ex) {
-            // If the user's session is totally invalid, this forces them to log in again
-            throw new UnauthorizedAccessException("User needs to re-authenticate.", ex);
+        if (tokenResult.TryGetToken(out var token))
+        {
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", token.Value);
+        }
+        else
+        {
+            // Token not available – redirect to MSAL login and abort the request.
+            navigationManager.NavigateToLogin("authentication/login");
+            return new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized);
         }
 
         return await base.SendAsync(request, cancellationToken);
