@@ -11,16 +11,6 @@ services:
     volumes:
       - sqlserver_data:/var/opt/mssql
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-
   # The Message Broker
   rabbitmq:
     image: rabbitmq:3-management
@@ -53,15 +43,12 @@ services:
     depends_on:
       sqlserver:
         condition: service_started
-      redis:
-        condition: service_started
       rabbitmq:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5000;http://+:7085 
       - ConnectionStrings__PlannerDb=Server=sqlserver,1433;Database=PlannerDB;User Id=sa;Password=PlannerDevPass123;Encrypt=False;TrustServerCertificate=True;
-      - ConnectionStrings__Redis=redis:6379
       - SignalR__Server=http://planner-api:7085
       - SignalR__Client=http://localhost:7014
       - SignalR__Route=/hubs/planner
@@ -114,6 +101,5 @@ services:
 
 volumes:
   sqlserver_data:
-  redis_data:
   rabbitmq_data:
-  
+

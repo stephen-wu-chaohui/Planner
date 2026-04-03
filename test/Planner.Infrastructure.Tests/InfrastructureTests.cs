@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
 using Planner.Application;
 using Planner.Domain;
 using Planner.Infrastructure;
@@ -37,7 +36,7 @@ public class InfrastructureTests
 
 public class PlannerDataCenterTests
 {
-    private static (PlannerDbContext db, IDistributedCache distributedCache) CreateInfrastructure(Guid tenantId) {
+    private static (PlannerDbContext db, HybridCache hybridCache) CreateInfrastructure(Guid tenantId) {
         var options = new DbContextOptionsBuilder<PlannerDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
@@ -45,31 +44,35 @@ public class PlannerDataCenterTests
         var tenantContext = Mock.Of<ITenantContext>(t => t.TenantId == tenantId);
         var db = new PlannerDbContext(options, tenantContext);
 
-        var distributedCache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        services.AddLogging();
+        var sp = services.BuildServiceProvider();
+        var hybridCache = sp.GetRequiredService<HybridCache>();
 
-        return (db, distributedCache);
+        return (db, hybridCache);
     }
 
     [Fact]
     public void DataCenter_exposes_DbContext_and_Cache() {
         var tenantId = Guid.NewGuid();
-        var (db, distributedCache) = CreateInfrastructure(tenantId);
+        var (db, hybridCache) = CreateInfrastructure(tenantId);
 
-        var dataCenter = new PlannerDataCenter(db, distributedCache);
+        var dataCenter = new PlannerDataCenter(db, hybridCache);
 
         dataCenter.DbContext.Should().BeSameAs(db);
-        dataCenter.Cache.Should().BeSameAs(distributedCache);
+        dataCenter.Cache.Should().BeSameAs(hybridCache);
     }
 
     [Fact]
     public async Task GetOrFetchAsync_returns_value_from_db_on_cache_miss() {
         var tenantId = Guid.NewGuid();
-        var (db, distributedCache) = CreateInfrastructure(tenantId);
+        var (db, hybridCache) = CreateInfrastructure(tenantId);
 
         db.Customers.Add(new Customer { Name = "Alice", TenantId = tenantId, LocationId = 1 });
         await db.SaveChangesAsync();
 
-        var dataCenter = new PlannerDataCenter(db, distributedCache);
+        var dataCenter = new PlannerDataCenter(db, hybridCache);
 
         var result = await dataCenter.GetOrFetchAsync(
             "customers:alice",
@@ -82,12 +85,12 @@ public class PlannerDataCenterTests
     [Fact]
     public async Task GetOrFetchAsync_caches_value_and_returns_it_on_second_call() {
         var tenantId = Guid.NewGuid();
-        var (db, distributedCache) = CreateInfrastructure(tenantId);
+        var (db, hybridCache) = CreateInfrastructure(tenantId);
 
         db.Customers.Add(new Customer { Name = "Bob", TenantId = tenantId, LocationId = 1 });
         await db.SaveChangesAsync();
 
-        var dataCenter = new PlannerDataCenter(db, distributedCache);
+        var dataCenter = new PlannerDataCenter(db, hybridCache);
 
         const string key = "customers:bob";
 
@@ -97,7 +100,8 @@ public class PlannerDataCenterTests
             () => db.Customers.FirstOrDefaultAsync(c => c.Name == "Bob"));
 
         // Remove from DB to prove the second call uses the cache
-        db.Customers.Remove(first!);
+        // Use the EF-tracked entity from the local identity map, not the deserialized cache copy
+        db.Customers.Remove(db.Customers.Local.First(c => c.Name == "Bob"));
         await db.SaveChangesAsync();
 
         // Second call – should hit the cache and still return the value
@@ -113,8 +117,8 @@ public class PlannerDataCenterTests
     [Fact]
     public async Task GetOrFetchAsync_returns_null_when_not_found_in_db_or_cache() {
         var tenantId = Guid.NewGuid();
-        var (db, distributedCache) = CreateInfrastructure(tenantId);
-        var dataCenter = new PlannerDataCenter(db, distributedCache);
+        var (db, hybridCache) = CreateInfrastructure(tenantId);
+        var dataCenter = new PlannerDataCenter(db, hybridCache);
 
         var result = await dataCenter.GetOrFetchAsync<Customer>(
             "customers:nobody",
@@ -126,15 +130,33 @@ public class PlannerDataCenterTests
     [Fact]
     public async Task Cache_RemoveAsync_evicts_entry() {
         var tenantId = Guid.NewGuid();
-        var (db, distributedCache) = CreateInfrastructure(tenantId);
+        var (db, hybridCache) = CreateInfrastructure(tenantId);
 
-        await distributedCache.SetStringAsync("my-key", "hello");
-        var before = distributedCache.GetString("my-key");
+        db.Customers.Add(new Customer { Name = "Carol", TenantId = tenantId, LocationId = 1 });
+        await db.SaveChangesAsync();
 
-        await distributedCache.RemoveAsync("my-key");
-        var after = distributedCache.GetString("my-key");
+        var dataCenter = new PlannerDataCenter(db, hybridCache);
+        const string key = "customers:carol";
 
-        before.Should().Be("hello");
+        // Prime the cache
+        var before = await dataCenter.GetOrFetchAsync(
+            key,
+            () => db.Customers.FirstOrDefaultAsync(c => c.Name == "Carol"));
+
+        // Remove from DB so next DB fetch returns null
+        // Use the EF-tracked entity from the local identity map, not the deserialized cache copy
+        db.Customers.Remove(db.Customers.Local.First(c => c.Name == "Carol"));
+        await db.SaveChangesAsync();
+
+        // Evict from HybridCache
+        await hybridCache.RemoveAsync(key);
+
+        // After eviction, cache miss → DB fetch → null (DB is empty)
+        var after = await dataCenter.GetOrFetchAsync(
+            key,
+            () => db.Customers.FirstOrDefaultAsync(c => c.Name == "Carol"));
+
+        before.Should().NotBeNull();
         after.Should().BeNull();
     }
 }
