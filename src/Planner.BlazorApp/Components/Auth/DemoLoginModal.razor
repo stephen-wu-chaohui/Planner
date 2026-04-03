@@ -1,3 +1,5 @@
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
 @if (IsVisible) {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
         <div class="modal-dialog modal-dialog-centered">
@@ -50,7 +52,12 @@
     };
 
     private void TriggerLogin(string email) {
-        Nav.NavigateTo($"/demo-login?hint={Uri.EscapeDataString(email)}", forceLoad: true);
+        var options = new InteractiveRequestOptions {
+            Interaction = InteractionType.SignIn,
+            ReturnUrl = "/dispatch-center"
+        };
+        options.TryAddAdditionalParameter("login_hint", email);
+        Nav.NavigateToLogin("authentication/login", options);
     }
 
     private sealed record DemoCityAccount(string City, string Email);

@@ -1,21 +1,33 @@
 # Planner.BlazorApp Folder Structure
 
-This document describes the current folder structure of Planner.BlazorApp, which follows Blazor best practices.
+This document describes the current folder structure of Planner.BlazorApp, a **Blazor WebAssembly** frontend application.
+
+## Architecture Overview
+
+Planner.BlazorApp runs as a **standalone Blazor WebAssembly** application. All application code is compiled to WebAssembly and executed in the browser. There is no server-side Blazor rendering.
+
+- **Authentication**: Azure AD / Entra ID via MSAL (Microsoft Authentication Library for JavaScript), configured through `Microsoft.Authentication.WebAssembly.Msal`.
+- **API calls**: All backend communication is via HTTP REST calls to `Planner.API`, with Bearer tokens obtained from MSAL.
+- **Real-time updates**: Optimization results are received via HTTP polling against `GET /api/vrp/results/{runId}` (replacing the previous Firestore listener).
+- **Configuration**: Application settings are loaded from `wwwroot/appsettings.json` at runtime.
 
 ## Directory Structure
 
 ```
 Planner.BlazorApp/
 ├── Auth/                           # Authentication services
-│   ├── IJwtTokenStore.cs          # JWT token store interface
-│   └── JwtTokenStore.cs           # JWT token store implementation
+│   ├── AuthorizationMessageHandler.cs  # MSAL-based bearer token handler for HTTP calls
+│   └── RedirectToLogin.razor           # Redirects unauthenticated users to MSAL login
 │
 ├── Components/                     # Blazor components
+│   ├── Auth/                       # Authentication-related UI components
+│   │   ├── DemoLoginModal.razor    # Demo login modal with city account selector
+│   │   └── RedirectToLogin.razor   # Auto-redirects to MSAL login
+│   │
 │   ├── DispatchCenter/            # Feature: Dispatch Center components
 │   │   ├── CustomersTab.razor
 │   │   ├── DispatchCenter.razor
 │   │   ├── JobsTab.razor
-│   │   ├── Login.razor
 │   │   ├── NewCustomerModal.razor
 │   │   ├── PlannerEntitiesModal.razor
 │   │   ├── PlannerMap.razor
@@ -24,6 +36,7 @@ Planner.BlazorApp/
 │   │   └── VehiclesTab.razor
 │   │
 │   ├── Pages/                     # Page components
+│   │   ├── Authentication.razor   # MSAL authentication callback handler
 │   │   └── Error.razor
 │   │
 │   ├── Shared/                    # Shared, reusable components
@@ -38,8 +51,8 @@ Planner.BlazorApp/
 │   │       ├── WizardService.cs
 │   │       └── WizardStep.cs
 │   │
-│   ├── App.razor                  # Root app component
-│   ├── Routes.razor               # Routing configuration
+│   ├── App.razor                  # Root app component (router + auth state)
+│   ├── Routes.razor               # Legacy routing component (kept for reference)
 │   └── _Imports.razor             # Global component imports
 │
 ├── FormModels/                    # Models and DTOs for forms
@@ -54,14 +67,15 @@ Planner.BlazorApp/
 ├── Services/                      # Application services
 │   ├── ColourHelper.cs
 │   ├── EditStyles.cs
-│   ├── IOptimizationHubClient.cs
-│   ├── JwtExtensions.cs
-│   ├── OptimizationHubClient.cs
+│   ├── OptimizationResultsListenerService.cs    # Firestore-based (used by server-side if needed)
+│   ├── PollingOptimizationResultsListenerService.cs  # WASM-compatible HTTP polling
+│   ├── RouteInsightsListenerService.cs          # Firestore-based + NoOp WASM implementation
 │   └── PlannerApiClient.cs
 │
 ├── State/                         # State management with partial classes
 │   ├── DispatchCenterState.cs
 │   ├── DispatchCenterState.Customer.cs   # Partial class
+│   ├── DispatchCenterState.Insights.cs   # Partial class
 │   ├── DispatchCenterState.Job.cs        # Partial class
 │   ├── DispatchCenterState.Processing.cs # Partial class
 │   ├── DispatchCenterState.Routes.cs     # Partial class
@@ -71,6 +85,7 @@ Planner.BlazorApp/
 │   └── Interfaces/                # State interfaces
 │       ├── ICustomerState.cs
 │       ├── IDispatchStateProcessing.cs
+│       ├── IInsightState.cs
 │       ├── IJobState.cs
 │       ├── IRouteState.cs
 │       ├── ITenantState.cs
@@ -83,13 +98,17 @@ Planner.BlazorApp/
 │   ├── icons/                    # Icon assets
 │   ├── images/                   # Image assets
 │   ├── js/                       # JavaScript files
+│   │   ├── plannerMap.js         # Google Maps integration (dynamically loads Maps API)
+│   │   └── wizardStorage.js      # Wizard local storage helper
 │   ├── app.css                   # Main application CSS
-│   └── favicon.png               # Favicon
+│   ├── appsettings.json          # WASM runtime configuration (AzureAd, Api, GoogleMaps)
+│   ├── favicon.png               # Favicon
+│   └── index.html                # WASM entry point (HTML shell)
 │
-├── Program.cs                     # Application entry point
-├── Planner.BlazorApp.csproj      # Project file
-├── appsettings.json              # Configuration
-└── appsettings.Development.json  # Development configuration
+├── Program.cs                     # Application entry point (WebAssemblyHostBuilder)
+├── Planner.BlazorApp.csproj      # Project file (Microsoft.NET.Sdk.BlazorWebAssembly)
+├── appsettings.json              # Legacy server config (not used by WASM)
+└── appsettings.Development.json  # Legacy server config (not used by WASM)
 ```
 
 ## Best Practices Implemented
@@ -98,6 +117,7 @@ Planner.BlazorApp/
 - **Feature-based folders**: Components are grouped by feature (DispatchCenter/, WelcomeWizard/)
 - **Shared components**: Reusable components are in Components/Shared/
 - **Layout separation**: Layout components are in Components/Shared/Layout/
+- **Auth components**: Authentication UI is in Components/Auth/
 
 ### 2. State Management
 - **Partial classes**: DispatchCenterState is split into logical partial classes (Customer, Job, Routes, Vehicle, etc.)
@@ -111,17 +131,18 @@ Planner.BlazorApp/
 
 ### 4. Services
 - **Single location**: All services are in Services/
-- **Interface pattern**: Services follow interface/implementation pattern (e.g., IOptimizationHubClient/OptimizationHubClient)
-- **Clear naming**: Services use descriptive names indicating their purpose
+- **Interface pattern**: Services follow interface/implementation pattern
+- **WASM-compatible implementations**: Polling-based services replace Firestore listeners for browser compatibility
 
 ### 5. Authentication
-- **Dedicated folder**: Auth/ contains all authentication-related code
-- **Interface pattern**: Follows interface/implementation pattern (IJwtTokenStore/JwtTokenStore)
+- **MSAL-based**: Authentication uses `Microsoft.Authentication.WebAssembly.Msal` for browser-side Azure AD auth
+- **Token handler**: `AuthorizationMessageHandler` uses `IAccessTokenProvider` to attach Bearer tokens to API calls
+- **Auth pages**: `Components/Pages/Authentication.razor` handles MSAL redirect callbacks
 
 ### 6. Static Resources
 - **Organized by type**: wwwroot/ contains only static files organized by type (css/, js/, images/, icons/)
-- **No logic**: No code or logic files in wwwroot/
-- **Asset organization**: Images are further organized (e.g., images/wizard/)
+- **WASM entry point**: `wwwroot/index.html` is the HTML shell for the WASM app
+- **Runtime config**: `wwwroot/appsettings.json` provides configuration loaded at runtime by the browser
 
 ### 7. Naming Conventions
 - **PascalCase**: All components, services, and interfaces use PascalCase
@@ -130,25 +151,64 @@ Planner.BlazorApp/
 
 ## Migration Notes
 
-### Recent Changes
-- **Layout components moved**: MainLayout and NavMenu moved from Components/Layout/ to Components/Shared/Layout/
-- **Namespace updated**: Layout components now use Planner.BlazorApp.Components.Shared.Layout namespace
-- **Routes updated**: Routes.razor updated to reference new layout namespace
-- **Project file fixed**: Removed exclusion rule that was blocking Components/Shared/ from compilation
+### Blazor Server → Blazor WebAssembly Migration
 
-### No Breaking Changes
-- All application logic remains unchanged
-- No functional changes to any components
-- Build and tests continue to pass
+The following changes were made to migrate from Blazor Server to standalone Blazor WebAssembly:
 
-## Future Considerations
+**Project Configuration:**
+- SDK changed from `Microsoft.NET.Sdk.Web` to `Microsoft.NET.Sdk.BlazorWebAssembly`
+- Removed server-side packages: `Microsoft.AspNetCore.Authentication.OpenIdConnect`, `Microsoft.Identity.Web`, `Microsoft.Identity.Web.UI`, `Google.Cloud.Firestore`
+- Added WASM packages: `Microsoft.AspNetCore.Components.WebAssembly`, `Microsoft.Authentication.WebAssembly.Msal`, `Microsoft.Extensions.Http`
+- Removed project references to `Planner.Application` and `Planner.Messaging` (server-side infrastructure)
 
-1. Consider adding more granular shared components as needed (e.g., Components/Shared/Forms/, Components/Shared/Tables/)
-2. If the application grows significantly, consider splitting features into separate feature folders with their own State and Services subfolders
-3. Consider adding unit tests for each feature folder
-4. Consider adding integration tests that verify the folder structure and naming conventions
+**Authentication:**
+- Replaced server-side OpenIdConnect + OIDC cookie auth with client-side MSAL
+- `AuthorizationMessageHandler` now uses `IAccessTokenProvider` instead of `ITokenAcquisition`
+- Sign-in/sign-out now uses MSAL routes (`authentication/login`, `authentication/logout`)
+- `DemoLoginModal` passes `login_hint` via `InteractiveRequestOptions.TryAddAdditionalParameter`
+
+**Entry Point:**
+- Created `wwwroot/index.html` as the WASM HTML shell
+- `Program.cs` rewritten to use `WebAssemblyHostBuilder` instead of `WebApplication`
+- `App.razor` changed from an HTML shell to a Blazor router component
+
+**Real-time Updates:**
+- Firestore listeners replaced with `PollingOptimizationResultsListenerService` (HTTP polling via `GET /api/vrp/results/{runId}`)
+- `NoOpRouteInsightsListenerService` replaces Firestore listener for AI route insights (pending SignalR upgrade)
+- New `GET /api/vrp/results/{runId}` endpoint added to `Planner.API`
+
+**Components:**
+- Removed `@rendermode InteractiveServer` from all components (not needed in WASM)
+- Removed `@using static Microsoft.AspNetCore.Components.Web.RenderMode` imports
+- `Error.razor` updated to remove server-side `HttpContext` dependency
+- `ColourHelper.cs` updated to use browser-compatible djb2 hash instead of `MD5`
+
+## Configuration
+
+The WASM app reads configuration from `wwwroot/appsettings.json`. Key settings:
+
+```json
+{
+  "AzureAd": {
+    "Authority": "https://login.microsoftonline.com/{TenantId}",
+    "ClientId": "{your-client-id}",
+    "ValidateAuthority": true
+  },
+  "Api": {
+    "BaseUrl": "https://your-api-url",
+    "Scope": "api://{client-id}/access_as_user"
+  },
+  "GoogleMaps": {
+    "ApiKey": "{your-google-maps-api-key}",
+    "MapId": "{your-map-id}"
+  }
+}
+```
 
 ## References
 
+- [Blazor WebAssembly standalone apps](https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models#blazor-webassembly)
+- [Secure ASP.NET Core Blazor WebAssembly with Azure Active Directory](https://learn.microsoft.com/en-us/aspnet/core/blazor/security/webassembly/standalone-with-azure-active-directory)
 - [Blazor Project Structure Best Practices](https://learn.microsoft.com/en-us/aspnet/core/blazor/project-structure)
 - [ASP.NET Core Blazor layouts](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/layouts)
+
