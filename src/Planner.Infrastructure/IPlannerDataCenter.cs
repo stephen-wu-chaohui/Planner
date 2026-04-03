@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Hybrid;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.Infrastructure;
@@ -11,7 +11,7 @@ namespace Planner.Infrastructure;
 ///     authoritative source of truth).
 ///   </description></item>
 ///   <item><description>
-///     <b>The Workbench</b> – Redis via <see cref="IDistributedCache"/> (short-term memory,
+///     <b>The Workbench</b> – HybridCache (short-term memory,
 ///     fast in-flight cache for frequently-read data).
 ///   </description></item>
 /// </list>
@@ -26,14 +26,14 @@ public interface IPlannerDataCenter {
     IPlannerDbContext DbContext { get; }
 
     /// <summary>
-    /// The Workbench – Redis short-term memory for fast, low-latency cached data access.
+    /// The Workbench – HybridCache short-term memory for fast, low-latency cached data access.
     /// </summary>
-    IDistributedCache Cache { get; }
+    HybridCache Cache { get; }
 
     /// <summary>
     /// Applies the <b>Cache-Aside Pattern</b>:
     /// <list type="number">
-    ///   <item><description>Read from The Workbench (Redis cache) first.</description></item>
+    ///   <item><description>Read from The Workbench (HybridCache) first.</description></item>
     ///   <item><description>On a cache miss, fetch from The Vault (SQL database).</description></item>
     ///   <item><description>Populate The Workbench so subsequent reads are served from cache.</description></item>
     /// </list>

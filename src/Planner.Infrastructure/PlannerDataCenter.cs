@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Microsoft.Extensions.Caching.Distributed;
+﻿using Microsoft.Extensions.Caching.Hybrid;
 using Planner.Infrastructure.Persistence;
 
 namespace Planner.Infrastructure;
@@ -7,16 +6,16 @@ namespace Planner.Infrastructure;
 /// <summary>
 /// Implements <see cref="IPlannerDataCenter"/> with the Cache-Aside Pattern.
 /// Coordinates between The Vault (SQL via <see cref="IPlannerDbContext"/>) and
-/// The Workbench (Redis via <see cref="IDistributedCache"/>) to serve data efficiently.
+/// The Workbench (HybridCache) to serve data efficiently.
 /// </summary>
-public sealed class PlannerDataCenter(IPlannerDbContext dbContext, IDistributedCache cache) : IPlannerDataCenter {
+public sealed class PlannerDataCenter(IPlannerDbContext dbContext, HybridCache cache) : IPlannerDataCenter {
     private static readonly TimeSpan DefaultExpiry = TimeSpan.FromMinutes(5);
 
     /// <inheritdoc />
     public IPlannerDbContext DbContext => dbContext;
 
     /// <inheritdoc />
-    public IDistributedCache Cache => cache;
+    public HybridCache Cache => cache;
 
     /// <inheritdoc />
     public async Task<T?> GetOrFetchAsync<T>(
@@ -25,34 +24,17 @@ public sealed class PlannerDataCenter(IPlannerDbContext dbContext, IDistributedC
         TimeSpan? expiry = null,
         CancellationToken cancellationToken = default) {
 
-        // Step 1 – Try The Workbench (Redis short-term memory)
-        var bytes = await cache.GetAsync(cacheKey, cancellationToken);
-        if (bytes is not null) {
-            try {
-                // Added explicit options for better compatibility
-                return JsonSerializer.Deserialize<T>(bytes, new JsonSerializerOptions {
-                    PropertyNameCaseInsensitive = true
-                });
-            } catch (JsonException) {
-                // If deserialization fails, treat it as a cache miss
-                // rather than crashing the entire request.
-                await cache.RemoveAsync(cacheKey, cancellationToken);
-            }
-        }
+        var options = new HybridCacheEntryOptions {
+            Expiration = expiry ?? DefaultExpiry,
+            LocalCacheExpiration = expiry ?? DefaultExpiry,
+        };
 
-        // Step 2 – Cache miss (or corruption): fetch from The Vault
-        var result = await fetchFromDb();
-
-        // Step 3 – Populate The Workbench
-        if (result is not null) {
-            var options = new DistributedCacheEntryOptions {
-                AbsoluteExpirationRelativeToNow = expiry ?? DefaultExpiry
-            };
-            // Serialize with the same options used for deserialization
-            var serializedData = JsonSerializer.SerializeToUtf8Bytes(result);
-            await cache.SetAsync(cacheKey, serializedData, options, cancellationToken);
-        }
-
-        return result;
+        // HybridCache.GetOrCreateAsync handles L1 (in-process) lookup, factory invocation on miss,
+        // and L2 (optional distributed) population automatically.
+        return await cache.GetOrCreateAsync<T?>(
+            cacheKey,
+            async ct => await fetchFromDb(),
+            options,
+            cancellationToken: cancellationToken);
     }
 }
