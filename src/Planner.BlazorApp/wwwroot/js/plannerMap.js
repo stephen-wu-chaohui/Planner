@@ -63,6 +63,7 @@ async function computeRoutePath(points) {
             destination: { lat: points[points.length - 1].lat, lng: points[points.length - 1].lng },
             intermediates: points.slice(1, points.length - 1).map(p => ({ lat: p.lat, lng: p.lng })),
             travelMode: google.maps.TravelMode.DRIVING,
+            fields: ['path'],
             optimizeWaypointOrder: false
         });
 
