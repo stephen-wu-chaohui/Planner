@@ -1,5 +1,6 @@
 ﻿
 let mapsResolver;
+let mapsScriptLoading = false;
 const googleMapsPromise = new Promise((resolve) => { mapsResolver = resolve; });
 
 // Configuration constants
@@ -18,8 +19,19 @@ window.loadGoogleMaps = (apiKey) => {
         return Promise.resolve(); 
     }
 
-    // 2. Otherwise, wait for the 'mapInteropInit' callback to resolve this promise.
-    //    We assume the script tag in App.razor has already started the process.
+    // 2. Dynamically inject the Google Maps script tag if not already loading.
+    //    This is required for Blazor WebAssembly where there is no server-side
+    //    template to inject the script tag with the API key.
+    if (!mapsScriptLoading && apiKey) {
+        mapsScriptLoading = true;
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker,places,routes,geometry&loading=async&callback=mapInteropInit`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+    }
+
+    // 3. Wait for the 'mapInteropInit' callback to resolve this promise.
     return googleMapsPromise;
 };
 
