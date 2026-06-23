@@ -95,7 +95,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GEMINI_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL}
       - FIREBASE_CONFIG_JSON=${FIREBASE_CONFIG_JSON}
     restart: unless-stopped
 
