@@ -32,7 +32,7 @@ WHERE NOT EXISTS (
     SELECT 1
     FROM Users u
     WHERE u.TenantId = t.Id
-      AND u.Email = LOWER(t.Name) + '@demo.local'
+      AND u.Email = LOWER(t.Name) + '.admin@demo.local'
 );
 
 -- Insert Normal users

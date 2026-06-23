@@ -86,6 +86,48 @@ jobs:
             set -eo pipefail
 
             IMAGE_TAG="${AZURE_CONTAINER_REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}"
+            JOB_CONTAINER_NAME="planner-db-migrator"
+
+            dump_job_logs() {
+              local job_name="$1"
+              local execution_name="$2"
+              local environment_id
+              local workspace_id
+              local log_query
+
+              echo "::group::$job_name/$execution_name logs"
+              az containerapp job logs show \
+                --name "$job_name" \
+                --resource-group "$AZURE_RESOURCE_GROUP" \
+                --execution "$execution_name" \
+                --container "$JOB_CONTAINER_NAME" \
+                --tail 300 \
+                --format text || true
+
+              environment_id="$(az containerapp job show \
+                --name "$job_name" \
+                --resource-group "$AZURE_RESOURCE_GROUP" \
+                --query properties.environmentId \
+                -o tsv 2>/dev/null || true)"
+
+              if [ -n "$environment_id" ]; then
+                workspace_id="$(az containerapp env show \
+                  --ids "$environment_id" \
+                  --query properties.appLogsConfiguration.logAnalyticsConfiguration.customerId \
+                  -o tsv 2>/dev/null || true)"
+              fi
+
+              if [ -n "${workspace_id:-}" ]; then
+                sleep 20
+                log_query="ContainerAppConsoleLogs_CL | where TimeGenerated > ago(2h) | where ContainerJobName_s == '$job_name' and ContainerGroupName_s startswith '$execution_name' | project TimeGenerated, Stream_s, Log_s | order by TimeGenerated asc"
+                az monitor log-analytics query \
+                  --workspace "$workspace_id" \
+                  --analytics-query "$log_query" \
+                  -o table || true
+              fi
+
+              echo "::endgroup::"
+            }
 
             wait_for_job() {
               local job_name="$1"
@@ -106,6 +148,7 @@ jobs:
                 fi
 
                 if [ "$status" = "Failed" ] || [ "$status" = "Canceled" ]; then
+                  dump_job_logs "$job_name" "$execution_name"
                   return 1
                 fi
 
@@ -113,6 +156,7 @@ jobs:
               done
 
               echo "Timed out waiting for $job_name/$execution_name"
+              dump_job_logs "$job_name" "$execution_name"
               return 1
             }
 
@@ -127,7 +171,6 @@ jobs:
               execution_name="$(az containerapp job start \
                 --name "$job_name" \
                 --resource-group "$AZURE_RESOURCE_GROUP" \
-                --image "$IMAGE_TAG" \
                 --query name \
                 -o tsv)"
 
