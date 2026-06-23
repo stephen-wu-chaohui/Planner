@@ -504,6 +504,10 @@ $RECYCLE.BIN/
 /src/Planner.BlazorApp/wwwroot/data
 /aip
 *.ps1
+!/scripts/azure/*.ps1
 *.txt
 /tools/Planner.Tools.DbMigrator/Properties/launchSettings.json
 /src/Credentials
+AI prompts/
+infra/main.json
+infra/.last-deployment-outputs.json

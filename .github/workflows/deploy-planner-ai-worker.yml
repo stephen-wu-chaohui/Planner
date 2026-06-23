@@ -1,54 +1,76 @@
-﻿name: Deploy Planner.AI to DigitalOcean
+name: Deploy Planner.AI to Azure Container Apps
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
+    paths:
+      - 'src/Planner.AI/**'
+      - '.github/workflows/deploy-planner-ai-worker.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
+  AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_AI_WORKER_CONTAINER_APP_NAME }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  IMAGE_NAME: planner-ai-worker
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment: dev
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to Droplet
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # 1. Prepare the workspace
-            mkdir -p ~/planner-ai
-            cd ~/planner-ai
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-            # 2. Initialize or update a Sparse Checkout
-            if [ ! -d ".git" ]; then
-                git init
-                git remote add origin https://github.com/stephen-wu-chaohui/Planner
-                git config core.sparseCheckout true
-                echo "src/Planner.AI" >> .git/info/sparse-checkout
-                echo "src/Planner.AI/*" >> .git/info/sparse-checkout
-            fi
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-            git fetch origin main
-            git reset --hard origin/main
+      - name: Login to ACR (OIDC)
+        run: |
+          az acr login --name $(echo "${AZURE_CONTAINER_REGISTRY}" | cut -d'.' -f1)
 
-            # 3. Navigate to the code
-            cd src/Planner.AI
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: src/Planner.AI
+          file: src/Planner.AI/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-            # 4. Build the image
-            # This will now find the Dockerfile in the current directory
-            docker build -t planner-ai-worker .
+      - name: Install Azure Container Apps extension
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az extension add --name containerapp --upgrade
 
-            # 5. Cleanup existing container
-            docker stop planner-ai-worker || true
-            docker rm planner-ai-worker || true
+      - name: Deploy to Azure Container Apps
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            set -eo pipefail
 
-            # 6. Run the worker
-            # IMPORTANT: Ensure your .env file is located at ~/planner-ai/.env
-            docker run -d \
-                --name planner-ai-worker \
-                --restart always \
-                --env-file ../../.env \
-                planner-ai-worker
+            IMAGE_TAG="${AZURE_CONTAINER_REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}"
+
+            az containerapp show \
+              --name "${AZURE_CONTAINER_APP_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              >/dev/null
+
+            az containerapp update \
+              --name "${AZURE_CONTAINER_APP_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --image "${IMAGE_TAG}"
