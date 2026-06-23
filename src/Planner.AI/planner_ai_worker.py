@@ -48,7 +48,8 @@ class PlannerAIWorker:
     def __init__(self):
         """Initialize the worker with Firestore and Gemini configurations."""
         self.db = None
-        self.model = None
+        self.client = None
+        self.model_name = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         self._initialize_firestore()
         self._initialize_gemini()
         logger.info("Planner.AI Worker initialized successfully")
@@ -104,7 +105,6 @@ class PlannerAIWorker:
             from google import genai
             self.client = genai.Client() # It will automatically use the GEMINI_API_KEY from environment variables
             # Initialize the model (gemini-2.0-flash-exp or gemini-2.0-flash)
-            self.model_name = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
             response = self.client.models.generate_content(
                 model=self.model_name, 
                 contents="Hello world"
@@ -114,7 +114,8 @@ class PlannerAIWorker:
             
         except Exception as e:
             logger.error(f"Failed to initialize Gemini: {e}")
-            raise
+            logger.warning("Gemini analysis will use fallback text until GEMINI_API_KEY is rotated.")
+            self.client = None
     
     def _construct_analysis_prompt(self, json_payload: str) -> str:
         """
@@ -147,6 +148,9 @@ Format your response in markdown with clear sections."""
             Analysis text from Gemini
         """
         try:
+            if self.client is None:
+                return "## Analysis Unavailable\n\nGemini is not configured with a valid API key. Rotate GEMINI_API_KEY to enable AI-generated route insights."
+
             prompt = self._construct_analysis_prompt(json_payload)
             response = self.client.models.generate_content(
                 model=self.model_name,

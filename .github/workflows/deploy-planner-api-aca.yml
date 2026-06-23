@@ -1,4 +1,4 @@
-﻿name: Deploy Planner.API to Azure Container Apps (dev)
+name: Deploy Planner.API to Azure Container Apps (dev)
 
 on:
   workflow_dispatch:
@@ -21,46 +21,20 @@ permissions:
   contents: read
 
 env:
-  AZURE_CONTAINER_REGISTRY: ${{ secrets.AZURE_CONTAINER_REGISTRY }}   # e.g. myregistry.azurecr.io
-  AZURE_CONTAINER_APP_NAME: ${{ secrets.AZURE_API_CONTAINER_APP_NAME }} # e.g. planner-api
-  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-  AZURE_CONTAINERAPPS_ENVIRONMENT: ${{ secrets.AZURE_CONTAINERAPPS_ENVIRONMENT }}
-  AZUREAD_CLIENTID: ${{ secrets.AZUREAD_CLIENTID_API }}
-
-  FIRESTORE_PROJECTID: ${{ secrets.FIRESTORE_PROJECTID }}
-  FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
-  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+  AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
+  AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_API_CONTAINER_APP_NAME }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
   IMAGE_NAME: planner-api
-
-  # Required configuration (match Program.cs)
-  PLANNERDB_CONNECTION: ${{ secrets.PLANNERDB_CONNECTION }}
-  REDIS_CONNECTION: ${{ secrets.REDIS_CONNECTION }}
-  RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}     # should be 'rabbitmq' (the container app name)
-  RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}     # usually 5672
-  RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}     # NOT guest in Azure
-  RABBITMQ_PASS: ${{ secrets.RABBITMQ_PASS }}
-
-  SIGNALR_CLIENT: ${{ secrets.SIGNALR_CLIENT }}   # whatever your app expects
-  SIGNALR_ROUTE: ${{ secrets.SIGNALR_ROUTE }}     # e.g. /hubs/optimization
-  JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
-  JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
-  JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
-  JWT_SECRET: ${{ secrets.JWT_SECRET }}
-  EXPIRATION_IN_MINUTES: 60
-
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment: dev
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ---------------------------
-      # Azure login (OIDC)
-      # ---------------------------
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -71,16 +45,10 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ---------------------------
-      # Login to ACR using OIDC (CHANGED)
-      # ---------------------------
       - name: Login to ACR (OIDC)
         run: |
           az acr login --name $(echo "${AZURE_CONTAINER_REGISTRY}" | cut -d'.' -f1)
 
-      # ---------------------------
-      # Build and push image
-      # ---------------------------
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
@@ -97,9 +65,6 @@ jobs:
           inlineScript: |
             az extension add --name containerapp --upgrade
 
-      # ---------------------------
-      # Deploy to Azure Container Apps
-      # ---------------------------
       - name: Deploy to Azure Container Apps
         uses: azure/CLI@v2
         with:
@@ -108,62 +73,12 @@ jobs:
 
             IMAGE_TAG="${AZURE_CONTAINER_REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}"
 
-            # Create if missing (optional convenience)
-            # az containerapp show \
-            #   --name "${AZURE_CONTAINER_APP_NAME}" \
-            #   --resource-group "${AZURE_RESOURCE_GROUP}" \
-            #   >/dev/null 2>&1 || \
-            # az containerapp create \
-            #   --name planner-api \
-            #   --resource-group "$AZURE_RESOURCE_GROUP" \
-            #   --environment "$AZURE_CONTAINERAPPS_ENVIRONMENT" \
-            #   --image "$IMAGE_TAG" \
-            #   --ingress external \
-            #   --target-port 8080 \
-            #   --transport auto \
-            #   --registry-server "$AZURE_CONTAINER_REGISTRY" \
-            #   --env-vars \
-            #     ASPNETCORE_URLS=http://+:8080 \
-            #     ConnectionStrings__PlannerDb="$PLANNERDB_CONNECTION" \
-            #     RabbitMq__Host="$RABBITMQ_HOST" \
-            #     RabbitMq__Port="$RABBITMQ_PORT" \
-            #     RabbitMq__User="$RABBITMQ_USER" \
-            #     RabbitMq__Pass="$RABBITMQ_PASS" \
-            #     SignalR__Client="$SIGNALR_CLIENT" \
-            #     SignalR__Route="$SIGNALR_ROUTE"
+            az containerapp show \
+              --name "${AZURE_CONTAINER_APP_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              >/dev/null
 
-            # Update image + env vars
             az containerapp update \
               --name "${AZURE_CONTAINER_APP_NAME}" \
               --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --image "${IMAGE_TAG}" \
-              --set-env-vars \
-                ASPNETCORE_ENVIRONMENT=Production  \
-                ASPNETCORE_URLS="http://+:8080" \
-                ConnectionStrings__PlannerDb="${PLANNERDB_CONNECTION}" \
-                ConnectionStrings__Redis="${REDIS_CONNECTION}" \
-                RabbitMq__Host="${RABBITMQ_HOST}" \
-                RabbitMq__Port="${RABBITMQ_PORT}" \
-                RabbitMq__User="${RABBITMQ_USER}" \
-                RabbitMq__Pass="${RABBITMQ_PASS}" \
-                SignalR__Client="${SIGNALR_CLIENT}" \
-                SignalR__Route="${SIGNALR_ROUTE}"   \
-                JwtOptions__Issuer="${JWT_ISSUER}"    \
-                JwtOptions__Audience="${JWT_AUDIENCE}"    \
-                JwtOptions__SigningKey="${JWT_SIGNING_KEY}"   \
-                JwtOptions__Secret="${JWT_SECRET}"            \
-                JwtOptions__ExpirationInMinutes="${EXPIRATION_IN_MINUTES}"  \
-                Firestore__ProjectId="${FIRESTORE_PROJECTID}"      \
-                AzureAd__Instance="https://login.microsoftonline.com/"        \
-                AzureAd__Domain="plannerdemo.com"               \
-                AzureAd__TenantId="common"         \
-                AzureAd__ClientId="${AZUREAD_CLIENTID}"         \
-                FIREBASE_CONFIG_JSON="${FIREBASE_CONFIG_JSON}"     \
-                GOOGLE_API_KEY="${GOOGLE_API_KEY}"        \
-                GEMINI_API_KEY="${GEMINI_API_KEY}"          \
-                GEMINI_MODEL="${GEMINI_MODEL}"
-
-
-
-
-
+              --image "${IMAGE_TAG}"

@@ -2,6 +2,16 @@ name: Database Migrate & Seed (dev)
 
 on:
   workflow_dispatch:
+    inputs:
+      command:
+        description: 'Database command to run'
+        required: true
+        default: 'migrate-and-seed'
+        type: choice
+        options:
+          - migrate-and-seed
+          - migrate
+          - seed
   push:
     branches:
       - main
@@ -15,6 +25,18 @@ on:
       - 'Directory.Build.props'
       - 'Directory.Build.targets'
       - 'global.json'
+      - '.github/workflows/db-migrator-dev.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  AZURE_DB_MIGRATE_JOB_NAME: ${{ vars.AZURE_DB_MIGRATE_JOB_NAME }}
+  AZURE_DB_SEED_JOB_NAME: ${{ vars.AZURE_DB_SEED_JOB_NAME }}
+  IMAGE_NAME: planner-db-migrator
 
 jobs:
   migrate-and-seed:
@@ -25,44 +47,106 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
         with:
-          dotnet-version: '10.0.x'
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Restore DbMigrator
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ACR (OIDC)
         run: |
-          dotnet restore tools/Planner.Tools.DbMigrator/Planner.Tools.DbMigrator.csproj
+          az acr login --name $(echo "${AZURE_CONTAINER_REGISTRY}" | cut -d'.' -f1)
 
-      - name: Build DbMigrator
-        run: |
-          dotnet build tools/Planner.Tools.DbMigrator/Planner.Tools.DbMigrator.csproj \
-            --configuration Release \
-            --no-restore
+      - name: Build and push DbMigrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/Planner.Tools.DbMigrator/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Safety check – dev database only
+      - name: Install Azure Container Apps extension
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az extension add --name containerapp --upgrade
+
+      - name: Run DbMigrator jobs
+        uses: azure/CLI@v2
         env:
-          ConnectionStrings__PlannerDb: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
-        run: |
-          echo "Checking database target..."
-          echo "$ConnectionStrings__PlannerDb" | grep -qi "dev" || \
-            (echo "Refusing to run against non-dev database" && exit 1)
+          DB_COMMAND: ${{ github.event.inputs.command || 'migrate-and-seed' }}
+        with:
+          inlineScript: |
+            set -eo pipefail
 
-      - name: Run EF Core migrations (dev)
-        env:
-          ConnectionStrings__PlannerDb: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
-        run: |
-          dotnet run \
-            --project tools/Planner.Tools.DbMigrator/Planner.Tools.DbMigrator.csproj \
-            --configuration Release \
-            -- migrate
+            IMAGE_TAG="${AZURE_CONTAINER_REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}"
 
-      - name: Run SQL seed scripts (dev)
-        env:
-          ConnectionStrings__PlannerDb: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
-        run: |
-          dotnet run \
-            --project tools/Planner.Tools.DbMigrator/Planner.Tools.DbMigrator.csproj \
-            --configuration Release \
-            -- seed
+            wait_for_job() {
+              local job_name="$1"
+              local execution_name="$2"
 
+              for attempt in $(seq 1 120); do
+                status="$(az containerapp job execution show \
+                  --name "$job_name" \
+                  --resource-group "$AZURE_RESOURCE_GROUP" \
+                  --job-execution-name "$execution_name" \
+                  --query properties.status \
+                  -o tsv)"
+
+                echo "$job_name/$execution_name status: $status"
+
+                if [ "$status" = "Succeeded" ]; then
+                  return 0
+                fi
+
+                if [ "$status" = "Failed" ] || [ "$status" = "Canceled" ]; then
+                  return 1
+                fi
+
+                sleep 15
+              done
+
+              echo "Timed out waiting for $job_name/$execution_name"
+              return 1
+            }
+
+            run_job() {
+              local job_name="$1"
+              az containerapp job update \
+                --name "$job_name" \
+                --resource-group "$AZURE_RESOURCE_GROUP" \
+                --image "$IMAGE_TAG" \
+                >/dev/null
+
+              execution_name="$(az containerapp job start \
+                --name "$job_name" \
+                --resource-group "$AZURE_RESOURCE_GROUP" \
+                --image "$IMAGE_TAG" \
+                --query name \
+                -o tsv)"
+
+              wait_for_job "$job_name" "$execution_name"
+            }
+
+            case "$DB_COMMAND" in
+              migrate-and-seed)
+                run_job "$AZURE_DB_MIGRATE_JOB_NAME"
+                run_job "$AZURE_DB_SEED_JOB_NAME"
+                ;;
+              migrate)
+                run_job "$AZURE_DB_MIGRATE_JOB_NAME"
+                ;;
+              seed)
+                run_job "$AZURE_DB_SEED_JOB_NAME"
+                ;;
+              *)
+                echo "Unknown command: $DB_COMMAND"
+                exit 1
+                ;;
+            esac
