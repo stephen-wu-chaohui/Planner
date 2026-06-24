@@ -48,6 +48,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5000;http://+:7085 
+      - Optimization__DispatchMode=${OPTIMIZATION_DISPATCH_MODE:-RabbitMq}
       - ConnectionStrings__PlannerDb=Server=sqlserver,1433;Database=PlannerDB;User Id=sa;Password=PlannerDevPass123;Encrypt=False;TrustServerCertificate=True;
       - SignalR__Server=http://planner-api:7085
       - SignalR__Client=http://localhost:7014
@@ -60,9 +61,77 @@ services:
       - AzureAd__TenantId=common
       - AzureAd__ClientId=8621f365-5e51-4b25-931a-1c717ead22ac
       - Firestore__ProjectId=${FIRESTORE_PROJECT_ID}
+      - Cosmos__ConnectionString=${COSMOS_CONNECTION_STRING}
+      - Cosmos__DatabaseName=planner
+      - Cosmos__OptimizationRunsContainerName=optimizationRuns
+      - Cosmos__DisableServerCertificateValidation=${COSMOS_DISABLE_SERVER_CERTIFICATE_VALIDATION:-false}
+      - ServiceBus__ConnectionString=${SERVICEBUS_CONNECTION_STRING}
+      - ServiceBus__OptimizationQueueName=optimization-jobs
+      - SignalR__ConnectionString=${AZURE_SIGNALR_CONNECTION_STRING}
+      - SignalR__HubName=planner
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - FIREBASE_CONFIG_JSON=${FIREBASE_CONFIG_JSON}
     restart: unless-stopped
+
+  # Azure Cosmos DB emulator (optional Azure async optimization profile)
+  cosmosdb:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest
+    container_name: cosmosdb
+    profiles: ["azure-emulators"]
+    ports:
+      - "8081:8081"
+      - "8080:8080"
+      - "1234:1234"
+    restart: unless-stopped
+
+  # SQL dependency for Azure Service Bus emulator
+  servicebus-mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: servicebus-mssql
+    profiles: ["azure-emulators"]
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=ServiceBusDevPass123
+    restart: unless-stopped
+
+  # Azure Service Bus emulator (optional Azure async optimization profile)
+  servicebus-emulator:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    container_name: servicebus-emulator
+    profiles: ["azure-emulators"]
+    volumes:
+      - ./infra/local/servicebus-emulator-config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro
+    ports:
+      - "5672:5672"
+      - "5300:5300"
+    environment:
+      - SQL_SERVER=servicebus-mssql
+      - MSSQL_SA_PASSWORD=ServiceBusDevPass123
+      - ACCEPT_EULA=Y
+      - EMULATOR_HTTP_PORT=5300
+    depends_on:
+      - servicebus-mssql
+    restart: unless-stopped
+
+  # One-message Azure optimization job worker. Run manually when testing Azure mode.
+  planner-optimization-job-worker:
+    build:
+      context: .
+      dockerfile: src/Planner.Optimization.JobWorker/Dockerfile
+    container_name: planner-optimization-job-worker
+    profiles: ["azure-emulators"]
+    depends_on:
+      - servicebus-emulator
+      - cosmosdb
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - Cosmos__ConnectionString=${COSMOS_CONNECTION_STRING}
+      - Cosmos__DatabaseName=planner
+      - Cosmos__OptimizationRunsContainerName=optimizationRuns
+      - Cosmos__DisableServerCertificateValidation=${COSMOS_DISABLE_SERVER_CERTIFICATE_VALIDATION:-true}
+      - ServiceBus__ConnectionString=Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      - ServiceBus__OptimizationQueueName=optimization-jobs
+    restart: "no"
 
   # .NET Optimization Worker
   planner-optimization-worker:

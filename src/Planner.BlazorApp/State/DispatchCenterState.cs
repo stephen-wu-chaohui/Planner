@@ -55,6 +55,7 @@ public partial class DispatchCenterState(
     {
         if (_listenerServicesStarted)
         {
+            optimizationResultsListenerService.OnOptimizationRunChanged -= OnOptimizationRunChanged;
             optimizationResultsListenerService.OnOptimizationCompleted -= OnOptimizationCompleted;
             routeInsightsListenerService.OnNewInsight -= HandleNewInsight;
 
@@ -75,6 +76,7 @@ public partial class DispatchCenterState(
             return;
         }
 
+        optimizationResultsListenerService.OnOptimizationRunChanged += OnOptimizationRunChanged;
         optimizationResultsListenerService.OnOptimizationCompleted += OnOptimizationCompleted;
         routeInsightsListenerService.OnNewInsight += HandleNewInsight;
 
@@ -91,6 +93,7 @@ public partial class DispatchCenterState(
         }
         catch
         {
+            optimizationResultsListenerService.OnOptimizationRunChanged -= OnOptimizationRunChanged;
             optimizationResultsListenerService.OnOptimizationCompleted -= OnOptimizationCompleted;
             routeInsightsListenerService.OnNewInsight -= HandleNewInsight;
 
