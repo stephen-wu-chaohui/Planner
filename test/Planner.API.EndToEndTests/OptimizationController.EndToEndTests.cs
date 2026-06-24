@@ -7,6 +7,8 @@ using Planner.Infrastructure.Persistence;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
 using Planner.Testing;
+using Planner.Application.OptimizationRuns;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -51,5 +53,32 @@ public sealed class OptimizationControllerEndToEndTests {
         bus.Should().NotBeNull();
         bus!.PublishedMessages.Should().ContainSingle(m =>
             m.Route == MessageRoutes.Request);
+    }
+
+    [Fact]
+    public async Task Solve_endpoint_in_azure_mode_creates_run_and_enqueues_lightweight_message() {
+        using var factory = new TestApiFactory(dispatchMode: "AzureServiceBus");
+
+        var tenant = factory.Get<ITenantContext>();
+        var db = factory.Get<PlannerDbContext>();
+        var controller = factory.Get<OptimizationController>();
+        controller.MockUserContext();
+
+        DomainSeed.SeedSmallScenario(db, tenant.TenantId);
+        await db.SaveChangesAsync();
+
+        var result = await controller.Solve();
+
+        result.Should().BeOfType<OkObjectResult>();
+
+        var store = (TestApiFactory.InMemoryOptimizationRunStore)factory.Get<IOptimizationRunStore>();
+        var queue = (TestApiFactory.FakeOptimizationJobQueue)factory.Get<IOptimizationJobQueue>();
+        var bus = factory.Get<IMessageBus>() as FakeMessageBus;
+
+        store.Runs.Should().ContainSingle();
+        queue.Messages.Should().ContainSingle();
+        queue.Messages[0].TenantId.Should().Be(tenant.TenantId);
+        queue.Messages[0].OptimizationRunId.Should().Be(store.Runs.Single().Key);
+        bus!.PublishedMessages.Should().BeEmpty();
     }
 }

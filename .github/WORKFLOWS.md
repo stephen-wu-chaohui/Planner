@@ -20,6 +20,14 @@ The Azure dev deployment is bootstrapped by Bicep and scripts under `infra/` and
   - Builds and pushes the `Planner.Optimization.Worker` container image to ACR
   - Deploys/updates the worker to Azure Container Apps (dev)
 
+- `deploy-planner-optimization-job-worker.yml`
+  - Builds and pushes the `Planner.Optimization.JobWorker` container image to ACR
+  - Deploys/updates the async optimization Container Apps Job (dev)
+
+- `deploy-planner-reactor.yml`
+  - Publishes `Planner.Reactor`
+  - Deploys/updates the Cosmos change-feed Function App (dev)
+
 - `deploy-planner-ai-worker.yml`
   - Builds and pushes the `Planner.AI` container image to ACR
   - Deploys/updates the AI worker to Azure Container Apps (dev)

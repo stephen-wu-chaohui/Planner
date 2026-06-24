@@ -1,5 +1,6 @@
 ﻿using Google.Cloud.Firestore;
 using Planner.Contracts.Optimization;
+using Planner.Contracts.OptimizationRuns;
 using System.Text.Json;
 using Planner.Messaging.Firestore;
 
@@ -10,6 +11,7 @@ namespace Planner.BlazorApp.Services;
 /// </summary>
 public interface IOptimizationResultsListenerService : IAsyncDisposable
 {
+    event Action<OptimizationRunChangedDto>? OnOptimizationRunChanged;
     event Action<RoutingResultDto>? OnOptimizationCompleted;
     Task StartListeningAsync(Guid tenantId);
     Task StopListeningAsync();
@@ -25,6 +27,7 @@ public sealed class OptimizationResultsListenerService(
 {
     private FirestoreChangeListener? _listener;
 
+    public event Action<OptimizationRunChangedDto>? OnOptimizationRunChanged;
     public event Action<RoutingResultDto>? OnOptimizationCompleted;
 
     public async Task StartListeningAsync(Guid tenantId)
@@ -66,6 +69,7 @@ public sealed class OptimizationResultsListenerService(
                         if (result != null && result.TenantId == tenantId)
                         {
                             logger.LogInformation("New optimization result received: Run {OptimizationRunId}", result.OptimizationRunId);
+                            OnOptimizationRunChanged?.Invoke(ToRunChanged(result));
                             OnOptimizationCompleted?.Invoke(result);
                         }
                     }
@@ -100,4 +104,23 @@ public sealed class OptimizationResultsListenerService(
     {
         await StopListeningAsync();
     }
+
+    private static OptimizationRunChangedDto ToRunChanged(RoutingResultDto result) =>
+        new(
+            result.TenantId,
+            result.OptimizationRunId,
+            Version: 0,
+            string.IsNullOrWhiteSpace(result.ErrorMessage)
+                ? OptimizationRunStatus.Succeeded
+                : OptimizationRunStatus.Failed,
+            result.CompletedAt,
+            new OptimizationRunSummaryDto(
+                result.Routes.Sum(r => r.Stops.Count),
+                result.Routes.Count,
+                result.CompletedAt,
+                SearchTimeLimitSeconds: 0,
+                RequestedBy: null),
+            HasResult: true,
+            HasAiInsight: false,
+            result.ErrorMessage);
 }

@@ -7,6 +7,7 @@ using Planner.API.GraphQL;
 using Planner.API.Middleware;
 using Planner.API.Services;
 using Planner.Application;
+using Planner.Application.OptimizationRuns;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Coordinator;
 using Planner.Messaging;
@@ -38,6 +39,8 @@ builder.Services.AddControllers();
 
 // API Services
 builder.Services.AddScoped<IMatrixCalculationService, MatrixCalculationService>();
+builder.Services.AddScoped<IOptimizationRunSnapshotBuilder, OptimizationRunSnapshotBuilder>();
+builder.Services.AddScoped<IAzureSignalRConnectionInfoService, AzureSignalRConnectionInfoService>();
 
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);

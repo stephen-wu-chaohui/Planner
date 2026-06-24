@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "Cosmos:ConnectionString": "AccountEndpoint=https://localhost:8081/;AccountKey=<cosmos-emulator-key>;",
+    "Cosmos:DatabaseName": "planner",
+    "Cosmos:OptimizationRunsContainerName": "optimizationRuns",
+    "SignalR:ConnectionString": "<dev-azure-signalr-connection-string>",
+    "SignalR:HubName": "planner"
+  }
+}

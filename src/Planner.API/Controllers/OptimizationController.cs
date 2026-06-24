@@ -1,12 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Planner.API.Caching;
 using Planner.API.Services;
 using Planner.Application;
+using Planner.Application.OptimizationRuns;
 using Planner.Contracts.Optimization;
-using Planner.Domain;
-using Planner.Infrastructure;
+using Planner.Contracts.OptimizationRuns;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
 
@@ -17,20 +15,48 @@ namespace Planner.API.Controllers;
 [Authorize]
 public class OptimizationController(
     IMessageBus bus,
-    IPlannerDataCenter dataCenter,
+    IOptimizationRunSnapshotBuilder snapshotBuilder,
+    IOptimizationRunStore runStore,
+    IOptimizationJobQueue jobQueue,
     ITenantContext tenant,
-    IMatrixCalculationService matrixService) : ControllerBase {
+    IConfiguration configuration,
+    IRouteEnrichmentService routeEnrichmentService) : ControllerBase {
     /// <summary>
     /// Accept a route optimization request and dispatch it to the optimization worker.
     /// </summary>
     [HttpGet("solve")]
     public async Task<IActionResult> Solve([FromQuery] int? searchTimeLimitSeconds = null) {
-        var request = await BuildRequestFromDomainAsync(searchTimeLimitSeconds);
+        var ct = HttpContext?.RequestAborted ?? CancellationToken.None;
+        var run = await snapshotBuilder.BuildAsync(
+            tenant.TenantId,
+            tenant.UserEmail,
+            searchTimeLimitSeconds,
+            ct);
+
+        var request = run.RequestSnapshot;
 
         if (request.Stops.Length == 0 || request.Vehicles.Length == 0)
             return BadRequest("No jobs or vehicles available for optimization.");
 
-        await bus.PublishAsync(MessageRoutes.Request, request);
+        if (UseAzureServiceBus()) {
+            await runStore.CreateAsync(run, ct);
+            try {
+                await jobQueue.EnqueueAsync(
+                    new OptimizationJobMessage(run.TenantId, run.OptimizationRunId),
+                    ct);
+                await runStore.MarkQueuedAsync(run.TenantId, run.OptimizationRunId, ct);
+            } catch (Exception ex) {
+                await runStore.SaveFailureAsync(
+                    run.TenantId,
+                    run.OptimizationRunId,
+                    $"Failed to enqueue optimization job: {ex.Message}",
+                    OptimizationRunStatus.Failed,
+                    ct);
+                throw;
+            }
+        } else {
+            await bus.PublishAsync(MessageRoutes.Request, request);
+        }
 
         var summary = new OptimizationSummary(
             request.TenantId,
@@ -43,110 +69,40 @@ public class OptimizationController(
         return Ok(summary);
     }
 
+    [HttpGet("runs/{optimizationRunId:guid}")]
+    public async Task<IActionResult> GetRun(Guid optimizationRunId, CancellationToken ct) {
+        var run = await runStore.GetAsync(tenant.TenantId, optimizationRunId, ct);
+        return run is null ? NotFound() : Ok(run.ToStatusDto());
+    }
+
+    [HttpGet("runs/{optimizationRunId:guid}/result")]
+    public async Task<IActionResult> GetRunResult(Guid optimizationRunId, CancellationToken ct) {
+        var run = await runStore.GetAsync(tenant.TenantId, optimizationRunId, ct);
+        if (run is null) {
+            return NotFound();
+        }
+
+        if (run.SolverResult is null) {
+            return Accepted(run.ToStatusDto());
+        }
+
+        var enriched = await routeEnrichmentService.EnrichAsync(run.SolverResult);
+        return Ok(enriched);
+    }
+
     private async Task<OptimizeRouteRequest> BuildRequestFromDomainAsync(int? searchTimeLimitSeconds = null) {
-
-        await EnsureJobsForAllCustomersAsync();
-
-        var jobs = await dataCenter.GetOrFetchAsync(
-            CacheKeys.JobsList(tenant.TenantId),
-            async () => await dataCenter.DbContext.Jobs
-                .Include(j => j.Location)
-                .ToListAsync()) ?? [];
-
-        var vehicles = await dataCenter.GetOrFetchAsync(
-            CacheKeys.VehiclesList(tenant.TenantId),
-            async () => await dataCenter.DbContext.Vehicles
-                .Include(v => v.StartDepot)
-                    .ThenInclude(d => d.Location)
-                .Include(v => v.EndDepot)
-                    .ThenInclude(d => d.Location)
-                .ToListAsync()) ?? [];
-
-        var routableVehicles = vehicles
-            .Where(v =>
-                v.StartDepot is not null &&
-                v.EndDepot is not null &&
-                v.StartDepot.Location is not null &&
-                v.EndDepot.Location is not null)
-            .ToList();
-
-        var settings = new OptimizationSettings(
-            SearchTimeLimitSeconds: searchTimeLimitSeconds ?? (1 * jobs.Count) // Use provided value or default to 1 second per job
-        );
-
-        // Build location list in the same order as solver expects: depots first, then jobs
-        var depotLocations = routableVehicles
-            .SelectMany(v => new[] { v.StartDepot!.Location!, v.EndDepot!.Location! })
-            .GroupBy(l => l.Id)
-            .Select(g => g.First())
-            .ToList();
-
-        var jobLocations = jobs.Select(j => j.Location).ToList();
-        var allLocations = depotLocations.Concat(jobLocations).ToList();
-
-        // Build matrices
-        var (distanceMatrix, travelTimeMatrix) = matrixService.BuildMatrices(allLocations, settings);
-
-        var stops = allLocations.Select(loc => {
-            var job = jobs.FirstOrDefault(j => j.LocationId == loc.Id);
-            if (job != null) {
-                return ToInput.FromJob(job);
-            }
-            var depotLoc = depotLocations.FirstOrDefault(depot => depot.Id == loc.Id);
-            if (depotLoc != null) {
-                return ToInput.FromDepotLocation(depotLoc.Id);
-            }
-            return ToInput.FromDepotLocation(1); // Fallback, should not happen
-        }).ToArray();
-
-        var vs = routableVehicles.Select(ToInput.FromVehicle).ToArray();
-
-        var request = new OptimizeRouteRequest(
-            TenantId: tenant.TenantId,
-            OptimizationRunId: Guid.NewGuid(),
-            RequestedAt: DateTime.UtcNow,
-            Stops: stops,
-            Vehicles: vs,
-            DistanceMatrix: distanceMatrix,
-            TravelTimeMatrix: travelTimeMatrix,
-            Settings: settings
-        );
-
-        return request;
-    }
-
-    private async Task EnsureJobsForAllCustomersAsync() {
-        var jobsWithNoCustomers = dataCenter.DbContext.Jobs
-            .Where(j => !dataCenter.DbContext.Customers.Any(c => c.CustomerId == j.CustomerId))
-            .ToList();
-        dataCenter.DbContext.Jobs.RemoveRange(jobsWithNoCustomers);
-
-        var customersWithNoJobs = dataCenter.DbContext.Customers
-            .Where(c => !dataCenter.DbContext.Jobs.Any(j => j.CustomerId == c.CustomerId))
-            .ToList();
-
-        var newJobs = customersWithNoJobs.Select(c => new Job {
-            CustomerId = c.CustomerId,
-            TenantId = tenant.TenantId,
-            Name = $"Job for {c.Name}",
-            LocationId = c.LocationId,
-            Location = c.Location,
-            JobType = JobType.Delivery,
-            ServiceTimeMinutes = c.DefaultServiceMinutes,
-            PalletDemand = 0,
-            WeightDemand = 0,
-            ReadyTime = 0,
-            DueTime = 8 * 60, // 8 hours from start of day
-            RequiresRefrigeration = false
-        }).ToList();
-
-        dataCenter.DbContext.Jobs.AddRange(newJobs);
-        await dataCenter.DbContext.SaveChangesAsync();
-
         var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
-        await dataCenter.RemoveCacheKeysAsync(
-            cancellationToken,
-            CacheKeys.JobsList(tenant.TenantId),
-            CacheKeys.CustomersList(tenant.TenantId));
+        var run = await snapshotBuilder.BuildAsync(
+            tenant.TenantId,
+            tenant.UserEmail,
+            searchTimeLimitSeconds,
+            cancellationToken);
+        return run.RequestSnapshot;
     }
+
+    private bool UseAzureServiceBus() =>
+        string.Equals(
+            configuration["Optimization:DispatchMode"],
+            "AzureServiceBus",
+            StringComparison.OrdinalIgnoreCase);
 }

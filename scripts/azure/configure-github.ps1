@@ -39,6 +39,7 @@ if ([string]::IsNullOrWhiteSpace($ClientId) -or $ClientId -eq "pending-bootstrap
 
 $acrLoginServer = az acr list --resource-group $ResourceGroupName --query "[0].loginServer" -o tsv
 $blazorAppName = az webapp list --resource-group $ResourceGroupName --query "[0].name" -o tsv
+$reactorFunctionAppName = az functionapp list --resource-group $ResourceGroupName --query "[?contains(name, 'reactor')].name | [0]" -o tsv
 $containerAppsEnvironment = az containerapp env list --resource-group $ResourceGroupName --query "[0].name" -o tsv
 
 $variables = [ordered]@{
@@ -48,7 +49,9 @@ $variables = [ordered]@{
     AZURE_BLAZOR_APP_NAME = $blazorAppName
     AZURE_API_CONTAINER_APP_NAME = "planner-dev-api"
     AZURE_OPTIMIZATION_CONTAINER_APP_NAME = "planner-dev-optimization-worker"
+    AZURE_OPTIMIZATION_JOB_NAME = "planner-dev-optimization-job-worker"
     AZURE_AI_WORKER_CONTAINER_APP_NAME = "planner-dev-ai-worker"
+    AZURE_REACTOR_FUNCTION_APP_NAME = $reactorFunctionAppName
     AZURE_DB_MIGRATE_JOB_NAME = "planner-dev-db-migrate"
     AZURE_DB_SEED_JOB_NAME = "planner-dev-db-seed"
     AZURE_KEY_VAULT_NAME = $KeyVaultName

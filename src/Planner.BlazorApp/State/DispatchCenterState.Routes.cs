@@ -5,6 +5,7 @@ using Planner.BlazorApp.Services;
 using Planner.BlazorApp.State.Interfaces;
 using Planner.Contracts.API;
 using Planner.Contracts.Optimization;
+using Planner.Contracts.OptimizationRuns;
 
 namespace Planner.BlazorApp.State;
 
@@ -25,6 +26,7 @@ public partial class DispatchCenterState : IRouteState
 
     private void OnOptimizationCompleted(RoutingResultDto evt)
     {
+        IsProcessing = false;
         if (!string.IsNullOrEmpty(evt.ErrorMessage))
         {
             LastErrorMessage = evt.ErrorMessage;
@@ -49,6 +51,19 @@ public partial class DispatchCenterState : IRouteState
             LastOptimizationSummary = null;
         }
 
+        NotifyStatus();
+    }
+
+    private void OnOptimizationRunChanged(OptimizationRunChangedDto evt) {
+        IsProcessing = evt.Status is OptimizationRunStatus.Created
+            or OptimizationRunStatus.Queued
+            or OptimizationRunStatus.Running;
+
+        if (evt.Status is OptimizationRunStatus.Failed or OptimizationRunStatus.DeadLettered) {
+            LastErrorMessage = evt.ErrorMessage ?? $"Optimization {evt.Status}.";
+        }
+
+        NotifyStatus();
     }
 
     private void BuildMapRoutes()

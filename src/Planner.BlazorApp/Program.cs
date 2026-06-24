@@ -63,7 +63,11 @@ builder.Services.AddScoped<PlannerApiClient>();
 builder.Services.AddMessagingBus();
 
 // App services
-builder.Services.AddScoped<IOptimizationResultsListenerService, OptimizationResultsListenerService>();
+if (string.Equals(builder.Configuration["Realtime:Provider"], "SignalR", StringComparison.OrdinalIgnoreCase)) {
+    builder.Services.AddScoped<IOptimizationResultsListenerService, SignalROptimizationResultsListenerService>();
+} else {
+    builder.Services.AddScoped<IOptimizationResultsListenerService, OptimizationResultsListenerService>();
+}
 builder.Services.AddScoped<IRouteInsightsListenerService, RouteInsightsListenerService>();
 
 builder.Services.AddScoped<DispatchCenterState>();

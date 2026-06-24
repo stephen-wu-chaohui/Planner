@@ -9,6 +9,7 @@ param(
     [string]$SqlAdminLogin = "planneradmin",
     [string]$ApiImage,
     [string]$OptimizationWorkerImage,
+    [string]$OptimizationJobWorkerImage,
     [string]$AiWorkerImage,
     [string]$DbMigratorImage,
     [switch]$WhatIf
@@ -156,6 +157,9 @@ if ([string]::IsNullOrWhiteSpace($ApiImage)) {
 if ([string]::IsNullOrWhiteSpace($OptimizationWorkerImage)) {
     $OptimizationWorkerImage = Get-ExistingContainerAppImage -RgName $ResourceGroupName -AppName "$NamePrefix-optimization-worker"
 }
+if ([string]::IsNullOrWhiteSpace($OptimizationJobWorkerImage)) {
+    $OptimizationJobWorkerImage = Get-ExistingContainerAppJobImage -RgName $ResourceGroupName -JobName "$NamePrefix-optimization-job-worker"
+}
 if ([string]::IsNullOrWhiteSpace($AiWorkerImage)) {
     $AiWorkerImage = Get-ExistingContainerAppImage -RgName $ResourceGroupName -AppName "$NamePrefix-ai-worker"
 }
@@ -184,6 +188,10 @@ if (-not [string]::IsNullOrWhiteSpace($ApiImage)) {
 if (-not [string]::IsNullOrWhiteSpace($OptimizationWorkerImage)) {
     Write-Host "Using optimization worker image: $OptimizationWorkerImage"
     $parameters += "optimizationWorkerImage=$OptimizationWorkerImage"
+}
+if (-not [string]::IsNullOrWhiteSpace($OptimizationJobWorkerImage)) {
+    Write-Host "Using optimization job worker image: $OptimizationJobWorkerImage"
+    $parameters += "optimizationJobWorkerImage=$OptimizationJobWorkerImage"
 }
 if (-not [string]::IsNullOrWhiteSpace($AiWorkerImage)) {
     Write-Host "Using AI worker image: $AiWorkerImage"
