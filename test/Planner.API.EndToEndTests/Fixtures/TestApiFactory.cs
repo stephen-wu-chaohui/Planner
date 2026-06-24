@@ -14,6 +14,7 @@ using Planner.Optimization;
 using Planner.Messaging.Messaging;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Persistence;
+using Planner.Application.Persistence;
 using Planner.Messaging.Optimization.Outputs;
 
 namespace Planner.API.EndToEndTests.Fixtures;
@@ -29,6 +30,9 @@ public sealed class TestApiFactory : IDisposable {
                 ["Optimization:DispatchMode"] = dispatchMode
             })
             .Build());
+
+        services.AddLogging();
+        services.AddApplication();
 
         // --- EF Core InMemory ---
         services.AddDbContext<PlannerDbContext>(o =>

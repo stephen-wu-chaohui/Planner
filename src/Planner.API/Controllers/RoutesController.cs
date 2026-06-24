@@ -1,76 +1,42 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Planner.API.Caching;
-using Planner.Domain;
-using Planner.Infrastructure;
+using Planner.Application.Features.Routes;
 using Route = Planner.Domain.Route;
 
 namespace Planner.API.Controllers;
 
 [Route("api/routes")]
 [Authorize]
-public sealed class RoutesController(IPlannerDataCenter dataCenter) : ControllerBase {
+public sealed class RoutesController(IMediator mediator) : PlannerControllerBase {
     [HttpGet]
-    public async Task<ActionResult<List<Route>>> GetAll() {
-        var items = await dataCenter.GetOrFetchAsync(
-            CacheKeys.RoutesList(),
-            async () => await dataCenter.DbContext.Set<Route>()
-                .AsNoTracking()
-                .ToListAsync());
-
-        return Ok(items ?? []);
-    }
+    public async Task<ActionResult<List<Route>>> GetAll(CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(new GetRoutesQuery(), cancellationToken));
 
     [HttpGet("{id:long}")]
-    public async Task<ActionResult<Route>> GetById(long id) {
-        var entity = await dataCenter.GetOrFetchAsync(
-            CacheKeys.RouteById(id),
-            async () => await dataCenter.DbContext.Set<Route>()
-                .AsNoTracking()
-                .FirstOrDefaultAsync(r => r.Id == id));
-
-        return entity is null ? NotFound() : Ok(entity);
-    }
+    public async Task<ActionResult<Route>> GetById(long id, CancellationToken cancellationToken) =>
+        OkOrNotFound(await mediator.Send(new GetRouteByIdQuery(id), cancellationToken));
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] Route entity) {
-        dataCenter.DbContext.Set<Route>().Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.RoutesList(),
-            CacheKeys.RouteById(entity.Id));
-        return Created($"/api/routes/{entity.Id}", entity);
+    public async Task<IActionResult> Create(
+        [FromBody] Route entity,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateRouteCommand(entity), cancellationToken);
+        return CreatedOrError(result, created => $"/api/routes/{created.Id}");
     }
 
     [HttpPut("{id:long}")]
-    public async Task<IActionResult> Update(long id, [FromBody] Route updated) {
-        var existing = await dataCenter.DbContext.Set<Route>().FirstOrDefaultAsync(r => r.Id == id);
-        if (existing is null)
-            return NotFound();
-
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.RoutesList(),
-            CacheKeys.RouteById(id));
-        return NoContent();
+    public async Task<IActionResult> Update(
+        long id,
+        [FromBody] Route updated,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateRouteCommand(id, updated), cancellationToken);
+        return NoContentOrError(result);
     }
 
     [HttpDelete("{id:long}")]
-    public async Task<IActionResult> Delete(long id) {
-        var entity = await dataCenter.DbContext.Set<Route>().FirstOrDefaultAsync(r => r.Id == id);
-        if (entity is null)
-            return NotFound();
-
-        dataCenter.DbContext.Set<Route>().Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.RoutesList(),
-            CacheKeys.RouteById(id));
-        return NoContent();
+    public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteRouteCommand(id), cancellationToken);
+        return NoContentOrError(result);
     }
 }

@@ -1,302 +1,190 @@
-using Microsoft.EntityFrameworkCore;
-using Planner.API.Caching;
-using Planner.API.Mappings;
-using Planner.Application;
+using MediatR;
+using Planner.Application.CQRS;
+using Planner.Application.Features.Customers;
+using Planner.Application.Features.Depots;
+using Planner.Application.Features.Jobs;
+using Planner.Application.Features.Locations;
+using Planner.Application.Features.Tasks;
+using Planner.Application.Features.Vehicles;
 using Planner.Contracts.API;
 using Planner.Domain;
-using Planner.Infrastructure;
 
 namespace Planner.API.GraphQL;
 
 public sealed class Mutation {
-    // Job Mutations
-    public async Task<JobDto> CreateJob(JobDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-
-        var entity = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Jobs.Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.JobsList(tenant.TenantId),
-            CacheKeys.JobById(entity.Id, tenant.TenantId));
-        return entity.ToDto();
+    public async Task<JobDto> CreateJob(
+        JobDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateJobCommand(input), cancellationToken);
+        return ValueOrThrow(result);
     }
 
-    public async Task<JobDto?> UpdateJob(long id, JobDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-
-        if (id != input.Id) {
-            throw new ArgumentException($"Job ID in path ({id}) does not match ID in request body ({input.Id})");
-        }
-
-        var existing = await dataCenter.DbContext.Jobs.Where(j => j.TenantId == tenant.TenantId).FirstOrDefaultAsync(j => j.Id == id);
-        if (existing == null) {
-            return null;
-        }
-
-        var updated = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.JobsList(tenant.TenantId),
-            CacheKeys.JobById(id, tenant.TenantId));
-
-        return existing.ToDto();
+    public async Task<JobDto?> UpdateJob(
+        long id,
+        JobDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateJobCommand(id, input), cancellationToken);
+        return NullableValueOrThrow(result);
     }
 
-    public async Task<bool> DeleteJob(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        var entity = await dataCenter.DbContext.Jobs.Where(j => j.TenantId == tenant.TenantId).FirstOrDefaultAsync(j => j.Id == id);
-        if (entity is null)
-            return false;
-
-        dataCenter.DbContext.Jobs.Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.JobsList(tenant.TenantId),
-            CacheKeys.JobById(id, tenant.TenantId));
-        return true;
+    public async Task<bool> DeleteJob(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteJobCommand(id), cancellationToken);
+        return DeletedOrThrow(result);
     }
 
-    // Customer Mutations
-    public async Task<CustomerDto> CreateCustomer(CustomerDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        var entity = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Customers.Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.CustomersList(tenant.TenantId),
-            CacheKeys.CustomerById(entity.CustomerId, tenant.TenantId));
-        return entity.ToDto();
+    public async Task<CustomerDto> CreateCustomer(
+        CustomerDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateCustomerCommand(input), cancellationToken);
+        return ValueOrThrow(result);
     }
 
-    public async Task<CustomerDto?> UpdateCustomer(long id, CustomerDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        if (id != input.CustomerId) {
-            throw new ArgumentException($"Customer ID in path ({id}) does not match ID in request body ({input.CustomerId})");
-        }
-
-        var existing = await dataCenter.DbContext.Customers.Where(c => c.TenantId == tenant.TenantId).FirstOrDefaultAsync(c => c.CustomerId == id);
-        if (existing == null) {
-            return null;
-        }
-
-        var updated = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.CustomersList(tenant.TenantId),
-            CacheKeys.CustomerById(id, tenant.TenantId));
-
-        return existing.ToDto();
+    public async Task<CustomerDto?> UpdateCustomer(
+        long id,
+        CustomerDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateCustomerCommand(id, input), cancellationToken);
+        return NullableValueOrThrow(result);
     }
 
-    public async Task<bool> DeleteCustomer(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        var entity = await dataCenter.DbContext.Customers.Where(c => c.TenantId == tenant.TenantId).FirstOrDefaultAsync(c => c.CustomerId == id);
-        if (entity is null)
-            return false;
-
-        dataCenter.DbContext.Customers.Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.CustomersList(tenant.TenantId),
-            CacheKeys.CustomerById(id, tenant.TenantId));
-        return true;
+    public async Task<bool> DeleteCustomer(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteCustomerCommand(id), cancellationToken);
+        return DeletedOrThrow(result);
     }
 
-    // Vehicle Mutations
-    public async Task<VehicleDto> CreateVehicle(VehicleDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        var entity = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Set<Planner.Domain.Vehicle>().Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.VehiclesList(tenant.TenantId),
-            CacheKeys.VehicleById(entity.Id, tenant.TenantId));
-        return entity.ToDto();
+    public async Task<VehicleDto> CreateVehicle(
+        VehicleDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateVehicleCommand(input), cancellationToken);
+        return ValueOrThrow(result);
     }
 
-    public async Task<VehicleDto?> UpdateVehicle(long id, VehicleDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        if (id != input.Id) {
-            throw new ArgumentException($"Vehicle ID in path ({id}) does not match ID in request body ({input.Id})");
-        }
-
-        var existing = await dataCenter.DbContext.Set<Planner.Domain.Vehicle>().Where(v => v.TenantId == tenant.TenantId).FirstOrDefaultAsync(v => v.Id == id);
-        if (existing == null) {
-            return null;
-        }
-
-        var updated = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.VehiclesList(tenant.TenantId),
-            CacheKeys.VehicleById(id, tenant.TenantId));
-
-        return existing.ToDto();
+    public async Task<VehicleDto?> UpdateVehicle(
+        long id,
+        VehicleDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateVehicleCommand(id, input), cancellationToken);
+        return NullableValueOrThrow(result);
     }
 
-    public async Task<bool> DeleteVehicle(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        var entity = await dataCenter.DbContext.Set<Planner.Domain.Vehicle>().Where(v => v.TenantId == tenantContext.TenantId).FirstOrDefaultAsync(v => v.Id == id);
-        if (entity is null)
-            return false;
-
-        dataCenter.DbContext.Set<Planner.Domain.Vehicle>().Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.VehiclesList(tenantContext.TenantId),
-            CacheKeys.VehicleById(id, tenantContext.TenantId));
-        return true;
+    public async Task<bool> DeleteVehicle(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteVehicleCommand(id), cancellationToken);
+        return DeletedOrThrow(result);
     }
 
-    // Depot Mutations
-    public async Task<DepotDto> CreateDepot(DepotDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        var entity = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Depots.Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.DepotsList(tenant.TenantId),
-            CacheKeys.DepotById(entity.Id, tenant.TenantId),
-            CacheKeys.ConfigInit(tenant.TenantId),
-            CacheKeys.TenantMetadata(tenant.TenantId),
-            CacheKeys.VehiclesList(tenant.TenantId));
-        return entity.ToDto();
+    public async Task<DepotDto> CreateDepot(
+        DepotDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateDepotCommand(input), cancellationToken);
+        return ValueOrThrow(result);
     }
 
-    public async Task<DepotDto?> UpdateDepot(long id, DepotDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        if (id != input.Id) {
-            throw new ArgumentException($"Depot ID in path ({id}) does not match ID in request body ({input.Id})");
-        }
-
-        var existing = await dataCenter.DbContext.Depots.Where(d => d.TenantId == tenant.TenantId).FirstOrDefaultAsync(d => d.Id == id);
-        if (existing is null) {
-            return null;
-        }
-
-        var updated = input.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.DepotsList(tenant.TenantId),
-            CacheKeys.DepotById(id, tenant.TenantId),
-            CacheKeys.ConfigInit(tenant.TenantId),
-            CacheKeys.TenantMetadata(tenant.TenantId),
-            CacheKeys.VehiclesList(tenant.TenantId));
-
-        return existing.ToDto();
+    public async Task<DepotDto?> UpdateDepot(
+        long id,
+        DepotDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateDepotCommand(id, input), cancellationToken);
+        return NullableValueOrThrow(result);
     }
 
-    public async Task<bool> DeleteDepot(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        var entity = await dataCenter.DbContext.Depots.Where(d => d.TenantId == tenantContext.TenantId).FirstOrDefaultAsync(d => d.Id == id);
-        if (entity is null)
-            return false;
-
-        dataCenter.DbContext.Depots.Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.DepotsList(tenantContext.TenantId),
-            CacheKeys.DepotById(id, tenantContext.TenantId),
-            CacheKeys.ConfigInit(tenantContext.TenantId),
-            CacheKeys.TenantMetadata(tenantContext.TenantId),
-            CacheKeys.VehiclesList(tenantContext.TenantId));
-        return true;
+    public async Task<bool> DeleteDepot(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteDepotCommand(id), cancellationToken);
+        return DeletedOrThrow(result);
     }
 
-    // Location Mutations
-    public async Task<LocationDto> CreateLocation(LocationDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        var entity = input.ToDomain();
-        dataCenter.DbContext.Locations.Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.LocationsList(),
-            CacheKeys.LocationById(entity.Id));
-        return entity.ToDto();
+    public async Task<LocationDto> CreateLocation(
+        LocationDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateLocationCommand(input), cancellationToken);
+        return ValueOrThrow(result);
     }
 
-    public async Task<LocationDto?> UpdateLocation(long id, LocationDto input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        if (id != input.Id) {
-            throw new ArgumentException($"Location ID in path ({id}) does not match ID in request body ({input.Id})");
-        }
-
-        var existing = await dataCenter.DbContext.Locations.FindAsync(id);
-        if (existing == null) {
-            return null;
-        }
-
-        var updated = input.ToDomain();
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.LocationsList(),
-            CacheKeys.LocationById(id));
-
-        return existing.ToDto();
+    public async Task<LocationDto?> UpdateLocation(
+        long id,
+        LocationDto input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateLocationCommand(id, input), cancellationToken);
+        return NullableValueOrThrow(result);
     }
 
-    public async Task<bool> DeleteLocation(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        var entity = await dataCenter.DbContext.Locations.FirstOrDefaultAsync(l => l.Id == id);
-        if (entity is null)
-            return false;
-
-        dataCenter.DbContext.Locations.Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.LocationsList(),
-            CacheKeys.LocationById(id));
-        return true;
+    public async Task<bool> DeleteLocation(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteLocationCommand(id), cancellationToken);
+        return DeletedOrThrow(result);
     }
 
-    // Task Mutations
-    public async Task<TaskItem> CreateTask(TaskItem input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        dataCenter.DbContext.Tasks.Add(input);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.TasksList(tenant.TenantId),
-            CacheKeys.TaskById(input.Id, tenant.TenantId));
-        return input;
+    public async Task<TaskItem> CreateTask(
+        TaskItem input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateTaskCommand(input), cancellationToken);
+        return ValueOrThrow(result);
     }
 
-    public async Task<TaskItem?> UpdateTask(long id, TaskItem input, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenant) {
-        if (id != input.Id) {
-            throw new ArgumentException($"Task ID in path ({id}) does not match ID in request body ({input.Id})");
-        }
-
-        var existing = await dataCenter.DbContext.Tasks.FindAsync(id);
-        if (existing == null) {
-            return null;
-        }
-
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(input);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.TasksList(tenant.TenantId),
-            CacheKeys.TaskById(id, tenant.TenantId));
-
-        return existing;
+    public async Task<TaskItem?> UpdateTask(
+        long id,
+        TaskItem input,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateTaskCommand(id, input), cancellationToken);
+        return NullableValueOrThrow(result);
     }
 
-    public async Task<bool> DeleteTask(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        var entity = await dataCenter.DbContext.Tasks.FirstOrDefaultAsync(t => t.Id == id);
-        if (entity is null)
-            return false;
-
-        dataCenter.DbContext.Tasks.Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            default,
-            CacheKeys.TasksList(tenantContext.TenantId),
-            CacheKeys.TaskById(id, tenantContext.TenantId));
-        return true;
+    public async Task<bool> DeleteTask(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteTaskCommand(id), cancellationToken);
+        return DeletedOrThrow(result);
     }
+
+    private static T ValueOrThrow<T>(CommandResult<T> result)
+        where T : class =>
+        result.Status switch {
+            CommandStatus.Succeeded when result.Value is not null => result.Value,
+            CommandStatus.NotFound => throw new InvalidOperationException("Entity not found."),
+            CommandStatus.Rejected => throw new ArgumentException(result.Error),
+            _ => throw new InvalidOperationException($"Unhandled command status: {result.Status}")
+        };
+
+    private static T? NullableValueOrThrow<T>(CommandResult<T> result)
+        where T : class =>
+        result.Status switch {
+            CommandStatus.Succeeded => result.Value,
+            CommandStatus.NotFound => null,
+            CommandStatus.Rejected => throw new ArgumentException(result.Error),
+            _ => throw new InvalidOperationException($"Unhandled command status: {result.Status}")
+        };
+
+    private static bool DeletedOrThrow(CommandResult result) =>
+        result.Status switch {
+            CommandStatus.Succeeded => true,
+            CommandStatus.NotFound => false,
+            CommandStatus.Rejected => throw new ArgumentException(result.Error),
+            _ => throw new InvalidOperationException($"Unhandled command status: {result.Status}")
+        };
 }

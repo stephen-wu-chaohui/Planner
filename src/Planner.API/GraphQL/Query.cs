@@ -1,184 +1,106 @@
-using Microsoft.EntityFrameworkCore;
-using Planner.API.Caching;
-using Planner.API.Mappings;
-using Planner.Application;
+using MediatR;
+using HotChocolate.Authorization;
+using Planner.Application.CQRS;
+using Planner.Application.Features.Customers;
+using Planner.Application.Features.Depots;
+using Planner.Application.Features.Jobs;
+using Planner.Application.Features.Locations;
+using Planner.Application.Features.Routes;
+using Planner.Application.Features.Tasks;
+using Planner.Application.Features.Vehicles;
 using Planner.Contracts.API;
 using Planner.Domain;
 using DomainRoute = Planner.Domain.Route;
-using Planner.Infrastructure;
-using Microsoft.AspNetCore.Authorization;
 
 namespace Planner.API.GraphQL;
 
 public sealed class Query {
-    // Jobs
     [Authorize]
-    public async Task<List<JobDto>> GetJobs(
-        [Service] IPlannerDataCenter dataCenter,
-        [Service] ITenantContext tenantContext) {
-
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.JobsList(tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Jobs
-                .AsNoTracking()
-                .Where(j => j.TenantId == tenantContext.TenantId)
-                .Include(j => j.Location)
-                .Select(j => j.ToDto())
-                .ToListAsync()) ?? [];
-    }
+    public Task<List<JobDto>> GetJobs(
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetJobsQuery(), cancellationToken);
 
     [Authorize]
-    public async Task<JobDto?> GetJobById(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.JobById(id, tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Jobs
-                .AsNoTracking()
-                .Where(j => j.TenantId == tenantContext.TenantId)
-                .Include(j => j.Location)
-                .Where(j => j.Id == id)
-                .Select(j => j.ToDto())
-                .FirstOrDefaultAsync());
-    }
+    public Task<JobDto?> GetJobById(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetJobByIdQuery(id), cancellationToken);
 
-    // Customers
     [Authorize]
-    public async Task<List<CustomerDto>> GetCustomers([Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.CustomersList(tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Customers
-                .AsNoTracking()
-                .Where(c => c.TenantId == tenantContext.TenantId)
-                .Include(c => c.Location)
-                .Select(c => c.ToDto())
-                .ToListAsync()) ?? [];
+    public Task<List<CustomerDto>> GetCustomers(
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetCustomersQuery(), cancellationToken);
+
+    [Authorize]
+    public Task<CustomerDto?> GetCustomerById(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetCustomerByIdQuery(id), cancellationToken);
+
+    [Authorize]
+    public async Task<List<VehicleDto>> GetVehicles(
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new GetVehiclesQuery(), cancellationToken);
+        return result.Items;
     }
 
     [Authorize]
-    public async Task<CustomerDto?> GetCustomerById(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.CustomerById(id, tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Customers
-                .AsNoTracking()
-                .Where(c => c.TenantId == tenantContext.TenantId)
-                .Include(c => c.Location)
-                .Where(c => c.CustomerId == id)
-                .Select(c => c.ToDto())
-                .FirstOrDefaultAsync());
-    }
-
-    // Vehicles
-    [Authorize]
-    public async Task<List<VehicleDto>> GetVehicles([Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.VehiclesList(tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Set<Planner.Domain.Vehicle>()
-                .AsNoTracking()
-                .Where(v => v.TenantId == tenantContext.TenantId)
-                .Include(v => v.StartDepot)
-                .Include(v => v.EndDepot)
-                .Select(v => v.ToDto())
-                .ToListAsync()) ?? [];
-    }
+    public Task<VehicleDto?> GetVehicleById(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetVehicleByIdQuery(id), cancellationToken);
 
     [Authorize]
-    public async Task<VehicleDto?> GetVehicleById(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.VehicleById(id, tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Set<Planner.Domain.Vehicle>()
-                .AsNoTracking()
-                .Where(v => v.TenantId == tenantContext.TenantId)
-                .Include(v => v.StartDepot)
-                .Include(v => v.EndDepot)
-                .Where(v => v.Id == id)
-                .Select(v => v.ToDto())
-                .FirstOrDefaultAsync());
-    }
-
-    // Depots
-    [Authorize]
-    public async Task<List<DepotDto>> GetDepots([Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.DepotsList(tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Depots
-                .AsNoTracking()
-                .Where(d => d.TenantId == tenantContext.TenantId)
-                .Include(d => d.Location)
-                .Select(d => d.ToDto())
-                .ToListAsync()) ?? [];
-    }
+    public Task<List<DepotDto>> GetDepots(
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetDepotsQuery(), cancellationToken);
 
     [Authorize]
-    public async Task<DepotDto?> GetDepotById(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
+    public Task<DepotDto?> GetDepotById(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetDepotByIdQuery(id), cancellationToken);
 
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.DepotById(id, tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Depots
-                .AsNoTracking()
-                .Where(d => d.TenantId == tenantContext.TenantId)
-                .Include(d => d.Location)
-                .Where(d => d.Id == id)
-                .Select(d => d.ToDto())
-                .FirstOrDefaultAsync());
-    }
+    public Task<List<LocationDto>> GetLocations(
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetLocationsQuery(), cancellationToken);
 
-    // Locations
-    public async Task<List<LocationDto>> GetLocations([Service] IPlannerDataCenter dataCenter) {
-
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.LocationsList(),
-            async () => await dataCenter.DbContext.Locations
-                .AsNoTracking()
-                .Select(l => l.ToDto())
-                .ToListAsync()) ?? [];
-    }
-
-    public async Task<LocationDto?> GetLocationById(long id, [Service] IPlannerDataCenter dataCenter) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.LocationById(id),
-            async () => await dataCenter.DbContext.Locations
-                .AsNoTracking()
-                .Where(l => l.Id == id)
-                .Select(l => l.ToDto())
-                .FirstOrDefaultAsync());
-    }
-
-    // Routes
-    [Authorize]
-    public async Task<List<DomainRoute>> GetRoutes([Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.RoutesList(tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Set<DomainRoute>()
-                .AsNoTracking()
-                .Where(r => r.TenantId == tenantContext.TenantId)
-                .ToListAsync()) ?? [];
-    }
+    public Task<LocationDto?> GetLocationById(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetLocationByIdQuery(id), cancellationToken);
 
     [Authorize]
-    public async Task<DomainRoute?> GetRouteById(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.RouteById(id, tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Set<DomainRoute>()
-                .AsNoTracking()
-                .Where(r => r.TenantId == tenantContext.TenantId)
-                .FirstOrDefaultAsync(r => r.Id == id));
-    }
+    public Task<List<DomainRoute>> GetRoutes(
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetRoutesQuery(), cancellationToken);
 
-    // Tasks
-    public async Task<List<TaskItem>> GetTasks([Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.TasksList(tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Tasks
-                .AsNoTracking()
-                .Where(t => t.TenantId == tenantContext.TenantId)
-                .ToListAsync()) ?? [];
-    }
+    [Authorize]
+    public Task<DomainRoute?> GetRouteById(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetRouteByIdQuery(id), cancellationToken);
 
-    public async Task<TaskItem?> GetTaskById(long id, [Service] IPlannerDataCenter dataCenter, [Service] ITenantContext tenantContext) {
-        return await dataCenter.GetOrFetchAsync(
-            CacheKeys.TaskById(id, tenantContext.TenantId),
-            async () => await dataCenter.DbContext.Tasks
-                .AsNoTracking()
-                .Where(t => t.TenantId == tenantContext.TenantId)
-                .FirstOrDefaultAsync(t => t.Id == id));
-    }
+    public Task<List<TaskItem>> GetTasks(
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetTasksQuery(), cancellationToken);
+
+    public Task<TaskItem?> GetTaskById(
+        long id,
+        [Service] IMediator mediator,
+        CancellationToken cancellationToken) =>
+        mediator.Send(new GetTaskByIdQuery(id), cancellationToken);
 }

@@ -1,4 +1,4 @@
-namespace Planner.API.Caching;
+namespace Planner.Application.Caching;
 
 public static class CacheKeys {
     private static string Scope(Guid? tenantId) => tenantId.HasValue ? $"tenant:{tenantId.Value:N}" : "scope:all";

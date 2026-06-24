@@ -1,6 +1,4 @@
-using Planner.Infrastructure;
-
-namespace Planner.API.Caching;
+namespace Planner.Application.Caching;
 
 public static class PlannerDataCenterCacheExtensions {
     public static Task RemoveCacheKeysAsync(

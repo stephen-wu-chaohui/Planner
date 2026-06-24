@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Planner.Application;
+using Planner.Application.Persistence;
 using Planner.Application.OptimizationRuns;
 using Planner.Infrastructure.OptimizationRuns;
 using Planner.Infrastructure.Persistence;

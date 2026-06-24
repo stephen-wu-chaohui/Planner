@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Services;
 using Planner.Application;
+using Planner.Application.OptimizationRuns;
 using Planner.Messaging;
 using Planner.Messaging.Firestore;
 using Planner.Messaging.Messaging;

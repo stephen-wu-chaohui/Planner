@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Caching.Hybrid;
-using Planner.Infrastructure.Persistence;
+using Planner.Application;
+using Planner.Application.Persistence;
 
 namespace Planner.Infrastructure;
 

@@ -1,11 +1,11 @@
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Planner.API.Controllers;
 using Planner.API.EndToEndTests.Fixtures;
 using Planner.Application;
 using Planner.Contracts.API;
 using Planner.Domain;
-using Planner.Infrastructure;
 using Planner.Infrastructure.Persistence;
 using Planner.Testing;
 using System;
@@ -22,11 +22,10 @@ public sealed class CustomersControllerCacheAsideEndToEndTests {
         using var factory = new TestApiFactory();
         var tenant = factory.Get<ITenantContext>();
         var db = factory.Get<PlannerDbContext>();
-        var dataCenter = factory.Get<IPlannerDataCenter>();
 
         SeedCustomer(db, tenant.TenantId, id: 1, name: "Alpha");
 
-        var controller = new CustomersController(dataCenter, tenant);
+        var controller = new CustomersController(factory.Get<IMediator>());
         controller.MockUserContext();
 
         var first = await controller.GetById(1);
@@ -49,11 +48,10 @@ public sealed class CustomersControllerCacheAsideEndToEndTests {
         using var factory = new TestApiFactory();
         var tenant = factory.Get<ITenantContext>();
         var db = factory.Get<PlannerDbContext>();
-        var dataCenter = factory.Get<IPlannerDataCenter>();
 
         SeedCustomer(db, tenant.TenantId, id: 1, name: "Before");
 
-        var controller = new CustomersController(dataCenter, tenant);
+        var controller = new CustomersController(factory.Get<IMediator>());
         controller.MockUserContext();
 
         var cachedRead = await controller.GetById(1);
@@ -79,11 +77,10 @@ public sealed class CustomersControllerCacheAsideEndToEndTests {
         using var factory = new TestApiFactory();
         var tenant = factory.Get<ITenantContext>();
         var db = factory.Get<PlannerDbContext>();
-        var dataCenter = factory.Get<IPlannerDataCenter>();
 
         SeedCustomer(db, tenant.TenantId, id: 1, name: "Existing");
 
-        var controller = new CustomersController(dataCenter, tenant);
+        var controller = new CustomersController(factory.Get<IMediator>());
         controller.MockUserContext();
 
         var first = await controller.GetAll();

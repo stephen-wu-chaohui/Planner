@@ -1,7 +1,7 @@
 using Planner.Contracts.API;
 using DomainLocation = Planner.Domain.Location;
 
-namespace Planner.API.Mappings;
+namespace Planner.Application.Mappings;
 
 public static class DomainDtoMappings {
     public static TenantDto ToDto(this Planner.Domain.Tenant tenant, long? mainDepotId = null) =>

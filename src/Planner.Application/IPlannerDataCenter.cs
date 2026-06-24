@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Hybrid;
-using Planner.Infrastructure.Persistence;
+using Planner.Application.Persistence;
 
-namespace Planner.Infrastructure;
+namespace Planner.Application;
 
 /// <summary>
 /// Central data-access facade that unifies the two memory tiers of the Planner system:

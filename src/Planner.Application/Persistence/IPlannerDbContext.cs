@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Planner.Domain;
 
-namespace Planner.Infrastructure.Persistence;
+namespace Planner.Application.Persistence;
 
 public interface IPlannerDbContext {
     DbSet<Tenant> Tenants { get; }

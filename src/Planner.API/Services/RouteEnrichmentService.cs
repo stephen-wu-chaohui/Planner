@@ -1,21 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Planner.Application;
+using Planner.Application.OptimizationRuns;
+using Planner.Application.Persistence;
 using Planner.Contracts.Optimization;
-using Planner.Infrastructure.Persistence;
 using Planner.Messaging.Optimization.Outputs;
 using System.Linq;
 
 namespace Planner.API.Services;
-
-/// <summary>
-/// Service for enriching routing results with database data.
-/// </summary>
-public interface IRouteEnrichmentService {
-    /// <summary>
-    /// Enriches an OptimizeRouteResponse with vehicle names, job details, and customer names from the database.
-    /// </summary>
-    Task<RoutingResultDto> EnrichAsync(OptimizeRouteResponse response);
-}
 
 /// <summary>
 /// Scoped service for enriching routing results with database lookups.

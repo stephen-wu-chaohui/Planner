@@ -38,6 +38,7 @@ builder.Logging.AddConsole();
 builder.Services.AddControllers();
 
 // API Services
+builder.Services.AddApplication();
 builder.Services.AddScoped<IMatrixCalculationService, MatrixCalculationService>();
 builder.Services.AddScoped<IOptimizationRunSnapshotBuilder, OptimizationRunSnapshotBuilder>();
 builder.Services.AddScoped<IAzureSignalRConnectionInfoService, AzureSignalRConnectionInfoService>();

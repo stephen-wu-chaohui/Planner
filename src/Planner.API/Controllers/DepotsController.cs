@@ -1,93 +1,42 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Planner.Application;
-using Planner.API.Caching;
-using Planner.API.Mappings;
+using Planner.Application.Features.Depots;
 using Planner.Contracts.API;
-using Planner.Infrastructure;
 
 namespace Planner.API.Controllers;
 
 [Route("api/depots")]
 [Authorize]
-public sealed class DepotsController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
+public sealed class DepotsController(IMediator mediator) : PlannerControllerBase {
     [HttpGet]
-    public async Task<ActionResult<List<DepotDto>>> GetAll() {
-        var items = await dataCenter.GetOrFetchAsync(
-            CacheKeys.DepotsList(tenant.TenantId),
-            async () => await dataCenter.DbContext.Depots
-                .AsNoTracking()
-                .Include(d => d.Location)
-                .Select(d => d.ToDto())
-                .ToListAsync());
-
-        return Ok(items ?? []);
-    }
+    public async Task<ActionResult<List<DepotDto>>> GetAll(CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(new GetDepotsQuery(), cancellationToken));
 
     [HttpGet("{id:long}")]
-    public async Task<ActionResult<DepotDto>> GetById(long id) {
-        var entity = await dataCenter.GetOrFetchAsync(
-            CacheKeys.DepotById(id, tenant.TenantId),
-            async () => await dataCenter.DbContext.Depots
-                .AsNoTracking()
-                .Include(d => d.Location)
-                .Where(d => d.Id == id)
-                .Select(d => d.ToDto())
-                .FirstOrDefaultAsync());
-
-        return entity is null ? NotFound() : Ok(entity);
-    }
+    public async Task<ActionResult<DepotDto>> GetById(long id, CancellationToken cancellationToken) =>
+        OkOrNotFound(await mediator.Send(new GetDepotByIdQuery(id), cancellationToken));
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] DepotDto dto) {
-        var entity = dto.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Depots.Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.DepotsList(tenant.TenantId),
-            CacheKeys.DepotById(entity.Id, tenant.TenantId),
-            CacheKeys.ConfigInit(tenant.TenantId),
-            CacheKeys.TenantMetadata(tenant.TenantId),
-            CacheKeys.VehiclesList(tenant.TenantId));
-        return Created($"/api/depots/{entity.Id}", entity.ToDto());
+    public async Task<IActionResult> Create(
+        [FromBody] DepotDto dto,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new CreateDepotCommand(dto), cancellationToken);
+        return CreatedOrError(result, created => $"/api/depots/{created.Id}");
     }
 
     [HttpPut("{id:long}")]
-    public async Task<IActionResult> Update(long id, [FromBody] DepotDto dto) {
-        var existing = await dataCenter.DbContext.Depots.FirstOrDefaultAsync(d => d.Id == id);
-        if (existing is null)
-            return NotFound();
-
-        var updated = dto.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.DepotsList(tenant.TenantId),
-            CacheKeys.DepotById(id, tenant.TenantId),
-            CacheKeys.ConfigInit(tenant.TenantId),
-            CacheKeys.TenantMetadata(tenant.TenantId),
-            CacheKeys.VehiclesList(tenant.TenantId));
-        return NoContent();
+    public async Task<IActionResult> Update(
+        long id,
+        [FromBody] DepotDto dto,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(new UpdateDepotCommand(id, dto), cancellationToken);
+        return NoContentOrError(result);
     }
 
     [HttpDelete("{id:long}")]
-    public async Task<IActionResult> Delete(long id) {
-        var entity = await dataCenter.DbContext.Depots.FirstOrDefaultAsync(d => d.Id == id);
-        if (entity is null)
-            return NotFound();
-
-        dataCenter.DbContext.Depots.Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.DepotsList(tenant.TenantId),
-            CacheKeys.DepotById(id, tenant.TenantId),
-            CacheKeys.ConfigInit(tenant.TenantId),
-            CacheKeys.TenantMetadata(tenant.TenantId),
-            CacheKeys.VehiclesList(tenant.TenantId));
-        return NoContent();
+    public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken) {
+        var result = await mediator.Send(new DeleteDepotCommand(id), cancellationToken);
+        return NoContentOrError(result);
     }
 }

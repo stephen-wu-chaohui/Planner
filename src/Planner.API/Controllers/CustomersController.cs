@@ -1,92 +1,42 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Planner.Application;
+using Planner.Application.Features.Customers;
 using Planner.Contracts.API;
-using Planner.API.Caching;
-using Planner.API.Mappings;
-using Planner.Infrastructure;
 
 namespace Planner.API.Controllers;
 
 [Route("api/customers")]
 [Authorize]
-public sealed class CustomersController(IPlannerDataCenter dataCenter, ITenantContext tenant) : ControllerBase {
-
+public sealed class CustomersController(IMediator mediator) : PlannerControllerBase {
     [HttpGet]
-    public async Task<ActionResult<List<CustomerDto>>> GetAll() {
-        var items = await dataCenter.GetOrFetchAsync(
-            CacheKeys.CustomersList(tenant.TenantId),
-            async () => await dataCenter.DbContext.Customers
-                .AsNoTracking()
-                .Include(c => c.Location)
-                .Select(c => c.ToDto())
-                .ToListAsync());
-
-        return Ok(items ?? []);
-    }
+    public async Task<ActionResult<List<CustomerDto>>> GetAll(CancellationToken cancellationToken = default) =>
+        Ok(await mediator.Send(new GetCustomersQuery(), cancellationToken));
 
     [HttpGet("{id:long}")]
-    public async Task<ActionResult<CustomerDto>> GetById(long id) {
-        var entity = await dataCenter.GetOrFetchAsync(
-            CacheKeys.CustomerById(id, tenant.TenantId),
-            async () => await dataCenter.DbContext.Customers
-                .AsNoTracking()
-                .Include(c => c.Location)
-                .Where(c => c.CustomerId == id)
-                .Select(c => c.ToDto())
-                .FirstOrDefaultAsync());
-
-        return entity is null ? NotFound() : Ok(entity);
-    }
+    public async Task<ActionResult<CustomerDto>> GetById(long id, CancellationToken cancellationToken = default) =>
+        OkOrNotFound(await mediator.Send(new GetCustomerByIdQuery(id), cancellationToken));
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CustomerDto dto) {
-        var entity = dto.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Customers.Add(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.CustomersList(tenant.TenantId),
-            CacheKeys.CustomerById(entity.CustomerId, tenant.TenantId));
-        return Created($"/api/customers/{entity.CustomerId}", entity.ToDto());
+    public async Task<IActionResult> Create(
+        [FromBody] CustomerDto dto,
+        CancellationToken cancellationToken = default) {
+        var result = await mediator.Send(new CreateCustomerCommand(dto), cancellationToken);
+        return CreatedOrError(result, created => $"/api/customers/{created.CustomerId}");
     }
 
     [HttpPut("{id:long}")]
-    public async Task<IActionResult> Update(long id, [FromBody] CustomerDto dto) {
-        if (id != dto.CustomerId) {
-            return BadRequest("ID mismatch");
-        }
-
-        var existing = await dataCenter.DbContext.Customers.FindAsync(id);
-        if (existing == null) {
-            return NotFound();
-        }
-
-        // Map DTO to Entity (Full replacement)
-        var updated = dto.ToDomain(tenant.TenantId);
-        dataCenter.DbContext.Entry(existing).CurrentValues.SetValues(updated);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.CustomersList(tenant.TenantId),
-            CacheKeys.CustomerById(id, tenant.TenantId));
-
-        return NoContent();
+    public async Task<IActionResult> Update(
+        long id,
+        [FromBody] CustomerDto dto,
+        CancellationToken cancellationToken = default) {
+        var result = await mediator.Send(new UpdateCustomerCommand(id, dto), cancellationToken);
+        return NoContentOrError(result);
     }
 
     [HttpDelete("{id:long}")]
-    public async Task<IActionResult> Delete(long id) {
-        var entity = await dataCenter.DbContext.Customers.FirstOrDefaultAsync(c => c.CustomerId == id);
-        if (entity is null)
-            return NotFound();
-
-        dataCenter.DbContext.Customers.Remove(entity);
-        await dataCenter.DbContext.SaveChangesAsync();
-        await dataCenter.RemoveCacheKeysAsync(
-            HttpContext.RequestAborted,
-            CacheKeys.CustomersList(tenant.TenantId),
-            CacheKeys.CustomerById(id, tenant.TenantId));
-        return NoContent();
+    public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken = default) {
+        var result = await mediator.Send(new DeleteCustomerCommand(id), cancellationToken);
+        return NoContentOrError(result);
     }
 }

@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Planner.Application;
-using Planner.Infrastructure.Persistence;
+using Planner.Application.Persistence;
 using System.Security;
 
 namespace Planner.API.Middleware;

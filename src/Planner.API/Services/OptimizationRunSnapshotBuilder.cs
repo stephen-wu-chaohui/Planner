@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Planner.API.Caching;
+using Planner.Application;
+using Planner.Application.Caching;
 using Planner.Application.OptimizationRuns;
 using Planner.Contracts.OptimizationRuns;
 using Planner.Domain;
-using Planner.Infrastructure;
 using Planner.Messaging.Optimization.Inputs;
 
 namespace Planner.API.Services;
