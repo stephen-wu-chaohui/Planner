@@ -69,11 +69,13 @@ public sealed class Query {
         CancellationToken cancellationToken) =>
         mediator.Send(new GetDepotByIdQuery(id), cancellationToken);
 
+    [Authorize]
     public Task<List<LocationDto>> GetLocations(
         [Service] IMediator mediator,
         CancellationToken cancellationToken) =>
         mediator.Send(new GetLocationsQuery(), cancellationToken);
 
+    [Authorize]
     public Task<LocationDto?> GetLocationById(
         long id,
         [Service] IMediator mediator,
@@ -93,11 +95,13 @@ public sealed class Query {
         CancellationToken cancellationToken) =>
         mediator.Send(new GetRouteByIdQuery(id), cancellationToken);
 
+    [Authorize]
     public Task<List<TaskItem>> GetTasks(
         [Service] IMediator mediator,
         CancellationToken cancellationToken) =>
         mediator.Send(new GetTasksQuery(), cancellationToken);
 
+    [Authorize]
     public Task<TaskItem?> GetTaskById(
         long id,
         [Service] IMediator mediator,
