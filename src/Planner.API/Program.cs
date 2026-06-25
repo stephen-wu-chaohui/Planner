@@ -11,6 +11,7 @@ using Planner.Application.OptimizationRuns;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Coordinator;
 using Planner.Messaging;
+using Planner.Messaging.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,7 @@ builder.Configuration
     .AddEnvironmentVariables();
 
 ValidateRequiredConfiguration(builder.Configuration);
+var useAzureOptimizationDispatch = UseAzureServiceBusDispatch(builder.Configuration);
 
 // ────────────────────────────────────────────────
 // Logging
@@ -70,12 +72,18 @@ builder.Services
 // ---------------------------------------
 
 // Messaging
-builder.Services.AddMessagingBus();
+if (useAzureOptimizationDispatch) {
+    builder.Services.AddSingleton<IMessageBus, DisabledLegacyOptimizationMessageBus>();
+} else {
+    builder.Services.AddMessagingBus();
+}
 builder.Services.AddScoped<IRouteEnrichmentService, RouteEnrichmentService>();
 
 // Background consumers / coordinators
 builder.Services.AddHostedService<CoordinatorService>();
-builder.Services.AddHostedService<OptimizeRouteResultConsumer>();
+if (!useAzureOptimizationDispatch) {
+    builder.Services.AddHostedService<OptimizeRouteResultConsumer>();
+}
 
 // Health checks
 builder.Services.AddHealthChecks();
@@ -126,15 +134,32 @@ app.Run();
 // Local helpers
 // ────────────────────────────────────────────────
 static void ValidateRequiredConfiguration(IConfiguration config) {
-    // Updated to reflect the shift to Entra ID
-    var requiredKeys = new[]
+    var requiredKeys = new List<string>
     {
         "ConnectionStrings:PlannerDb",
-        "RabbitMq:Host",
         "AzureAd:Instance",
         "AzureAd:TenantId",
         "AzureAd:ClientId"
     };
+
+    var dispatchMode = config["Optimization:DispatchMode"] ?? "RabbitMq";
+    if (UseAzureServiceBusDispatch(config)) {
+        requiredKeys.Add("ServiceBus:ConnectionString");
+
+        var hasCosmosConnectionString = !string.IsNullOrWhiteSpace(config["Cosmos:ConnectionString"]);
+        var hasCosmosEndpointAndKey =
+            !string.IsNullOrWhiteSpace(config["Cosmos:Endpoint"]) &&
+            !string.IsNullOrWhiteSpace(config["Cosmos:Key"]);
+
+        if (!hasCosmosConnectionString && !hasCosmosEndpointAndKey) {
+            requiredKeys.Add("Cosmos:ConnectionString or Cosmos:Endpoint plus Cosmos:Key");
+        }
+    } else if (string.Equals(dispatchMode, "RabbitMq", StringComparison.OrdinalIgnoreCase)) {
+        requiredKeys.Add("RabbitMq:Host");
+    } else {
+        throw new InvalidOperationException(
+            $"Unsupported Optimization:DispatchMode '{dispatchMode}'. Supported values are RabbitMq and AzureServiceBus.");
+    }
 
     var missing = requiredKeys
         .Where(k => string.IsNullOrWhiteSpace(config[k]))
@@ -142,9 +167,25 @@ static void ValidateRequiredConfiguration(IConfiguration config) {
 
     if (missing.Count != 0) {
         throw new InvalidOperationException(
-            $"Missing required configuration values for Entra ID integration: {string.Join(", ", missing)}"
+            $"Missing required configuration values: {string.Join(", ", missing)}"
         );
     }
 }
 
+static bool UseAzureServiceBusDispatch(IConfiguration config) =>
+    string.Equals(
+        config["Optimization:DispatchMode"],
+        "AzureServiceBus",
+        StringComparison.OrdinalIgnoreCase);
+
 public partial class Program { }
+
+internal sealed class DisabledLegacyOptimizationMessageBus : IMessageBus {
+    public Task PublishAsync<T>(string queueName, T message) =>
+        throw new InvalidOperationException(
+            "RabbitMQ optimization messaging is disabled because Optimization:DispatchMode is AzureServiceBus.");
+
+    public IDisposable Subscribe<T>(string queueName, Func<T, Task> onMessage) =>
+        throw new InvalidOperationException(
+            "RabbitMQ optimization messaging is disabled because Optimization:DispatchMode is AzureServiceBus.");
+}

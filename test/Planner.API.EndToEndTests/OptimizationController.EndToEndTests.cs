@@ -8,6 +8,8 @@ using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
 using Planner.Testing;
 using Planner.Application.OptimizationRuns;
+using Planner.Domain;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
@@ -80,5 +82,100 @@ public sealed class OptimizationControllerEndToEndTests {
         queue.Messages[0].TenantId.Should().Be(tenant.TenantId);
         queue.Messages[0].OptimizationRunId.Should().Be(store.Runs.Single().Key);
         bus!.PublishedMessages.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Solve_endpoint_in_azure_mode_snapshots_current_tenant_only() {
+        using var factory = new TestApiFactory(dispatchMode: "AzureServiceBus");
+
+        var tenant = factory.Get<ITenantContext>();
+        var db = factory.Get<PlannerDbContext>();
+        var controller = factory.Get<OptimizationController>();
+        controller.MockUserContext();
+
+        DomainSeed.SeedSmallScenario(db, tenant.TenantId);
+        SeedOtherTenantSmallScenario(
+            db,
+            Guid.Parse("00000000-0000-0000-0000-000000000002"));
+        await db.SaveChangesAsync();
+
+        var result = await controller.Solve();
+
+        result.Should().BeOfType<OkObjectResult>();
+
+        var store = (TestApiFactory.InMemoryOptimizationRunStore)factory.Get<IOptimizationRunStore>();
+        var run = store.Runs.Values.Single();
+
+        run.TenantId.Should().Be(tenant.TenantId);
+        run.RequestSnapshot.TenantId.Should().Be(tenant.TenantId);
+        run.RequestSnapshot.Vehicles.Should().ContainSingle(v => v.VehicleId == 1);
+        run.RequestSnapshot.Stops.Select(s => s.LocationId).Should().BeEquivalentTo([1L, 2L]);
+    }
+
+    private static void SeedOtherTenantSmallScenario(PlannerDbContext db, Guid tenantId) {
+        var depotLocation = new Location {
+            Id = 101,
+            Address = "Other Tenant Depot",
+            Latitude = -32.95,
+            Longitude = 116.86
+        };
+
+        var depot = new Depot {
+            Id = 101,
+            TenantId = tenantId,
+            Location = depotLocation,
+            Name = "Other Hub"
+        };
+
+        var vehicle = new Vehicle {
+            Id = 101,
+            TenantId = tenantId,
+            Name = "Other Truck",
+            StartDepot = depot,
+            EndDepot = depot,
+            MaxPallets = 10,
+            MaxWeight = 1000,
+            ShiftLimitMinutes = 480,
+            DriverRatePerHour = 50,
+            MaintenanceRatePerHour = 10,
+            FuelRatePerKm = 1.5,
+            BaseFee = 20,
+            SpeedFactor = 1.0
+        };
+
+        var customerLocation = new Location {
+            Id = 102,
+            Address = "Other Tenant Customer",
+            Latitude = -32.96,
+            Longitude = 116.87
+        };
+
+        var customer = new Customer {
+            CustomerId = 101,
+            TenantId = tenantId,
+            Name = "Other Customer",
+            Location = customerLocation,
+            DefaultServiceMinutes = 15
+        };
+
+        var job = new Job {
+            Id = 101,
+            TenantId = tenantId,
+            CustomerId = customer.CustomerId,
+            Name = "Other Delivery",
+            Location = customerLocation,
+            JobType = JobType.Delivery,
+            ServiceTimeMinutes = 15,
+            ReadyTime = 0,
+            DueTime = 1440,
+            PalletDemand = 2,
+            WeightDemand = 200
+        };
+
+        db.Locations.AddRange(depotLocation, customerLocation);
+        db.Depots.Add(depot);
+        db.Customers.Add(customer);
+        db.Vehicles.Add(vehicle);
+        db.Jobs.Add(job);
     }
 }
