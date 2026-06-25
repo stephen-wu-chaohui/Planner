@@ -5,7 +5,7 @@ public static class CacheKeys {
 
     public static string ConfigInit(Guid tenantId) => $"config:init:{Scope(tenantId)}";
     public static string TenantMetadata(Guid tenantId) => $"tenants:metadata:{Scope(tenantId)}";
-    public static string UsersList() => "users:list:scope:all";
+    public static string UsersList(Guid? tenantId = null) => $"users:list:{Scope(tenantId)}";
 
     public static string JobsList(Guid? tenantId = null) => $"jobs:list:{Scope(tenantId)}";
     public static string JobById(long id, Guid? tenantId = null) => $"jobs:item:{Scope(tenantId)}:{id}";

@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Planner.Application.Features.Users;
 using System.Diagnostics;
@@ -6,6 +7,7 @@ using System.Diagnostics;
 namespace Planner.API.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class UsersController(IMediator mediator, ILogger<UsersController> logger) : ControllerBase {
     [HttpGet]
