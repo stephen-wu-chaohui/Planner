@@ -5,6 +5,9 @@
 
 # dotenv files
 .env
+.env.local
+.env.*.local
+.env.azure
 
 # Firebase credentials (sensitive)
 *firebase-credentials.json
