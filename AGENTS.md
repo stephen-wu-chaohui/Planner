@@ -73,3 +73,8 @@ Before completing a task, run:
 ```bash
 dotnet build
 dotnet test
+
+```
+
+## Shipit
+Read and work as defined in docs\codex-workflows.md
