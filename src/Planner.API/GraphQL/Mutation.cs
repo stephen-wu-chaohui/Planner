@@ -1,4 +1,5 @@
 using MediatR;
+using HotChocolate.Authorization;
 using Planner.Application.CQRS;
 using Planner.Application.Features.Customers;
 using Planner.Application.Features.Depots;
@@ -11,6 +12,7 @@ using Planner.Domain;
 
 namespace Planner.API.GraphQL;
 
+[Authorize]
 public sealed class Mutation {
     public async Task<JobDto> CreateJob(
         JobDto input,

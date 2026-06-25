@@ -126,7 +126,7 @@ app.UseMiddleware<TenantContextMiddleware>();
 
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => true });
-app.MapGraphQL("/graphql");
+app.MapGraphQL("/graphql").RequireAuthorization();
 
 app.Run();
 
