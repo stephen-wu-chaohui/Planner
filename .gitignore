@@ -514,3 +514,4 @@ $RECYCLE.BIN/
 AI prompts/
 infra/main.json
 infra/.last-deployment-outputs.json
+docs/current/*
