@@ -91,8 +91,13 @@ class PlannerAIWorker:
                     print(f"Failed to initialize Firebase: {e}")
                     
             # Get Firestore client
-            self.db = firestore.client()
-            logger.info("Firestore client initialized")
+            database_id = os.getenv('FIRESTORE_DATABASE_ID')
+            if database_id:
+                self.db = firestore.client(database_id=database_id)
+                logger.info("Firestore client initialized for database '%s'", database_id)
+            else:
+                self.db = firestore.client()
+                logger.info("Firestore client initialized")
             
         except Exception as e:
             logger.error(f"Failed to initialize Firestore: {e}")
