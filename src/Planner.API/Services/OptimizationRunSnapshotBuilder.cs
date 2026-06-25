@@ -23,12 +23,16 @@ public sealed class OptimizationRunSnapshotBuilder(
         var jobs = await dataCenter.GetOrFetchAsync(
             CacheKeys.JobsList(tenantId),
             async () => await dataCenter.DbContext.Jobs
+                .AsNoTracking()
+                .Where(j => j.TenantId == tenantId)
                 .Include(j => j.Location)
                 .ToListAsync(ct)) ?? [];
 
         var vehicles = await dataCenter.GetOrFetchAsync(
             CacheKeys.VehiclesList(tenantId),
             async () => await dataCenter.DbContext.Vehicles
+                .AsNoTracking()
+                .Where(v => v.TenantId == tenantId)
                 .Include(v => v.StartDepot)
                     .ThenInclude(d => d!.Location)
                 .Include(v => v.EndDepot)
@@ -114,12 +118,19 @@ public sealed class OptimizationRunSnapshotBuilder(
 
     private async Task EnsureJobsForAllCustomersAsync(Guid tenantId, CancellationToken ct) {
         var jobsWithNoCustomers = await dataCenter.DbContext.Jobs
-            .Where(j => !dataCenter.DbContext.Customers.Any(c => c.CustomerId == j.CustomerId))
+            .Where(j => j.TenantId == tenantId)
+            .Where(j => !dataCenter.DbContext.Customers.Any(c =>
+                c.TenantId == tenantId &&
+                c.CustomerId == j.CustomerId))
             .ToListAsync(ct);
         dataCenter.DbContext.Jobs.RemoveRange(jobsWithNoCustomers);
 
         var customersWithNoJobs = await dataCenter.DbContext.Customers
-            .Where(c => !dataCenter.DbContext.Jobs.Any(j => j.CustomerId == c.CustomerId))
+            .Where(c => c.TenantId == tenantId)
+            .Include(c => c.Location)
+            .Where(c => !dataCenter.DbContext.Jobs.Any(j =>
+                j.TenantId == tenantId &&
+                j.CustomerId == c.CustomerId))
             .ToListAsync(ct);
 
         var newJobs = customersWithNoJobs.Select(c => new Job {
