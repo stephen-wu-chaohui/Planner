@@ -29,6 +29,7 @@ public sealed class FirestoreConnectionFactory(IConfiguration configuration, ILo
             }
 
             var projectId = configuration["Firestore:ProjectId"];
+            var databaseId = configuration["Firestore:DatabaseId"];
             var base64Json = configuration["FIREBASE_CONFIG_JSON"];
 
             if (string.IsNullOrEmpty(base64Json))
@@ -73,8 +74,16 @@ public sealed class FirestoreConnectionFactory(IConfiguration configuration, ILo
                     ProjectId = projectId,
                     JsonCredentials = finalJson
                 };
+                if (!string.IsNullOrWhiteSpace(databaseId))
+                {
+                    builder.DatabaseId = databaseId;
+                }
+
                 _db = builder.Build();
-                logger.LogInformation("FirestoreDb instance created successfully for project {ProjectId}.", projectId);
+                logger.LogInformation(
+                    "FirestoreDb instance created successfully for project {ProjectId}, database {DatabaseId}.",
+                    projectId,
+                    string.IsNullOrWhiteSpace(databaseId) ? "(default)" : databaseId);
                 return _db;
             }
             catch (Exception ex)

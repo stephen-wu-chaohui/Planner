@@ -61,6 +61,7 @@ services:
       - AzureAd__TenantId=common
       - AzureAd__ClientId=8621f365-5e51-4b25-931a-1c717ead22ac
       - Firestore__ProjectId=${FIRESTORE_PROJECT_ID}
+      - Firestore__DatabaseId=${FIRESTORE_DATABASE_ID}
       - Cosmos__ConnectionString=${COSMOS_CONNECTION_STRING}
       - Cosmos__DatabaseName=planner
       - Cosmos__OptimizationRunsContainerName=optimizationRuns
@@ -163,9 +164,9 @@ services:
     container_name: planner-ai-worker
     environment:
       - PYTHONUNBUFFERED=1
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL}
+      - FIRESTORE_DATABASE_ID=${FIRESTORE_DATABASE_ID}
       - FIREBASE_CONFIG_JSON=${FIREBASE_CONFIG_JSON}
     restart: unless-stopped
 
