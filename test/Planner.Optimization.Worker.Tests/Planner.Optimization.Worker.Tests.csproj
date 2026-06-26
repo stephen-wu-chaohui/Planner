@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Planner.Messaging\Planner.Messaging.csproj" />
     <ProjectReference Include="..\..\src\Planner.Optimization.Worker\Planner.Optimization.Worker.csproj" />
   </ItemGroup>
 
