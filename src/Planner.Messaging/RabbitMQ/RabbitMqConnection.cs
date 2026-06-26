@@ -11,6 +11,7 @@ public interface IRabbitMqConnection : IDisposable {
 
 internal sealed class RabbitMqConnection : IRabbitMqConnection {
     private readonly ConnectionFactory _factory;
+    private readonly string _configuredEndpoint;
     private IConnection? _connection;
     private readonly object _lock = new();
     private readonly ILogger<RabbitMqConnection> _logger;
@@ -20,18 +21,14 @@ internal sealed class RabbitMqConnection : IRabbitMqConnection {
         ILogger<RabbitMqConnection> logger) {
         _logger = logger;
 
-        _factory = new ConnectionFactory {
-            HostName = configuration["RabbitMq:Host"] ?? "localhost",
-            UserName = configuration["RabbitMq:User"] ?? "guest",
-            Password = configuration["RabbitMq:Pass"] ?? "guest",
-            Port = int.TryParse(configuration["RabbitMq:Port"], out var p) ? p : 5672,
-            DispatchConsumersAsync = true
-        };
+        var settings = RabbitMqConnectionSettings.FromConfiguration(configuration);
+        _factory = new ConnectionFactory();
+        settings.ApplyTo(_factory);
+        _configuredEndpoint = settings.EndpointForLog;
 
         _logger.LogInformation(
-            "RabbitMQ configured for host {Host}:{Port}",
-            _factory.HostName,
-            _factory.Port
+            "RabbitMQ configured for endpoint {Endpoint}",
+            _configuredEndpoint
         );
     }
 
@@ -54,11 +51,11 @@ internal sealed class RabbitMqConnection : IRabbitMqConnection {
                 RegisterEventHandlers(_connection);
 
                 _logger.LogInformation(
-                    "RabbitMQ connection established to {Host}",
-                    _connection.Endpoint.HostName
+                    "RabbitMQ connection established to {Endpoint}",
+                    $"{_connection.Endpoint.HostName}:{_connection.Endpoint.Port}"
                 );
             } catch (Exception ex) {
-                _logger.LogError(ex, "RabbitMQ connection failed");
+                _logger.LogError(ex, "RabbitMQ connection failed for endpoint {Endpoint}", _configuredEndpoint);
                 throw; // fail fast, caller decides retry
             }
         }

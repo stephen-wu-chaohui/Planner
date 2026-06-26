@@ -47,7 +47,7 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:5000;http://+:7085 
+      - ASPNETCORE_URLS=http://+:5000;http://+:7085
       - Optimization__DispatchMode=${OPTIMIZATION_DISPATCH_MODE:-RabbitMq}
       - ConnectionStrings__PlannerDb=Server=sqlserver,1433;Database=PlannerDB;User Id=sa;Password=PlannerDevPass123;Encrypt=False;TrustServerCertificate=True;
       - SignalR__Server=http://planner-api:7085
@@ -55,10 +55,10 @@ services:
       - SignalR__Route=/hubs/planner
       - Cors__AllowedOrigins__0=https://localhost:7014
       - Cors__AllowedOrigins__1=http://localhost:5212
-      - RabbitMq__Host=rabbitmq
-      - RabbitMq__User=planner
-      - RabbitMq__Pass=planner
-      - RabbitMq__Port=5672
+      - RabbitMq__Host=${RABBITMQ_HOST:-rabbitmq}
+      - RabbitMq__User=${RABBITMQ_USERNAME:-planner}
+      - RabbitMq__Pass=${RABBITMQ_PASSWORD:-planner}
+      - RabbitMq__Port=${RABBITMQ_PORT:-5672}
       - AzureAd__Instance=https://login.microsoftonline.com/
       - AzureAd__TenantId=common
       - AzureAd__ClientId=8621f365-5e51-4b25-931a-1c717ead22ac
