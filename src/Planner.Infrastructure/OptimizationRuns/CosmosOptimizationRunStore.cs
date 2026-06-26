@@ -224,6 +224,14 @@ public sealed class CosmosOptimizationRunStore(
 
     private static CosmosClientOptions CreateClientOptions(IConfiguration configuration) {
         var options = new CosmosClientOptions();
+        if (Enum.TryParse<ConnectionMode>(configuration["Cosmos:ConnectionMode"], ignoreCase: true, out var connectionMode)) {
+            options.ConnectionMode = connectionMode;
+        }
+
+        if (TryReadPositiveSeconds(configuration["Cosmos:RequestTimeoutSeconds"], out var requestTimeout)) {
+            options.RequestTimeout = requestTimeout;
+        }
+
         if (bool.TryParse(configuration["Cosmos:DisableServerCertificateValidation"], out var disabled) && disabled) {
             options.HttpClientFactory = () => new HttpClient(new HttpClientHandler {
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
@@ -231,6 +239,16 @@ public sealed class CosmosOptimizationRunStore(
         }
 
         return options;
+    }
+
+    private static bool TryReadPositiveSeconds(string? value, out TimeSpan timeout) {
+        timeout = default;
+        if (!int.TryParse(value, out var seconds) || seconds <= 0) {
+            return false;
+        }
+
+        timeout = TimeSpan.FromSeconds(seconds);
+        return true;
     }
 
     private static PartitionKey PartitionKeyFor(Guid tenantId) => new(tenantId.ToString());

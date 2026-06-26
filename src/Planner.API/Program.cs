@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Identity.Web;
 using Planner.API.BackgroundServices;
 using Planner.API.GraphQL;
+using Planner.API.Hubs;
 using Planner.API.Middleware;
 using Planner.API.Services;
 using Planner.Application;
@@ -24,6 +25,7 @@ builder.Configuration
 
 ValidateRequiredConfiguration(builder.Configuration);
 var useAzureOptimizationDispatch = UseAzureServiceBusDispatch(builder.Configuration);
+const string BlazorClientCorsPolicy = "BlazorClient";
 
 // ────────────────────────────────────────────────
 // Logging
@@ -38,12 +40,35 @@ builder.Logging.AddConsole();
 
 // Controllers (API only)
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(BlazorClientCorsPolicy, policy =>
+    {
+        var origins = GetAllowedCorsOrigins(builder.Configuration);
+        if (origins.Length > 0)
+        {
+            policy
+                .WithOrigins(origins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+    });
+});
 
 // API Services
 builder.Services.AddApplication();
 builder.Services.AddScoped<IMatrixCalculationService, MatrixCalculationService>();
 builder.Services.AddScoped<IOptimizationRunSnapshotBuilder, OptimizationRunSnapshotBuilder>();
 builder.Services.AddScoped<IAzureSignalRConnectionInfoService, AzureSignalRConnectionInfoService>();
+builder.Services.AddScoped<IOptimizationRunNotificationPublisher, SignalROptimizationRunNotificationPublisher>();
+
+var signalRBuilder = builder.Services.AddSignalR();
+if (UseAzureSignalRService(builder.Configuration, builder.Environment)) {
+    signalRBuilder.AddAzureSignalR(options => {
+        options.ConnectionString = builder.Configuration["SignalR:ConnectionString"];
+    });
+}
 
 // Application / Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -53,6 +78,24 @@ builder.Services.AddMemoryCache();
 // We replace builder.Services.AddJwtAuthentication(...) with Microsoft Identity Web
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+
+builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options => {
+    var originalOnMessageReceived = options.Events.OnMessageReceived;
+    options.Events.OnMessageReceived = async context => {
+        if (originalOnMessageReceived is not null) {
+            await originalOnMessageReceived(context);
+        }
+
+        if (!string.IsNullOrWhiteSpace(context.Token)) {
+            return;
+        }
+
+        if (context.Request.Path.StartsWithSegments(PlannerHub.Route)
+            && context.Request.Query.TryGetValue("access_token", out var accessToken)) {
+            context.Token = accessToken;
+        }
+    };
+});
 
 builder.Services.AddAuthorization();
 
@@ -116,6 +159,7 @@ if (!app.Environment.IsProduction()) {
 }
 
 app.UseRouting();
+app.UseCors(BlazorClientCorsPolicy);
 
 // Order is important: Authentication MUST come before Authorization
 app.UseAuthentication();
@@ -125,6 +169,7 @@ app.UseAuthorization();
 app.UseMiddleware<TenantContextMiddleware>();
 
 app.MapControllers();
+app.MapHub<PlannerHub>(PlannerHub.Route).RequireAuthorization();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => true });
 app.MapGraphQL("/graphql").RequireAuthorization();
 
@@ -177,6 +222,31 @@ static bool UseAzureServiceBusDispatch(IConfiguration config) =>
         config["Optimization:DispatchMode"],
         "AzureServiceBus",
         StringComparison.OrdinalIgnoreCase);
+
+static bool UseAzureSignalRService(IConfiguration config, IHostEnvironment environment) =>
+    environment.IsProduction() &&
+    !string.IsNullOrWhiteSpace(config["SignalR:ConnectionString"]);
+
+static string[] GetAllowedCorsOrigins(IConfiguration config) {
+    var configuredOrigins = config
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>() ?? [];
+
+    var validOrigins = configuredOrigins
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .Select(origin => origin.Trim().TrimEnd('/'))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    if (validOrigins.Length > 0) {
+        return validOrigins;
+    }
+
+    return [
+        "https://localhost:7014",
+        "http://localhost:5212"
+    ];
+}
 
 public partial class Program { }
 

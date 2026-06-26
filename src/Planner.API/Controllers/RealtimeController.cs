@@ -18,6 +18,7 @@ public sealed class RealtimeController(
             return Unauthorized();
         }
 
-        return Ok(signalRConnectionInfoService.CreateConnectionInfo(tenantContext.TenantId.ToString()));
+        var connectionInfo = signalRConnectionInfoService.CreateConnectionInfo(tenantContext.TenantId.ToString());
+        return connectionInfo is null ? NoContent() : Ok(connectionInfo);
     }
 }

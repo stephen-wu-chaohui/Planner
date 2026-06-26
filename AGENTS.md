@@ -1,48 +1,134 @@
 # Planner Agent Instructions
 
-## Architecture direction
+## Optimization Worker Architecture
 
-Planner is a multi-tenant route optimization platform.
+`Planner.Optimization.Worker` is a long-running background worker, not a one-shot job worker.
 
-The target architecture is:
+It should support both messaging channels:
 
-- SQL Server + EF Core remain the source of truth for long-lived master data:
-  - Tenants
-  - Vehicles
-  - Depots
-  - Jobs
-  - accepted/published Routes
+```text
+Primary Azure path:
+Planner API -> Azure Service Bus -> Planner.Optimization.Worker
 
-- Cosmos DB stores optimization run lifecycle documents:
-  - request snapshot
-  - status
-  - solver result
-  - AI insight
-  - timeline
-  - execution attempts
+Playground / legacy path:
+Planner API -> RabbitMQ -> Planner.Optimization.Worker
+```
 
-- Azure Service Bus is the command queue.
-  - Messages should be lightweight.
-  - Optimization job messages must contain tenantId and optimizationRunId only.
-  - Do not put full OptimizeRouteRequest payloads into Service Bus messages.
+So far, let's keep Playground / legacy path until changes made in this file.
 
-- Optimization execution is handled by a Container Apps Job-style worker.
-  - The worker consumes Service Bus messages.
-  - The worker reads OptimizationRun documents from Cosmos DB.
-  - The worker calls VehicleRoutingProblem.Optimize(...)
-  - The worker writes status/result back to Cosmos DB.
-  - The worker must not call Planner.Api to fetch requests or return results.
+### Design principle
 
-- Planner.Reactor / Functions App is a reaction layer around Cosmos DB.
-  - It listens to Cosmos DB Change Feed.
-  - It publishes lightweight SignalR notifications.
-  - It may handle AI insight triggers, DLQ processing, cleanup, and stuck-run recovery.
-  - It must not become a user-facing query API.
+The worker should keep the optimization processing pipeline channel-agnostic.
 
-- Planner.Api remains the user-facing command/query control plane.
-  - It handles authentication, tenant authorization, quota checks, run creation, status queries, result queries, and route acceptance.
-  - BlazorApp must call Planner.Api for full result data.
-  - SignalR messages should notify that something changed; they should not be treated as the authoritative data source.
+Service Bus and RabbitMQ should only differ in message transport/adapters. The core optimization flow should remain shared:
+
+```text
+Receive optimization job message
+Load optimization run/input
+Run solver
+Upload result to Planner API
+API persists result
+API sends SignalR notification
+Blazor fetches latest result from API
+```
+
+### Responsibilities
+
+#### Planner API
+
+The API owns optimization run state and client notifications.
+
+It should:
+
+* Create optimization runs.
+* Save run/input data.
+* Publish lightweight optimization job messages to the configured transport.
+* Receive completed solver results from `Planner.Optimization.Worker`.
+* Persist solver results.
+* Update run status.
+* Notify Blazor clients through SignalR.
+* Expose GET endpoints for Blazor to fetch the latest run/result data.
+
+#### Planner.Optimization.Worker
+
+The worker owns computation only.
+
+It should:
+
+* Run as a long-lived `BackgroundService`.
+* Listen continuously to the configured message transport.
+* Support Azure Service Bus as the primary Azure-native transport.
+* Preserve RabbitMQ support as a playground / legacy transport.
+* Receive optimization job messages.
+* Load the required optimization run/input data.
+* Execute the solver.
+* Upload the solver result back to Planner API.
+* Acknowledge/complete the message only after the API confirms the result was saved successfully.
+* Reject, abandon, requeue, or dead-letter messages according to the transport and failure type.
+
+The worker should not directly notify Blazor and should not directly send SignalR messages.
+
+### Important rule
+
+Do not acknowledge or complete a message before the solver result has been successfully uploaded to the API and persisted by the API.
+
+Correct order:
+
+```text
+Receive message
+Run solver
+Upload result to API
+API saves result
+API returns success
+Acknowledge / complete message
+```
+
+### Local development
+
+In local development, message brokers do not start the worker process.
+
+Run both services manually:
+
+```bash
+dotnet run --project Planner.Api
+dotnet run --project Planner.Optimization.Worker
+```
+
+The worker should remain running and continue listening for messages.
+
+### Transport configuration
+
+Use configuration to select the active optimization messaging transport.
+
+Example:
+
+```json
+{
+  "OptimizationMessaging": {
+    "Transport": "ServiceBus"
+  }
+}
+```
+
+Supported values:
+
+```text
+ServiceBus
+RabbitMQ
+```
+
+The transport-specific code should be isolated behind interfaces/adapters. The solver and result-upload workflow should not depend directly on Service Bus or RabbitMQ SDK types.
+
+### Azure deployment direction
+
+In Azure, prefer `ServiceBus` as the primary transport.
+
+Deploy `Planner.Optimization.Worker` as a long-running Container App worker.
+
+Use Service Bus queue depth and Container Apps/KEDA scaling rules to scale worker replicas when needed.
+
+Keep `RabbitMQ` available for local experimentation, architecture comparison, and playground scenarios.
+
 
 ## Multi-tenancy rules
 

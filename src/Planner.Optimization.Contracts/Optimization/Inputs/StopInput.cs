@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging.Optimization.Inputs;
+namespace Planner.Messaging.Optimization.Inputs;
 
 /// <summary>
 /// Solver-facing job definition.
@@ -21,5 +21,5 @@ public sealed record StopInput(
     bool RequiresRefrigeration,
 
     // Extra data used by UI but not solver
-    long ? ExtraIdForJob = null
+    long? ExtraIdForJob = null
 );

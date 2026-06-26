@@ -5,7 +5,8 @@ param(
     [string]$TenantId,
     [string]$ClientId,
     [string]$ResourceGroupName = "rg-planner-dev-aue",
-    [string]$KeyVaultName
+    [string]$KeyVaultName,
+    [string]$ApiHostName = "api.plannerdemo.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,8 +40,12 @@ if ([string]::IsNullOrWhiteSpace($ClientId) -or $ClientId -eq "pending-bootstrap
 
 $acrLoginServer = az acr list --resource-group $ResourceGroupName --query "[0].loginServer" -o tsv
 $blazorAppName = az webapp list --resource-group $ResourceGroupName --query "[0].name" -o tsv
-$reactorFunctionAppName = az functionapp list --resource-group $ResourceGroupName --query "[?contains(name, 'reactor')].name | [0]" -o tsv
 $containerAppsEnvironment = az containerapp env list --resource-group $ResourceGroupName --query "[0].name" -o tsv
+$apiScope = az keyvault secret show --vault-name $KeyVaultName --name api-scope --query value -o tsv
+$blazorClientId = az keyvault secret show --vault-name $KeyVaultName --name azuread-blazor-client-id --query value -o tsv
+$tenantIdForAuthority = az keyvault secret show --vault-name $KeyVaultName --name azuread-tenant-id --query value -o tsv
+$googleMapsApiKey = az keyvault secret show --vault-name $KeyVaultName --name google-maps-api-key --query value -o tsv
+$googleMapsMapId = az keyvault secret show --vault-name $KeyVaultName --name google-maps-map-id --query value -o tsv
 
 $variables = [ordered]@{
     AZURE_RESOURCE_GROUP = $ResourceGroupName
@@ -49,12 +54,16 @@ $variables = [ordered]@{
     AZURE_BLAZOR_APP_NAME = $blazorAppName
     AZURE_API_CONTAINER_APP_NAME = "planner-dev-api"
     AZURE_OPTIMIZATION_CONTAINER_APP_NAME = "planner-dev-optimization-worker"
-    AZURE_OPTIMIZATION_JOB_NAME = "planner-dev-optimization-job-worker"
     AZURE_AI_WORKER_CONTAINER_APP_NAME = "planner-dev-ai-worker"
-    AZURE_REACTOR_FUNCTION_APP_NAME = $reactorFunctionAppName
     AZURE_DB_MIGRATE_JOB_NAME = "planner-dev-db-migrate"
     AZURE_DB_SEED_JOB_NAME = "planner-dev-db-seed"
     AZURE_KEY_VAULT_NAME = $KeyVaultName
+    BLAZOR_API_BASE_URL = "https://$ApiHostName"
+    BLAZOR_API_SCOPE = $apiScope
+    BLAZOR_AZURE_AD_AUTHORITY = "https://login.microsoftonline.com/$tenantIdForAuthority"
+    BLAZOR_AZURE_AD_CLIENT_ID = $blazorClientId
+    BLAZOR_GOOGLE_MAPS_API_KEY = $googleMapsApiKey
+    BLAZOR_GOOGLE_MAPS_MAP_ID = $googleMapsMapId
 }
 
 gh api -X PUT "repos/$Repo/environments/$GitHubEnvironment" 1>$null
@@ -64,7 +73,7 @@ gh secret set AZURE_TENANT_ID --repo $Repo --env $GitHubEnvironment --body $Tena
 gh secret set AZURE_SUBSCRIPTION_ID --repo $Repo --env $GitHubEnvironment --body $SubscriptionId
 
 foreach ($entry in $variables.GetEnumerator()) {
-    if ([string]::IsNullOrWhiteSpace($entry.Value)) {
+    if ($entry.Key -ne "BLAZOR_GOOGLE_MAPS_MAP_ID" -and [string]::IsNullOrWhiteSpace($entry.Value)) {
         throw "Value for GitHub variable '$($entry.Key)' is empty."
     }
     gh variable set $entry.Key --repo $Repo --env $GitHubEnvironment --body $entry.Value

@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging.Optimization.Inputs; 
+namespace Planner.Messaging.Optimization.Inputs;
 
 // Carrying the previously hardcoded "magic numbers"
 public record OptimizationSettings(
@@ -7,7 +7,8 @@ public record OptimizationSettings(
     double KmPerMinute = 0.84,          // 50 km/h
     double OvertimeMultiplier = 2.0,
     double DistanceScale = 1.0,
-    int SearchTimeLimitSeconds = 60);
+    int SearchTimeLimitSeconds = 60,
+    bool EnableSearchLogging = false);
 
 // Update to OptimizeRouteRequest to include Settings
 // public record OptimizeRouteRequest(..., OptimizationSettings? Settings = null);

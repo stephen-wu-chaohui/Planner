@@ -14,7 +14,7 @@ public partial class DispatchCenterState : IRouteState
     private List<RouteDto> _routes = [];
     IReadOnlyList<RouteDto> IRouteState.Routes => _routes.AsReadOnly();
 
-    public OptimizationSummaryInfo LastOptimizationSummary { get; private set; }
+    public OptimizationSummaryInfo? LastOptimizationSummary { get; private set; }
 
     private IReadOnlyList<MapRoute> _mapRoutes = [];
 
@@ -42,7 +42,7 @@ public partial class DispatchCenterState : IRouteState
             OnRoutesChanged?.Invoke();
         }
         // Calculate optimization summary
-        if (_routes != null && _routes.Count > 0) {
+        if (_routes.Count > 0) {
             var totalCost = _routes.Sum(r => r.TotalCost);
             var totalStops = _routes.Sum(r => r.Stops.Count);
             LastOptimizationSummary = new OptimizationSummaryInfo(_routes.Count, totalStops, totalCost);
@@ -61,6 +61,10 @@ public partial class DispatchCenterState : IRouteState
 
         if (evt.Status is OptimizationRunStatus.Failed or OptimizationRunStatus.DeadLettered) {
             LastErrorMessage = evt.ErrorMessage ?? $"Optimization {evt.Status}.";
+        }
+
+        if (evt.HasAiInsight) {
+            _ = RefreshAiInsightAsync(evt.OptimizationRunId);
         }
 
         NotifyStatus();

@@ -3,9 +3,7 @@
 # ============================
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-
-# Copy solution (for reference only, not restore)
-COPY Planner.sln .
+ARG TARGETARCH=amd64
 
 # Copy project files required by Worker restore graph
 COPY src/Planner.Contracts/Planner.Contracts.csproj \
@@ -17,22 +15,38 @@ COPY src/Planner.Messaging/Planner.Messaging.csproj \
 COPY src/Planner.Optimization/Planner.Optimization.csproj \
      src/Planner.Optimization/
 
+COPY src/Planner.Optimization.Contracts/Planner.Optimization.Contracts.csproj \
+     src/Planner.Optimization.Contracts/
+
 COPY src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj \
      src/Planner.Optimization.Worker/
 
 # Restore ONLY the Worker project
-RUN dotnet restore \
-    src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj
+RUN case "$TARGETARCH" in \
+        amd64) TARGETRID=linux-x64 ;; \
+        arm64) TARGETRID=linux-arm64 ;; \
+        *) echo "Unsupported TARGETARCH: $TARGETARCH" && exit 1 ;; \
+    esac \
+    && dotnet restore \
+        src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj \
+        -r "$TARGETRID"
 
 # Copy remaining source
 COPY src/ src/
 
 # Publish Worker
-RUN dotnet publish \
-    src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj \
-    -c Release \
-    -o /app/publish \
-    --no-restore
+RUN case "$TARGETARCH" in \
+        amd64) TARGETRID=linux-x64 ;; \
+        arm64) TARGETRID=linux-arm64 ;; \
+        *) echo "Unsupported TARGETARCH: $TARGETARCH" && exit 1 ;; \
+    esac \
+    && dotnet publish \
+        src/Planner.Optimization.Worker/Planner.Optimization.Worker.csproj \
+        -c Release \
+        -r "$TARGETRID" \
+        --self-contained false \
+        -o /app/publish \
+        --no-restore
 
 # ============================
 # Runtime stage
@@ -45,4 +59,3 @@ USER app
 COPY --from=build /app/publish .
 
 ENTRYPOINT ["dotnet", "Planner.Optimization.Worker.dll"]
-

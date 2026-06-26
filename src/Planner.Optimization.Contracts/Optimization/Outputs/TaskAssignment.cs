@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging.Optimization.Outputs;
+namespace Planner.Messaging.Optimization.Outputs;
 
 /// <summary>
 /// Describes one stop in an optimized vehicle route.

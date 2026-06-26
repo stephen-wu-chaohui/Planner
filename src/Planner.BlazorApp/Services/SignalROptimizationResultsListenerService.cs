@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.SignalR.Client;
 using Planner.Contracts.Optimization;
 using Planner.Contracts.OptimizationRuns;
@@ -6,6 +7,8 @@ namespace Planner.BlazorApp.Services;
 
 public sealed class SignalROptimizationResultsListenerService(
     PlannerApiClient api,
+    IAccessTokenProvider accessTokenProvider,
+    IConfiguration configuration,
     ILogger<SignalROptimizationResultsListenerService> logger) : IOptimizationResultsListenerService {
     private HubConnection? _connection;
     private Guid _tenantId;
@@ -20,25 +23,53 @@ public sealed class SignalROptimizationResultsListenerService(
         }
 
         _tenantId = tenantId;
-        var connectionInfo = await api.GetFromJsonAsync<SignalRConnectionInfoDto>("/api/realtime/negotiate");
-        if (connectionInfo is null) {
-            logger.LogWarning("SignalR negotiate returned no connection info.");
-            return;
-        }
 
-        _connection = new HubConnectionBuilder()
-            .WithUrl(connectionInfo.Url, options => {
-                options.AccessTokenProvider = () => Task.FromResult<string?>(connectionInfo.AccessToken);
+        var connection = new HubConnectionBuilder()
+            .WithUrl(BuildHubUrl(), options => {
+                options.AccessTokenProvider = GetAccessTokenAsync;
             })
             .WithAutomaticReconnect()
             .Build();
 
-        _connection.On<OptimizationRunChangedDto>(
+        connection.On<OptimizationRunChangedDto>(
             "optimizationRunChanged",
             async notification => await HandleRunChangedAsync(notification));
+        connection.On<RoutingResultDto>(
+            "optimizationCompleted",
+            HandleOptimizationCompleted);
 
-        await _connection.StartAsync();
+        try {
+            await connection.StartAsync();
+        } catch (Exception ex) {
+            await connection.DisposeAsync();
+            logger.LogWarning(ex, "SignalR connection failed. Realtime optimization notifications are disabled.");
+            return;
+        }
+
+        _connection = connection;
         logger.LogInformation("SignalR optimization listener started.");
+    }
+
+    private string BuildHubUrl() {
+        var apiBaseUrl = configuration["Api:BaseUrl"]
+            ?? throw new InvalidOperationException("Api:BaseUrl not configured");
+        var route = configuration["SignalR:Route"] ?? "/hubs/planner";
+
+        return new Uri(
+            new Uri($"{apiBaseUrl.TrimEnd('/')}/"),
+            route.TrimStart('/')).ToString();
+    }
+
+    private async Task<string?> GetAccessTokenAsync() {
+        var apiScope = configuration["Api:Scope"];
+        if (string.IsNullOrWhiteSpace(apiScope)) {
+            logger.LogWarning("Api:Scope is not configured. SignalR access token cannot be requested.");
+            return null;
+        }
+
+        var tokenResult = await accessTokenProvider.RequestAccessToken(
+            new AccessTokenRequestOptions { Scopes = [apiScope] });
+        return tokenResult.TryGetToken(out var token) ? token.Value : null;
     }
 
     public async Task StopListeningAsync() {
@@ -79,5 +110,13 @@ public sealed class SignalROptimizationResultsListenerService(
                 "Failed to fetch optimization result for run {RunId}.",
                 notification.OptimizationRunId);
         }
+    }
+
+    private void HandleOptimizationCompleted(RoutingResultDto result) {
+        if (result.TenantId != _tenantId) {
+            return;
+        }
+
+        OnOptimizationCompleted?.Invoke(result);
     }
 }

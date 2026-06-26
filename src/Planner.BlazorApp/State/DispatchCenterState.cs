@@ -1,12 +1,12 @@
-﻿using Planner.BlazorApp.Services;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using Planner.BlazorApp.Services;
 using Planner.Contracts.API;
 
 namespace Planner.BlazorApp.State;
 
 public partial class DispatchCenterState(
     PlannerApiClient api,
-    IOptimizationResultsListenerService optimizationResultsListenerService,
-    IRouteInsightsListenerService routeInsightsListenerService) : IAsyncDisposable
+    IOptimizationResultsListenerService optimizationResultsListenerService) : IAsyncDisposable
 {
     private bool _listenerServicesStarted;
 
@@ -18,23 +18,24 @@ public partial class DispatchCenterState(
         {
             await LoadTenantInfo();
 
-            // ✅ Using REST API endpoints
             var vTask = api.GetFromJsonAsync<List<VehicleDto>>("/api/vehicles");
             var cTask = api.GetFromJsonAsync<List<CustomerDto>>("/api/customers");
             var jTask = api.GetFromJsonAsync<List<JobDto>>("/api/jobs");
 
             await Task.WhenAll(vTask, cTask, jTask);
 
-            _vehicles = vTask.Result;
-            _customers = cTask.Result;
-            _jobs = jTask.Result;
+            _vehicles = vTask.Result ?? [];
+            _customers = cTask.Result ?? [];
+            _jobs = jTask.Result ?? [];
 
             OnVehiclesChanged?.Invoke();
             OnCustomersChanged?.Invoke();
             OnJobsChanged?.Invoke();
-        } 
+        }
         catch (UnauthorizedAccessException) {
-            // Allow UI layer to trigger a fresh sign-in when token acquisition is not possible.
+            throw;
+        }
+        catch (AccessTokenNotAvailableException) {
             throw;
         }
         catch (Exception ex) {
@@ -57,11 +58,8 @@ public partial class DispatchCenterState(
         {
             optimizationResultsListenerService.OnOptimizationRunChanged -= OnOptimizationRunChanged;
             optimizationResultsListenerService.OnOptimizationCompleted -= OnOptimizationCompleted;
-            routeInsightsListenerService.OnNewInsight -= HandleNewInsight;
 
-            await Task.WhenAll(
-                optimizationResultsListenerService.StopListeningAsync(),
-                routeInsightsListenerService.StopListeningAsync());
+            await optimizationResultsListenerService.StopListeningAsync();
 
             _listenerServicesStarted = false;
         }
@@ -78,15 +76,12 @@ public partial class DispatchCenterState(
 
         optimizationResultsListenerService.OnOptimizationRunChanged += OnOptimizationRunChanged;
         optimizationResultsListenerService.OnOptimizationCompleted += OnOptimizationCompleted;
-        routeInsightsListenerService.OnNewInsight += HandleNewInsight;
 
         try
         {
             Guid currentTenantId = TenantInfo?.TenantId ?? Guid.Empty;
             if (currentTenantId != Guid.Empty) {
-                await Task.WhenAll(
-                    optimizationResultsListenerService.StartListeningAsync(currentTenantId!),
-                    routeInsightsListenerService.StartListeningAsync(currentTenantId!));
+                await optimizationResultsListenerService.StartListeningAsync(currentTenantId);
 
                 _listenerServicesStarted = true;
             }
@@ -95,11 +90,8 @@ public partial class DispatchCenterState(
         {
             optimizationResultsListenerService.OnOptimizationRunChanged -= OnOptimizationRunChanged;
             optimizationResultsListenerService.OnOptimizationCompleted -= OnOptimizationCompleted;
-            routeInsightsListenerService.OnNewInsight -= HandleNewInsight;
 
-            await Task.WhenAll(
-                optimizationResultsListenerService.StopListeningAsync(),
-                routeInsightsListenerService.StopListeningAsync());
+            await optimizationResultsListenerService.StopListeningAsync();
 
             throw;
         }

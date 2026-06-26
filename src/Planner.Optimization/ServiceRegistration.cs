@@ -8,7 +8,7 @@ public static class ServiceRegistration {
     /// </summary>
     public static IServiceCollection AddOptimization(
         this IServiceCollection services) {
-        services.AddScoped<IRouteOptimizer, VehicleRoutingProblem>();
+        services.AddSingleton<IRouteOptimizer, VehicleRoutingProblem>();
         return services;
     }
 }

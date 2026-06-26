@@ -122,9 +122,14 @@ $apiApp = Get-AppByDisplayName -DisplayName $ApiAppDisplayName
 
 $blazorApp = Ensure-App -DisplayName $BlazorAppDisplayName
 Set-GraphApplication -ObjectId $blazorApp.id -Body @{
-    web = @{
-        redirectUris = @("https://$PlannerHostName/signin-oidc")
+    spa = @{
+        redirectUris = @(
+            "https://$PlannerHostName/authentication/login-callback",
+            "https://localhost:7014/authentication/login-callback",
+            "http://localhost:5212/authentication/login-callback"
+        )
     }
+    isFallbackPublicClient = $true
     requiredResourceAccess = @(
         @{
             resourceAppId = $apiApp.appId
@@ -137,7 +142,6 @@ Set-GraphApplication -ObjectId $blazorApp.id -Body @{
         }
     )
 }
-$blazorSecret = az ad app credential reset --id $blazorApp.appId --append --display-name "planner-dev-keyvault" --years 1 --query password -o tsv
 az ad app permission admin-consent --id $blazorApp.appId 1>$null
 $blazorApp = Get-AppByDisplayName -DisplayName $BlazorAppDisplayName
 
@@ -175,7 +179,6 @@ Set-KeyVaultSecret -Name "azuread-tenant-id" -Value $TenantId
 Set-KeyVaultSecret -Name "azuread-domain" -Value $EntraDomain
 Set-KeyVaultSecret -Name "azuread-api-client-id" -Value $apiApp.appId
 Set-KeyVaultSecret -Name "azuread-blazor-client-id" -Value $blazorApp.appId
-Set-KeyVaultSecret -Name "azuread-blazor-client-secret" -Value $blazorSecret
 Set-KeyVaultSecret -Name "api-scope" -Value "$apiIdentifierUri/API.Access"
 Set-KeyVaultSecret -Name "github-deploy-client-id" -Value $githubApp.appId
 

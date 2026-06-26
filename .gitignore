@@ -8,6 +8,7 @@
 .env.local
 .env.*.local
 .env.azure
+src/**/local.settings.json
 
 # Firebase credentials (sensitive)
 *firebase-credentials.json

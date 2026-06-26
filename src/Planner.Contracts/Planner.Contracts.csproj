@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Planner.Messaging\Planner.Messaging.csproj" />
+    <ProjectReference Include="..\Planner.Optimization.Contracts\Planner.Optimization.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

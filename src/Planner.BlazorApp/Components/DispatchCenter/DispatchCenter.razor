@@ -1,18 +1,12 @@
-﻿@page "/dispatch-center"
-@rendermode InteractiveServer
+@page "/dispatch-center"
 
 @using Microsoft.AspNetCore.Components.Authorization
-@using Planner.BlazorApp.Auth
-@using Planner.BlazorApp.Components.DispatchCenter
+@using Planner.BlazorApp.Components.Auth
 @using Planner.BlazorApp.Components.DispatchCenter.Models
 @using Planner.BlazorApp.Components.WelcomeWizard
 @using Planner.BlazorApp.FormModels
-@using Planner.BlazorApp.Services
-@using Planner.BlazorApp.State
 @using Planner.BlazorApp.State.Interfaces
 @using Planner.Contracts.API
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
-@using Planner.BlazorApp.Components.Auth
 
 @inject ICustomerState CustomerState
 @inject ITenantState TenantState
@@ -31,10 +25,9 @@
             <AuthorizeView>
                 <Authorized>
                     <span>@(TenantState.TenantInfo?.TenantName ?? "Dispatch Centre") </span>
-                    <a href="/MicrosoftIdentity/Account/SignOut">Log out</a>
+                    <button type="button" class="btn btn-link p-0 align-baseline" @onclick="BeginLogOut">Log out</button>
                 </Authorized>
                 <NotAuthorized>
-                    @* Show a button to open the modal instead of the direct login link *@
                     <button class="btn btn-primary" @onclick="() => showDemoModal = true">
                         Explore Demo
                     </button>
@@ -66,21 +59,20 @@
     protected override async Task OnInitializedAsync() {
         var authState = await AuthProvider.GetAuthenticationStateAsync();
 
-        // Only call the API if we actually have a logged-in user!
         if (authState.User.Identity?.IsAuthenticated == true) {
             if (_subscribed) return;
             try {
                 await CustomerState.InitializeAsync();
                 _subscribed = true;
+            } catch (AccessTokenNotAvailableException ex) {
+                ex.Redirect();
             } catch (UnauthorizedAccessException) {
-                // Token cache may be missing after app restart even when an auth cookie exists.
-                Nav.NavigateTo("/MicrosoftIdentity/Account/SignIn?redirectUri=/dispatch-center", forceLoad: true);
+                Nav.NavigateToLogin("authentication/login", new InteractiveRequestOptions {
+                    Interaction = InteractionType.SignIn,
+                    ReturnUrl = "/dispatch-center"
+                });
             }
         }
-    }
-
-    private async void OnCollectionChanged(string _) {
-        await InvokeAsync(StateHasChanged);
     }
 
     private void OpenTab(string tab) {
@@ -89,6 +81,10 @@
 
     private void ShowWelcomeGuide() {
         Wizard.Open(startStep: 0);
+    }
+
+    private void BeginLogOut() {
+        Nav.NavigateToLogout("authentication/logout", "/dispatch-center");
     }
 
     private Task JobPositionPicked(MapPosition args) {

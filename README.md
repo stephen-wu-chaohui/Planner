@@ -1,7 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
-  <img alt="Planner - Clean Architecture / OR-Tools / RabbitMQ / Firestore / Multi-tenant" src="assets/banner-light.svg">
+  <img alt="Planner - Clean Architecture / OR-Tools / RabbitMQ / SignalR / Multi-tenant" src="assets/banner-light.svg">
 </picture>
 
 # Planner
@@ -10,7 +10,7 @@ Planner is a modular fleet planning / optimization playground built with **.NET 
 
 - map-centric dispatching (customers, jobs, vehicles, depots)
 - asynchronous optimization with background workers
-- real-time result delivery (Firestore)
+- real-time change notifications with API-owned result queries
 - multi-tenant isolation and auth boundaries
 - optional AI-powered route insights
 
@@ -28,7 +28,7 @@ Planner is a modular fleet planning / optimization playground built with **.NET 
 This repo is a learning and experimentation playground for:
 
 - Clean Architecture boundaries in a multi-project .NET solution
-- async messaging patterns (BFF-style API boundary + background worker)
+- async messaging patterns (API control plane + background worker)
 - practical multi-tenancy (claim → middleware → EF Core filters → messages)
 - “real-time but decoupled” UI updates using Firestore
 
@@ -38,42 +38,43 @@ This repo is a learning and experimentation playground for:
 
 ```mermaid
 flowchart LR
-  UI["Planner.BlazorApp<br/>Blazor Server"] -->|HTTP/JSON| API["Planner.API<br/>ASP.NET Core API"]
-  UI -->|Firestore listen| FS[(Firestore)]
+  UI["Planner.BlazorApp<br/>Blazor WebAssembly"] -->|HTTP/JSON + bearer token| API["Planner.API<br/>ASP.NET Core API"]
+  API -->|tenant-scoped notifications| UI
 
   API -->|AMQP publish| MQ[(RabbitMQ)]
-  API -->|Firestore write| FS
   MQ -->|AMQP consume| WK["Planner.Optimization.Worker<br/>OR-Tools"]
-  WK -->|AMQP publish| MQ
+  WK -->|solver result upload| API
 
-  FS -->|Listen & Analyze| AI["Planner.AI Worker<br/>Python + Gemini"]
-  AI -->|Firestore write| FS
+  API -->|read/write| SQL[(SQL Server)]
+  API -->|run lifecycle + results| COSMOS[(Cosmos DB)]
+  AI["Planner.AI Worker<br/>Gemini"] -->|insight status| COSMOS
 ```
 
 ### Key design choices (from completed work)
 
 - **DTO-only API contracts**: API returns/accepts `Planner.Contracts` DTOs (closed: #3).
 - **Solid Blazor state + cache synchronization**: UI state management follows explicit interfaces and refresh-on-change patterns (closed: #5).
+- **Blazor WebAssembly frontend**: `Planner.BlazorApp` is a browser-hosted WASM client that authenticates with MSAL and calls `Planner.API` for tenant-scoped data (#66).
 - **Tenant metadata registry**: UI can bootstrap tenant context (name + main depot) after login (closed: #8).
 - **Async optimization pipeline polish**: improved summary endpoints/UI workflows around jobs and optimization UX (closed: #31, #36).
 - **Result delivery evolution**: Firestore is used for real-time results/insights delivery; SignalR usage was replaced for the API→UI result channel in favor of Firestore-based flow (closed: #49).
 - **GraphQL capability**: GraphQL was introduced in `Planner.API` and consumed from the Blazor app for richer queries (closed: #51).
 - **AI worker integration**: Python worker + Firestore collections enable route insights (closed: #43).
-- **Authentication persistence**: HTTP-only cookie/BFF-style persistence was implemented to improve session security and UX (closed: #22).
+- **Authentication**: the WebAssembly client uses MSAL access tokens and `Planner.API` enforces JWT bearer policies.
 - **Identity provider migration**: Entra ID (Azure AD) “External ID” migration work completed (closed: #53).
 
 ## Technology Stack
 
 | Layer | Technology | Notes |
 |------|------------|------|
-| UI | Blazor Server (.NET 10) | Map-centric Dispatch Center |
+| UI | Blazor WebAssembly (.NET 10) | Browser-hosted map-centric Dispatch Center |
 | API | ASP.NET Core (.NET 10) | REST + GraphQL (closed: #51) |
-| Auth | JWT + role policies + BFF cookie persistence | Cookie persistence (closed: #22) |
+| Auth | MSAL + JWT bearer + role policies | Entra ID access tokens for API calls |
 | Messaging | RabbitMQ (AMQP) | Decouple API and optimizer |
 | Optimization | Google OR-Tools | VRP solving in worker |
 | Persistence | SQL Server + EF Core | Explicit migrate/seed tooling |
 | Cache | HybridCache (in-process L1; optional distributed L2) + `IPlannerDataCenter` | Cache-Aside Pattern; no external service required |
-| Real-time | Google Firestore | UI listens for results; pending_analysis + route_insights |
+| Real-time | SignalR notifications | UI refreshes full result/insight data from `Planner.API` |
 | AI (optional) | Python worker + Gemini | Route insights (closed: #43) |
 | CI/CD | GitHub Actions | Azure deploy pipelines |
 
@@ -86,7 +87,7 @@ Multi-tenancy is enforced across storage, API, and realtime updates:
 - **EF Core query filters**: tenant-scoped entities are filtered by `TenantId` at the DbContext level.
 - **`IPlannerDataCenter`**: unified data-access facade used by all REST controllers and GraphQL resolvers. Exposes `IPlannerDbContext` (The Vault – SQL long-term memory) and `HybridCache` (The Workbench – fast in-process short-term memory), and applies the Cache-Aside Pattern automatically via `GetOrFetchAsync<T>`.
 - **Messaging scoping**: optimization requests/results carry `TenantId` end-to-end.
-- **Realtime isolation**: Firestore documents are written with tenant context.
+- **Realtime isolation**: SignalR notifications are tenant-scoped and full data is fetched through tenant-authorized API endpoints.
 
 ## Features
 
@@ -96,10 +97,10 @@ Multi-tenancy is enforced across storage, API, and realtime updates:
 - Two-tier data access via `IPlannerDataCenter` (SQL Vault + HybridCache Workbench) with Cache-Aside Pattern
 - Async optimization job execution with RabbitMQ + background worker
 - Optimization UX improvements (summary endpoints and UI flows) (closed: #31, #36)
-- Firestore-based real-time results delivery (closed: #49)
+- SignalR-based optimization change notifications with API-backed result reads
 - GraphQL API + Blazor client usage (closed: #51)
-- AI-powered route insights via Python worker + Firestore (closed: #43)
-- BFF / HTTP-only cookie auth persistence (closed: #22)
+- AI-powered route insights surfaced through Planner.API
+- Blazor WebAssembly + MSAL authentication (#66)
 
 ## Roadmap
 
@@ -114,6 +115,10 @@ The high-level direction is to keep Planner as a realistic-but-approachable play
 ## Changelog (high-level)
 
 > This is a human-readable summary derived from closed issues. For exact details, see each issue.
+
+### 2026-06
+
+- Migrated `Planner.BlazorApp` from Blazor Server to Blazor WebAssembly with MSAL authentication and API-backed SignalR notifications (#66).
 
 ### 2026-02
 
@@ -187,14 +192,36 @@ $env:JwtOptions__Audience = "planner-local"
 $env:JwtOptions__SigningKey = "dev-signing-key-change-me-dev-signing-key"
 $env:JwtOptions__Secret = "dev-secret-change-me-dev-secret-change-me"
 
-$env:Api__BaseUrl = "https://localhost:7085/"
-$env:GoogleMaps__ApiKey = "<your-google-maps-api-key>"
-$env:GoogleMaps__MapId = "<optional-google-map-id>"
-
 # Optional: Firestore configuration for real-time updates
 $env:Firestore__ProjectId = "<your-firebase-project-id>"
 $env:FIREBASE_CONFIG_JSON = "<base64-encoded-firebase-credentials-or-raw-json>"
 ```
+
+`Planner.BlazorApp` is a static WebAssembly client. Browser-visible settings live in
+`src/Planner.BlazorApp/wwwroot/appsettings.Development.json` for local development:
+
+```json
+{
+  "Api": {
+    "BaseUrl": "http://localhost:7085",
+    "Scope": "api://<api-client-id>/API.Access"
+  },
+  "AzureAd": {
+    "Authority": "https://login.microsoftonline.com/<tenant-id-or-domain>",
+    "ClientId": "<blazor-spa-client-id>",
+    "ValidateAuthority": true
+  },
+  "GoogleMaps": {
+    "ApiKey": "<browser-restricted-google-maps-key>",
+    "MapId": "<optional-google-map-id>"
+  },
+  "Realtime": {
+    "Provider": "SignalR"
+  }
+}
+```
+
+Do not put server secrets or client secrets in the WebAssembly appsettings files. The Google Maps key is browser-visible and should be restricted in Google Cloud.
 
 ### Prepare the database
 
@@ -219,14 +246,12 @@ cd src/Planner.AI && python planner_ai_worker.py
 
 Typical URLs (from current launch profiles):
 - UI: `https://localhost:7014`
-- API: `https://localhost:7085`
+- API: `http://localhost:7085`
 - RabbitMQ UI: `http://localhost:15672`
 
 ### Demo login
 
-The Blazor login page (`/login`) is pre-filled with a seeded demo admin:
-- Email: `christchurch.admin@demo.local`
-- Password: `admin123`
+The Dispatch Center starts MSAL login through `/authentication/login`. Use a demo Entra user created by `scripts/azure/bootstrap-entra.ps1`; the old server-side `/login` page is no longer used by the WebAssembly client.
 
 ## Screenshots
 
