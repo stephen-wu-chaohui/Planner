@@ -21,6 +21,11 @@ public sealed record OptimizationResultQueryResult(
     OptimizationRunStatusDto? RunStatus = null,
     RoutingResultDto? Result = null);
 
+public sealed record OptimizationInsightQueryResult(
+    OptimizationResultQueryStatus Status,
+    OptimizationRunStatusDto? RunStatus = null,
+    OptimizationAiInsightDto? Insight = null);
+
 public sealed record SolveOptimizationCommand(int? SearchTimeLimitSeconds)
     : IRequest<CommandResult<OptimizationSummary>>;
 
@@ -29,6 +34,9 @@ public sealed record GetOptimizationRunStatusQuery(Guid OptimizationRunId)
 
 public sealed record GetOptimizationRunResultQuery(Guid OptimizationRunId)
     : IRequest<OptimizationResultQueryResult>;
+
+public sealed record GetOptimizationRunInsightQuery(Guid OptimizationRunId)
+    : IRequest<OptimizationInsightQueryResult>;
 
 public sealed record BuildOptimizationRequestQuery(int? SearchTimeLimitSeconds)
     : IRequest<OptimizeRouteRequest>;
@@ -39,6 +47,7 @@ public sealed class OptimizationCommandHandler(
     IOptimizationRunStore runStore,
     IOptimizationJobQueue jobQueue,
     ITenantContext tenant,
+    IOptimizationRunNotificationPublisher notificationPublisher,
     IConfiguration configuration) :
     IRequestHandler<SolveOptimizationCommand, CommandResult<OptimizationSummary>> {
     public async Task<CommandResult<OptimizationSummary>> Handle(
@@ -58,11 +67,20 @@ public sealed class OptimizationCommandHandler(
 
         if (UseAzureServiceBus()) {
             await runStore.CreateAsync(run, cancellationToken);
+            await notificationPublisher.PublishRunChangedAsync(run.ToRunChangedDto(), cancellationToken);
+
             try {
                 await jobQueue.EnqueueAsync(
                     new OptimizationJobMessage(run.TenantId, run.OptimizationRunId),
                     cancellationToken);
                 await runStore.MarkQueuedAsync(run.TenantId, run.OptimizationRunId, cancellationToken);
+                await notificationPublisher.PublishRunChangedAsync(
+                    (run with {
+                        Status = OptimizationRunStatus.Queued,
+                        Version = run.Version + 1,
+                        UpdatedAtUtc = DateTime.UtcNow
+                    }).ToRunChangedDto(),
+                    cancellationToken);
             } catch (Exception ex) {
                 await runStore.SaveFailureAsync(
                     run.TenantId,
@@ -70,10 +88,19 @@ public sealed class OptimizationCommandHandler(
                     $"Failed to enqueue optimization job: {ex.Message}",
                     OptimizationRunStatus.Failed,
                     cancellationToken);
+                await notificationPublisher.PublishRunChangedAsync(
+                    (run with {
+                        Status = OptimizationRunStatus.Failed,
+                        Version = run.Version + 1,
+                        UpdatedAtUtc = DateTime.UtcNow,
+                        ErrorMessage = $"Failed to enqueue optimization job: {ex.Message}"
+                    }).ToRunChangedDto(),
+                    cancellationToken);
                 throw;
             }
         } else {
             await bus.PublishAsync(MessageRoutes.Request, request);
+            await notificationPublisher.PublishRunChangedAsync(run.ToRunChangedDto(), cancellationToken);
         }
 
         var summary = new OptimizationSummary(
@@ -101,6 +128,7 @@ public sealed class OptimizationQueryHandler(
     IRouteEnrichmentService routeEnrichmentService) :
     IRequestHandler<GetOptimizationRunStatusQuery, OptimizationRunStatusDto?>,
     IRequestHandler<GetOptimizationRunResultQuery, OptimizationResultQueryResult>,
+    IRequestHandler<GetOptimizationRunInsightQuery, OptimizationInsightQueryResult>,
     IRequestHandler<BuildOptimizationRequestQuery, OptimizeRouteRequest> {
     public async Task<OptimizationRunStatusDto?> Handle(
         GetOptimizationRunStatusQuery query,
@@ -127,6 +155,25 @@ public sealed class OptimizationQueryHandler(
         return new OptimizationResultQueryResult(
             OptimizationResultQueryStatus.Found,
             Result: enriched);
+    }
+
+    public async Task<OptimizationInsightQueryResult> Handle(
+        GetOptimizationRunInsightQuery query,
+        CancellationToken cancellationToken) {
+        var run = await runStore.GetAsync(tenant.TenantId, query.OptimizationRunId, cancellationToken);
+        if (run is null) {
+            return new OptimizationInsightQueryResult(OptimizationResultQueryStatus.NotFound);
+        }
+
+        if (run.AiInsight is null) {
+            return new OptimizationInsightQueryResult(
+                OptimizationResultQueryStatus.Accepted,
+                RunStatus: run.ToStatusDto());
+        }
+
+        return new OptimizationInsightQueryResult(
+            OptimizationResultQueryStatus.Found,
+            Insight: run.AiInsight);
     }
 
     public async Task<OptimizeRouteRequest> Handle(

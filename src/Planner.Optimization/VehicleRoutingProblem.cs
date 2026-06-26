@@ -152,7 +152,7 @@ public sealed class VehicleRoutingProblem : IRouteOptimizer {
         p.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.Savings;
         p.LocalSearchMetaheuristic = LocalSearchMetaheuristic.Types.Value.GuidedLocalSearch;
         p.TimeLimit = new Duration { Seconds = settings.SearchTimeLimitSeconds };
-        p.LogSearch = true; // ENABLE LOGGING
+        p.LogSearch = false;
         return rt.SolveWithParameters(p);
     }
 

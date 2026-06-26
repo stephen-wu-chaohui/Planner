@@ -62,7 +62,7 @@
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 _showError = true;
-                _errorMessage = "Google Maps API key is not configured. Set 'GoogleMaps:ApiKey' in configuration or launch settings.";
+                _errorMessage = "Google Maps API key is not configured. Set 'GoogleMaps:ApiKey' in wwwroot/appsettings.Development.json or generated runtime configuration.";
                 Logger.LogWarning("Google Maps API key missing");
                 StateHasChanged();
                 return;
@@ -110,18 +110,13 @@
         // Execution will PAUSE here until SetResult(true) is called above
         await _mapReadySource.Task;
 
-        customers = CustomerState.Customers?.Select(c => new CustomerMarker
+        customers = CustomerState.Customers.Select(c => new CustomerMarker
         {
             Label = c.Name,
             Lat = c.Location.Latitude,
             Lng = c.Location.Longitude
         }).ToList();
 
-        if (customers is null)
-        {
-            Logger.LogWarning("CustomerState.Customers is null when updating map markers");
-            return;
-        }
         await JS.InvokeVoidAsync("plannerMap.updateCustomers", customers);
     }
 

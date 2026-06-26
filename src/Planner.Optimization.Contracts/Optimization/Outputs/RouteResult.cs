@@ -1,4 +1,4 @@
-﻿namespace Planner.Messaging.Optimization.Outputs;
+namespace Planner.Messaging.Optimization.Outputs;
 
 /// <summary>
 /// Ordered list of stops for this vehicle.

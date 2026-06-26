@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Planner.API.Services;
 using Planner.Application;
 using Planner.Application.OptimizationRuns;
+using Planner.Contracts.OptimizationRuns;
 using Planner.Messaging;
 using Planner.Messaging.Firestore;
 using Planner.Messaging.Messaging;
@@ -26,6 +27,7 @@ public sealed class OptimizeRouteResultConsumer(
                     tenantContext.SetTenant(resp.TenantId);
                     var enrichmentService = scope.ServiceProvider.GetRequiredService<IRouteEnrichmentService>();
                     var firestoreBus = scope.ServiceProvider.GetRequiredService<IFirestoreMessageBus>();
+                    var notificationPublisher = scope.ServiceProvider.GetRequiredService<IOptimizationRunNotificationPublisher>();
 
                     // Enrich the raw response with data from the database
                     var enrichedDto = await enrichmentService.EnrichAsync(resp);
@@ -43,6 +45,28 @@ public sealed class OptimizeRouteResultConsumer(
                             { "status", "new" },
                             { "timestamp", FieldValue.ServerTimestamp }
                         });
+
+                    var status = string.IsNullOrWhiteSpace(resp.ErrorMessage)
+                        ? OptimizationRunStatus.Succeeded
+                        : OptimizationRunStatus.Failed;
+                    var notification = new OptimizationRunChangedDto(
+                        resp.TenantId,
+                        resp.OptimizationRunId,
+                        Version: 1,
+                        status,
+                        resp.CompletedAt,
+                        new OptimizationRunSummaryDto(
+                            JobCount: enrichedDto.Routes.Sum(r => r.Stops.Count),
+                            VehicleCount: enrichedDto.Routes.Count,
+                            RequestedAtUtc: resp.CompletedAt,
+                            SearchTimeLimitSeconds: 0,
+                            RequestedBy: null),
+                        HasResult: false,
+                        HasAiInsight: false,
+                        resp.ErrorMessage);
+
+                    await notificationPublisher.PublishRunChangedAsync(notification, stoppingToken);
+                    await notificationPublisher.PublishOptimizationCompletedAsync(enrichedDto, stoppingToken);
                 } catch (Exception ex) {
                     logger.LogError(ex,
                         "[OptimizeRouteResultConsumer] Error forwarding optimization result (RunId={RunId})",

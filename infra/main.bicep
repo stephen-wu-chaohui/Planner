@@ -44,9 +44,6 @@ param apiImage string = 'mcr.microsoft.com/dotnet/samples:aspnetapp'
 @description('Container image for the optimization worker Container App.')
 param optimizationWorkerImage string = 'mcr.microsoft.com/dotnet/samples:aspnetapp'
 
-@description('Container image for the async optimization Container Apps job worker.')
-param optimizationJobWorkerImage string = 'mcr.microsoft.com/dotnet/samples:dotnetapp'
-
 @description('Container image for the AI worker Container App.')
 param aiWorkerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
@@ -79,7 +76,6 @@ module core 'modules/core.bicep' = {
     entraTenantId: entraTenantId
     apiImage: apiImage
     optimizationWorkerImage: optimizationWorkerImage
-    optimizationJobWorkerImage: optimizationJobWorkerImage
     aiWorkerImage: aiWorkerImage
     dbMigratorImage: dbMigratorImage
   }

@@ -42,6 +42,52 @@ jobs:
         run: |
           dotnet restore src/Planner.BlazorApp/Planner.BlazorApp.csproj
 
+      - name: Generate Planner.BlazorApp runtime config
+        shell: pwsh
+        env:
+          API_BASE_URL: ${{ vars.BLAZOR_API_BASE_URL }}
+          API_SCOPE: ${{ vars.BLAZOR_API_SCOPE }}
+          AZURE_AD_AUTHORITY: ${{ vars.BLAZOR_AZURE_AD_AUTHORITY }}
+          AZURE_AD_CLIENT_ID: ${{ vars.BLAZOR_AZURE_AD_CLIENT_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ vars.BLAZOR_GOOGLE_MAPS_API_KEY }}
+          GOOGLE_MAPS_MAP_ID: ${{ vars.BLAZOR_GOOGLE_MAPS_MAP_ID }}
+        run: |
+          $required = [ordered]@{
+            API_BASE_URL = $env:API_BASE_URL
+            API_SCOPE = $env:API_SCOPE
+            AZURE_AD_AUTHORITY = $env:AZURE_AD_AUTHORITY
+            AZURE_AD_CLIENT_ID = $env:AZURE_AD_CLIENT_ID
+            GOOGLE_MAPS_API_KEY = $env:GOOGLE_MAPS_API_KEY
+          }
+
+          foreach ($item in $required.GetEnumerator()) {
+            if ([string]::IsNullOrWhiteSpace($item.Value)) {
+              throw "Required GitHub environment variable '$($item.Key)' is missing."
+            }
+          }
+
+          $config = [ordered]@{
+            Api = [ordered]@{
+              BaseUrl = $env:API_BASE_URL
+              Scope = $env:API_SCOPE
+            }
+            AzureAd = [ordered]@{
+              Authority = $env:AZURE_AD_AUTHORITY
+              ClientId = $env:AZURE_AD_CLIENT_ID
+              ValidateAuthority = $true
+            }
+            GoogleMaps = [ordered]@{
+              ApiKey = $env:GOOGLE_MAPS_API_KEY
+              MapId = $env:GOOGLE_MAPS_MAP_ID
+            }
+            Realtime = [ordered]@{
+              Provider = "SignalR"
+            }
+          }
+
+          $configPath = Join-Path $env:GITHUB_WORKSPACE "src/Planner.BlazorApp/wwwroot/appsettings.json"
+          $config | ConvertTo-Json -Depth 5 | Set-Content -Path $configPath -Encoding utf8
+
       - name: Build and publish Planner.BlazorApp
         run: |
           dotnet publish src/Planner.BlazorApp/Planner.BlazorApp.csproj \
@@ -52,4 +98,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.AZURE_BLAZOR_APP_NAME }}
-          package: ${{ github.workspace }}/publish
+          package: ${{ github.workspace }}/publish/wwwroot

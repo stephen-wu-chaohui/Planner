@@ -13,7 +13,6 @@ param entraDomain string
 param entraTenantId string
 param apiImage string = 'mcr.microsoft.com/dotnet/samples:aspnetapp'
 param optimizationWorkerImage string = 'mcr.microsoft.com/dotnet/samples:aspnetapp'
-param optimizationJobWorkerImage string = 'mcr.microsoft.com/dotnet/samples:dotnetapp'
 param aiWorkerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 param dbMigratorImage string = 'mcr.microsoft.com/dotnet/aspnet:10.0'
 
@@ -38,8 +37,6 @@ var aiWorkerContainerAppName = '${namePrefix}-ai-worker'
 var rabbitMqContainerAppName = 'rabbitmq'
 var migrateJobName = '${namePrefix}-db-migrate'
 var seedJobName = '${namePrefix}-db-seed'
-var optimizationJobWorkerJobName = '${namePrefix}-optimization-job-worker'
-var reactorFunctionAppName = '${namePrefix}-${suffix}-reactor'
 var serviceBusNamespaceName = '${namePrefix}-${suffix}-sb'
 var serviceBusQueueName = 'optimization-jobs'
 var cosmosAccountName = toLower(take('${compactPrefix}${suffix}cosmos', 44))
@@ -49,10 +46,8 @@ var signalRName = '${namePrefix}-${suffix}-signalr'
 
 var apiIdentityName = '${namePrefix}-api-id'
 var optimizationWorkerIdentityName = '${namePrefix}-optimization-worker-id'
-var optimizationJobWorkerIdentityName = '${namePrefix}-optimization-job-worker-id'
 var aiWorkerIdentityName = '${namePrefix}-ai-worker-id'
 var migratorIdentityName = '${namePrefix}-db-migrator-id'
-var reactorIdentityName = '${namePrefix}-reactor-id'
 
 var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
@@ -194,18 +189,8 @@ resource optimizationWorkerIdentity 'Microsoft.ManagedIdentity/userAssignedIdent
   location: location
 }
 
-resource optimizationJobWorkerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: optimizationJobWorkerIdentityName
-  location: location
-}
-
 resource aiWorkerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: aiWorkerIdentityName
-  location: location
-}
-
-resource reactorIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: reactorIdentityName
   location: location
 }
 
@@ -230,16 +215,6 @@ resource optimizationWorkerAcrPull 'Microsoft.Authorization/roleAssignments@2022
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
     principalId: optimizationWorkerIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource optimizationJobWorkerAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, optimizationJobWorkerIdentity.id, acrPullRoleId)
-  scope: acr
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
-    principalId: optimizationJobWorkerIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -284,32 +259,12 @@ resource optimizationWorkerKeyVaultSecretsUser 'Microsoft.Authorization/roleAssi
   }
 }
 
-resource optimizationJobWorkerKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, optimizationJobWorkerIdentity.id, keyVaultSecretsUserRoleId)
-  scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-    principalId: optimizationJobWorkerIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
 resource aiWorkerKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, aiWorkerIdentity.id, keyVaultSecretsUserRoleId)
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
     principalId: aiWorkerIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource reactorKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, reactorIdentity.id, keyVaultSecretsUserRoleId)
-  scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-    principalId: reactorIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -582,14 +537,6 @@ resource azureAdBlazorClientIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-
   }
 }
 
-resource azureAdBlazorClientSecretSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'azuread-blazor-client-secret'
-  properties: {
-    value: 'pending-bootstrap'
-  }
-}
-
 resource apiScopeSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'api-scope'
@@ -625,7 +572,6 @@ var keyVaultSecretDependencies = [
   azureAdDomainSecret
   azureAdApiClientIdSecret
   azureAdBlazorClientIdSecret
-  azureAdBlazorClientSecretSecret
   apiScopeSecret
   githubDeployClientIdSecret
 ]
@@ -642,65 +588,14 @@ resource blazorApp 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     clientAffinityEnabled: true
     siteConfig: {
-      linuxFxVersion: 'DOTNETCORE|10.0'
+      linuxFxVersion: 'NODE|20-lts'
+      appCommandLine: 'pm2 serve /home/site/wwwroot --spa --no-daemon'
       alwaysOn: true
       webSocketsEnabled: true
       appSettings: [
         {
-          name: 'ASPNETCORE_ENVIRONMENT'
-          value: 'Production'
-        }
-        {
-          name: 'Api__BaseUrl'
-          value: 'https://${apiHostName}'
-        }
-        {
-          name: 'Api__Scope'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/api-scope)'
-        }
-        {
-          name: 'AzureAd__Instance'
-          value: 'https://login.microsoftonline.com/'
-        }
-        {
-          name: 'AzureAd__Domain'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/azuread-domain)'
-        }
-        {
-          name: 'AzureAd__TenantId'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/azuread-tenant-id)'
-        }
-        {
-          name: 'AzureAd__ClientId'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/azuread-blazor-client-id)'
-        }
-        {
-          name: 'AzureAd__ClientSecret'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/azuread-blazor-client-secret)'
-        }
-        {
-          name: 'AzureAd__Scopes'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/api-scope)'
-        }
-        {
-          name: 'AzureAd__CallbackPath'
-          value: '/signin-oidc'
-        }
-        {
-          name: 'GoogleMaps__ApiKey'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/google-maps-api-key)'
-        }
-        {
-          name: 'GoogleMaps__MapId'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/google-maps-map-id)'
-        }
-        {
-          name: 'Firestore__ProjectId'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/firestore-project-id)'
-        }
-        {
-          name: 'FIREBASE_CONFIG_JSON'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/firebase-config-json)'
+          name: 'WEBSITE_NODE_DEFAULT_VERSION'
+          value: '~20'
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -940,6 +835,10 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'planner'
             }
             {
+              name: 'Cors__AllowedOrigins__0'
+              value: 'https://${plannerHostName}'
+            }
+            {
               name: 'RabbitMq__Host'
               value: rabbitMqApp.name
             }
@@ -1094,182 +993,6 @@ resource optimizationWorkerApp 'Microsoft.App/containerApps@2024-03-01' = {
     optimizationWorkerAcrPull
     optimizationWorkerKeyVaultSecretsUser
     rabbitMqApp
-  ]
-}
-
-resource optimizationJobWorkerJob 'Microsoft.App/jobs@2024-03-01' = {
-  name: optimizationJobWorkerJobName
-  location: location
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${optimizationJobWorkerIdentity.id}': {}
-    }
-  }
-  properties: {
-    environmentId: containerAppsEnvironment.id
-    configuration: {
-      triggerType: 'Event'
-      replicaTimeout: 1800
-      replicaRetryLimit: 1
-      eventTriggerConfig: {
-        parallelism: 1
-        replicaCompletionCount: 1
-        scale: {
-          minExecutions: 0
-          maxExecutions: 5
-          pollingInterval: 30
-          rules: [
-            {
-              name: 'servicebus-optimization-jobs'
-              type: 'azure-servicebus'
-              metadata: {
-                queueName: serviceBusQueueName
-                namespace: serviceBusNamespace.name
-                messageCount: '1'
-              }
-              auth: [
-                {
-                  secretRef: 'servicebus-connection'
-                  triggerParameter: 'connection'
-                }
-              ]
-            }
-          ]
-        }
-      }
-      registries: [
-        {
-          server: acr.properties.loginServer
-          identity: optimizationJobWorkerIdentity.id
-        }
-      ]
-      secrets: [
-        {
-          name: 'servicebus-connection'
-          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/servicebus-connection'
-          identity: optimizationJobWorkerIdentity.id
-        }
-        {
-          name: 'cosmos-connection'
-          keyVaultUrl: '${keyVault.properties.vaultUri}secrets/cosmos-connection'
-          identity: optimizationJobWorkerIdentity.id
-        }
-      ]
-    }
-    template: {
-      containers: [
-        {
-          name: 'planner-optimization-job-worker'
-          image: optimizationJobWorkerImage
-          env: [
-            {
-              name: 'DOTNET_ENVIRONMENT'
-              value: 'Production'
-            }
-            {
-              name: 'Cosmos__ConnectionString'
-              secretRef: 'cosmos-connection'
-            }
-            {
-              name: 'Cosmos__DatabaseName'
-              value: cosmosDatabaseName
-            }
-            {
-              name: 'Cosmos__OptimizationRunsContainerName'
-              value: cosmosOptimizationRunsContainerName
-            }
-            {
-              name: 'ServiceBus__ConnectionString'
-              secretRef: 'servicebus-connection'
-            }
-            {
-              name: 'ServiceBus__OptimizationQueueName'
-              value: serviceBusQueueName
-            }
-            {
-              name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-              value: appInsights.properties.ConnectionString
-            }
-          ]
-          resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
-          }
-        }
-      ]
-    }
-  }
-  dependsOn: [
-    optimizationJobWorkerAcrPull
-    optimizationJobWorkerKeyVaultSecretsUser
-    serviceBusConnectionSecret
-    cosmosConnectionSecret
-    cosmosOptimizationRunsContainer
-  ]
-}
-
-resource reactorFunctionApp 'Microsoft.Web/sites@2023-12-01' = {
-  name: reactorFunctionAppName
-  location: location
-  kind: 'functionapp,linux'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${reactorIdentity.id}': {}
-    }
-  }
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    keyVaultReferenceIdentity: reactorIdentity.id
-    siteConfig: {
-      linuxFxVersion: 'DOTNET-ISOLATED|10.0'
-      alwaysOn: true
-      appSettings: [
-        {
-          name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'dotnet-isolated'
-        }
-        {
-          name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: '1'
-        }
-        {
-          name: 'Cosmos__ConnectionString'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/cosmos-connection)'
-        }
-        {
-          name: 'Cosmos__DatabaseName'
-          value: cosmosDatabaseName
-        }
-        {
-          name: 'Cosmos__OptimizationRunsContainerName'
-          value: cosmosOptimizationRunsContainerName
-        }
-        {
-          name: 'SignalR__ConnectionString'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/signalr-connection)'
-        }
-        {
-          name: 'SignalR__HubName'
-          value: 'planner'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsights.properties.ConnectionString
-        }
-      ]
-    }
-  }
-  dependsOn: [
-    reactorKeyVaultSecretsUser
-    cosmosConnectionSecret
-    signalRConnectionSecret
   ]
 }
 
@@ -1490,9 +1213,7 @@ output names object = {
   cosmosAccountName: cosmosAccount.name
   keyVaultName: keyVault.name
   migrateJobName: migrateJob.name
-  optimizationJobWorkerJobName: optimizationJobWorkerJob.name
   optimizationWorkerContainerAppName: optimizationWorkerApp.name
-  reactorFunctionAppName: reactorFunctionApp.name
   resourceGroupLocation: location
   seedJobName: seedJob.name
   serviceBusNamespaceName: serviceBusNamespace.name
@@ -1509,9 +1230,7 @@ output githubVariables object = {
   AZURE_DB_MIGRATE_JOB_NAME: migrateJob.name
   AZURE_DB_SEED_JOB_NAME: seedJob.name
   AZURE_KEY_VAULT_NAME: keyVault.name
-  AZURE_OPTIMIZATION_JOB_NAME: optimizationJobWorkerJob.name
   AZURE_OPTIMIZATION_CONTAINER_APP_NAME: optimizationWorkerApp.name
-  AZURE_REACTOR_FUNCTION_APP_NAME: reactorFunctionApp.name
   AZURE_RESOURCE_GROUP: resourceGroup().name
 }
 output dnsRecords object = {

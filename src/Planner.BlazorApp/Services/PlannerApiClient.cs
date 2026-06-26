@@ -1,5 +1,5 @@
-﻿using Planner.BlazorApp.Auth;
-using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Net;
 
 namespace Planner.BlazorApp.Services;
 
@@ -8,20 +8,7 @@ public sealed class PlannerApiClient(
 {
     private HttpClient CreateClient()
     {
-        var client = httpClientFactory.CreateClient("PlannerApi");
-
-        //// Always set/clear auth per request based on the *current* scoped TokenStore
-        //if (!string.IsNullOrWhiteSpace(tokenStore.AccessToken) && !tokenStore.IsExpired())
-        //{
-        //    client.DefaultRequestHeaders.Authorization =
-        //        new AuthenticationHeaderValue("Bearer", tokenStore.AccessToken);
-        //}
-        //else
-        //{
-        //    client.DefaultRequestHeaders.Authorization = null;
-        //}
-
-        return client;
+        return httpClientFactory.CreateClient("PlannerApi");
     }
 
     public Task<HttpResponseMessage> GetAsync(string requestUri, CancellationToken cancellationToken = default) =>
@@ -37,9 +24,8 @@ public sealed class PlannerApiClient(
     {
         var response = await GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
 
-        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.NoContent)
         {
-            // tokenStore?.Clear();
             return default;
         }
 
@@ -49,11 +35,7 @@ public sealed class PlannerApiClient(
 
     public async Task<HttpResponseMessage> PutAsJsonAsync<T>(string requestUri, T value, CancellationToken cancellationToken = default)
     {
-        var response = await CreateClient().PutAsJsonAsync(requestUri, value, cancellationToken);
-        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
-            // tokenStore?.Clear();
-        }
-        return response;
+        return await CreateClient().PutAsJsonAsync(requestUri, value, cancellationToken);
     }
 
     public async Task<HttpResponseMessage> DeleteAsync(string requestUri, long id, CancellationToken cancellationToken = default) {
@@ -61,12 +43,10 @@ public sealed class PlannerApiClient(
         var response = await CreateClient().DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) {
-            // tokenStore.Clear();
             return response;
         }
 
         response.EnsureSuccessStatusCode();
         return response;
     }
-
 }

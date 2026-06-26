@@ -1,5 +1,3 @@
-﻿using System.Collections.ObjectModel;
-
 namespace Planner.Messaging.Optimization.Inputs;
 
 /// <summary>

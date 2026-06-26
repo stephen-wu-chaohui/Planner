@@ -53,6 +53,8 @@ services:
       - SignalR__Server=http://planner-api:7085
       - SignalR__Client=http://localhost:7014
       - SignalR__Route=/hubs/planner
+      - Cors__AllowedOrigins__0=https://localhost:7014
+      - Cors__AllowedOrigins__1=http://localhost:5212
       - RabbitMq__Host=rabbitmq
       - RabbitMq__User=planner
       - RabbitMq__Pass=planner
@@ -62,11 +64,13 @@ services:
       - AzureAd__ClientId=8621f365-5e51-4b25-931a-1c717ead22ac
       - Firestore__ProjectId=${FIRESTORE_PROJECT_ID}
       - Firestore__DatabaseId=${FIRESTORE_DATABASE_ID}
-      - Cosmos__ConnectionString=${COSMOS_CONNECTION_STRING}
+      - Cosmos__ConnectionString=AccountEndpoint=https://cosmosdb:8081/;AccountKey=${COSMOS_EMULATOR_KEY:-cGxhbm5lci1sb2NhbC1jb3Ntb3MtZW11bGF0b3ItZGV2ZWxvcG1lbnQta2V5LTAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMA==};DisableServerCertificateValidation=True;
       - Cosmos__DatabaseName=planner
       - Cosmos__OptimizationRunsContainerName=optimizationRuns
-      - Cosmos__DisableServerCertificateValidation=${COSMOS_DISABLE_SERVER_CERTIFICATE_VALIDATION:-false}
-      - ServiceBus__ConnectionString=${SERVICEBUS_CONNECTION_STRING}
+      - Cosmos__ConnectionMode=Gateway
+      - Cosmos__RequestTimeoutSeconds=15
+      - Cosmos__DisableServerCertificateValidation=${COSMOS_DISABLE_SERVER_CERTIFICATE_VALIDATION:-true}
+      - ServiceBus__ConnectionString=Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
       - ServiceBus__OptimizationQueueName=optimization-jobs
       - SignalR__ConnectionString=${AZURE_SIGNALR_CONNECTION_STRING}
       - SignalR__HubName=planner
@@ -79,10 +83,21 @@ services:
     image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest
     container_name: cosmosdb
     profiles: ["azure-emulators"]
+    command: ["--gateway-endpoint", "cosmosdb"]
     ports:
       - "8081:8081"
       - "8080:8080"
       - "1234:1234"
+    environment:
+      - PROTOCOL=https
+      - KEY_FILE=/cosmos/key
+      - ENABLE_INIT_DATA=true
+      - INIT_PATH=/init
+      - ENABLE_TELEMETRY=false
+    volumes:
+      - ./infra/local/cosmos-emulator.key:/cosmos/key:ro
+      - ./infra/local/cosmos-init:/init:ro
+      - cosmos_data:/data
     restart: unless-stopped
 
   # SQL dependency for Azure Service Bus emulator
@@ -113,26 +128,6 @@ services:
     depends_on:
       - servicebus-mssql
     restart: unless-stopped
-
-  # One-message Azure optimization job worker. Run manually when testing Azure mode.
-  planner-optimization-job-worker:
-    build:
-      context: .
-      dockerfile: src/Planner.Optimization.JobWorker/Dockerfile
-    container_name: planner-optimization-job-worker
-    profiles: ["azure-emulators"]
-    depends_on:
-      - servicebus-emulator
-      - cosmosdb
-    environment:
-      - DOTNET_ENVIRONMENT=Development
-      - Cosmos__ConnectionString=${COSMOS_CONNECTION_STRING}
-      - Cosmos__DatabaseName=planner
-      - Cosmos__OptimizationRunsContainerName=optimizationRuns
-      - Cosmos__DisableServerCertificateValidation=${COSMOS_DISABLE_SERVER_CERTIFICATE_VALIDATION:-true}
-      - ServiceBus__ConnectionString=Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
-      - ServiceBus__OptimizationQueueName=optimization-jobs
-    restart: "no"
 
   # .NET Optimization Worker
   planner-optimization-worker:
@@ -173,4 +168,4 @@ services:
 volumes:
   sqlserver_data:
   rabbitmq_data:
-
+  cosmos_data:

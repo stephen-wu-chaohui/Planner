@@ -56,6 +56,22 @@ public class OptimizationController(IMediator mediator) : PlannerControllerBase 
         };
     }
 
+    [HttpGet("runs/{optimizationRunId:guid}/insight")]
+    public async Task<IActionResult> GetRunInsight(
+        Guid optimizationRunId,
+        CancellationToken cancellationToken) {
+        var result = await mediator.Send(
+            new GetOptimizationRunInsightQuery(optimizationRunId),
+            cancellationToken);
+
+        return result.Status switch {
+            OptimizationResultQueryStatus.Found when result.Insight is not null => Ok(result.Insight),
+            OptimizationResultQueryStatus.Accepted => Accepted(result.RunStatus),
+            OptimizationResultQueryStatus.NotFound => NotFound(),
+            _ => Problem($"Unhandled optimization insight status: {result.Status}")
+        };
+    }
+
     private Task<OptimizeRouteRequest> BuildRequestFromDomainAsync(int? searchTimeLimitSeconds = null) =>
         mediator.Send(
             new BuildOptimizationRequestQuery(searchTimeLimitSeconds),

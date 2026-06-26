@@ -18,8 +18,20 @@ window.loadGoogleMaps = (apiKey) => {
         return Promise.resolve(); 
     }
 
-    // 2. Otherwise, wait for the 'mapInteropInit' callback to resolve this promise.
-    //    We assume the script tag in App.razor has already started the process.
+    if (!apiKey) {
+        return Promise.reject(new Error("Google Maps API key is missing."));
+    }
+
+    if (!document.getElementById("google-maps-script")) {
+        const script = document.createElement("script");
+        script.id = "google-maps-script";
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=marker,places,routes,geometry&loading=async&callback=mapInteropInit`;
+        script.async = true;
+        script.defer = true;
+        script.onerror = () => console.error("Failed to load Google Maps script.");
+        document.head.appendChild(script);
+    }
+
     return googleMapsPromise;
 };
 

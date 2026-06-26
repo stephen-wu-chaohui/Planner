@@ -25,6 +25,7 @@ Deploy:
 ```
 
 This creates `rg-planner-dev-aue`, ACR, Key Vault, Log Analytics/App Insights, Container Apps, RabbitMQ with Azure Files storage, Azure SQL, App Service, and DbMigrator jobs.
+The Blazor App Service is a Linux Node/PM2 static host for the published WebAssembly assets.
 
 ## 2. Bootstrap Entra ID
 
@@ -35,11 +36,11 @@ This creates `rg-planner-dev-aue`, ACR, Key Vault, Log Analytics/App Insights, C
 This creates or updates:
 
 - `planner-dev-api` with `API.Access`.
-- `planner-dev-blazor` with `https://planner.plannerdemo.com/signin-oidc`.
+- `planner-dev-blazor` as a public SPA client with `https://planner.plannerdemo.com/authentication/login-callback`.
 - `planner-dev-github-deploy` with GitHub OIDC subject `repo:stephen-wu-chaohui/Planner:environment:dev`.
 - Demo admin users for the seeded tenants.
 
-It stores app ids, the Blazor client secret, and the API scope in Key Vault.
+It stores app ids and the API scope in Key Vault. The Blazor WebAssembly app does not use a client secret.
 
 ## 3. Store Rotated Runtime Secrets
 
@@ -60,6 +61,7 @@ It stores app ids, the Blazor client secret, and the API scope in Key Vault.
 ```
 
 GitHub environment `dev` receives only the Azure OIDC secrets. Resource names are stored as environment variables.
+Browser-visible Blazor WebAssembly settings are also stored as GitHub environment variables and are generated into `wwwroot/appsettings.json` during the Blazor deploy workflow.
 
 ## 5. Configure DNS And Certificates
 
@@ -96,6 +98,6 @@ Run the GitHub workflows in this order:
 
 - `https://api.plannerdemo.com/health` returns healthy.
 - `https://api.plannerdemo.com/graphql` loads.
-- `https://planner.plannerdemo.com` redirects through Entra login.
+- `https://planner.plannerdemo.com` redirects through Entra login using `/authentication/login-callback`.
 - Sign in as `auckland.admin@plannerdemo.com`.
-- Submit an optimization request and verify API -> RabbitMQ -> worker -> Firestore -> AI insight -> Blazor display.
+- Submit an optimization request and verify API -> queue -> worker -> run store -> SignalR notification -> Blazor API refresh.

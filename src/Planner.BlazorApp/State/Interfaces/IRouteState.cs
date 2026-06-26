@@ -7,7 +7,7 @@ public interface IRouteState : IDispatchStateProcessing
 {
     IReadOnlyList<RouteDto> Routes { get; }
     IReadOnlyList<MapRoute> MapRoutes { get; }
-    OptimizationSummaryInfo LastOptimizationSummary { get; }
+    OptimizationSummaryInfo? LastOptimizationSummary { get; }
     event Action OnRoutesChanged;
     event Action<int> StartWaitingForSolve;
 
