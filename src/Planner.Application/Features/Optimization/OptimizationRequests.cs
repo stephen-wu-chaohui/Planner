@@ -7,6 +7,7 @@ using Planner.Contracts.Optimization;
 using Planner.Contracts.OptimizationRuns;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
+using Planner.Messaging.Optimization.Outputs;
 
 namespace Planner.Application.Features.Optimization;
 
@@ -41,15 +42,18 @@ public sealed record GetOptimizationRunInsightQuery(Guid OptimizationRunId)
 public sealed record BuildOptimizationRequestQuery(int? SearchTimeLimitSeconds)
     : IRequest<OptimizeRouteRequest>;
 
+public sealed record CompleteOptimizationRunCommand(OptimizeRouteResponse Response)
+    : IRequest<CommandResult>;
+
 public sealed class OptimizationCommandHandler(
     IMessageBus bus,
     IOptimizationRunSnapshotBuilder snapshotBuilder,
     IOptimizationRunStore runStore,
-    IOptimizationJobQueue jobQueue,
     ITenantContext tenant,
     IOptimizationRunNotificationPublisher notificationPublisher,
     IConfiguration configuration) :
-    IRequestHandler<SolveOptimizationCommand, CommandResult<OptimizationSummary>> {
+    IRequestHandler<SolveOptimizationCommand, CommandResult<OptimizationSummary>>,
+    IRequestHandler<CompleteOptimizationRunCommand, CommandResult> {
     public async Task<CommandResult<OptimizationSummary>> Handle(
         SolveOptimizationCommand command,
         CancellationToken cancellationToken) {
@@ -65,14 +69,12 @@ public sealed class OptimizationCommandHandler(
             return CommandResult<OptimizationSummary>.Rejected("No jobs or vehicles available for optimization.");
         }
 
-        if (UseAzureServiceBus()) {
+        if (UseAzureOptimizationDispatch()) {
             await runStore.CreateAsync(run, cancellationToken);
             await notificationPublisher.PublishRunChangedAsync(run.ToRunChangedDto(), cancellationToken);
 
             try {
-                await jobQueue.EnqueueAsync(
-                    new OptimizationJobMessage(run.TenantId, run.OptimizationRunId),
-                    cancellationToken);
+                await bus.PublishAsync(MessageRoutes.Request, request);
                 await runStore.MarkQueuedAsync(run.TenantId, run.OptimizationRunId, cancellationToken);
                 await notificationPublisher.PublishRunChangedAsync(
                     (run with {
@@ -114,10 +116,56 @@ public sealed class OptimizationCommandHandler(
         return CommandResult<OptimizationSummary>.Succeeded(summary);
     }
 
-    private bool UseAzureServiceBus() =>
+    public async Task<CommandResult> Handle(
+        CompleteOptimizationRunCommand command,
+        CancellationToken cancellationToken) {
+        var response = command.Response;
+        if (response.TenantId == Guid.Empty) {
+            return CommandResult.Rejected("TenantId missing.");
+        }
+
+        if (response.OptimizationRunId == Guid.Empty) {
+            return CommandResult.Rejected("OptimizationRunId missing.");
+        }
+
+        var run = await runStore.GetAsync(
+            response.TenantId,
+            response.OptimizationRunId,
+            cancellationToken);
+        if (run is null) {
+            return CommandResult.NotFound();
+        }
+
+        await runStore.SaveSolverResultAsync(
+            response.TenantId,
+            response.OptimizationRunId,
+            response,
+            cancellationToken);
+
+        var updated = await runStore.GetAsync(
+            response.TenantId,
+            response.OptimizationRunId,
+            cancellationToken);
+        if (updated is not null) {
+            await notificationPublisher.PublishRunChangedAsync(
+                updated.ToRunChangedDto(),
+                cancellationToken);
+        }
+
+        return CommandResult.Succeeded();
+    }
+
+    private bool UseAzureOptimizationDispatch() =>
+        IsAzureOptimizationDispatch(configuration);
+
+    private static bool IsAzureOptimizationDispatch(IConfiguration configuration) =>
         string.Equals(
             configuration["Optimization:DispatchMode"],
             "AzureServiceBus",
+            StringComparison.OrdinalIgnoreCase)
+        || string.Equals(
+            configuration["OptimizationMessaging:Transport"],
+            "ServiceBus",
             StringComparison.OrdinalIgnoreCase);
 }
 

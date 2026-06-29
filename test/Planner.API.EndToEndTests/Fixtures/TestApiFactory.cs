@@ -27,7 +27,8 @@ public sealed class TestApiFactory : IDisposable {
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Optimization:DispatchMode"] = dispatchMode
+                ["Optimization:DispatchMode"] = dispatchMode,
+                ["Optimization:WorkerResultApiKey"] = "test-worker-result-key"
             })
             .Build());
 
@@ -111,7 +112,12 @@ public sealed class TestApiFactory : IDisposable {
 
         public Task SaveSolverResultAsync(Guid tenantId, Guid runId, OptimizeRouteResponse result, CancellationToken ct) {
             if (Runs.TryGetValue(runId, out var run)) {
-                Runs[runId] = run with { SolverResult = result };
+                Runs[runId] = run with {
+                    SolverResult = result,
+                    Status = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                        ? OptimizationRunStatus.Succeeded
+                        : OptimizationRunStatus.Failed
+                };
             }
 
             return Task.CompletedTask;

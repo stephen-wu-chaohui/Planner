@@ -6,11 +6,14 @@ using Planner.Application;
 using Planner.Infrastructure.Persistence;
 using Planner.Messaging.Messaging;
 using Planner.Messaging.Optimization.Inputs;
+using Planner.Messaging.Optimization.Outputs;
 using Planner.Testing;
 using Planner.Application.OptimizationRuns;
+using Planner.Contracts.OptimizationRuns;
 using Planner.Domain;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -81,7 +84,8 @@ public sealed class OptimizationControllerEndToEndTests {
         queue.Messages.Should().ContainSingle();
         queue.Messages[0].TenantId.Should().Be(tenant.TenantId);
         queue.Messages[0].OptimizationRunId.Should().Be(store.Runs.Single().Key);
-        bus!.PublishedMessages.Should().BeEmpty();
+        bus!.PublishedMessages.Should().ContainSingle(m =>
+            m.Route == MessageRoutes.Request);
     }
 
     [Fact]
@@ -110,6 +114,38 @@ public sealed class OptimizationControllerEndToEndTests {
         run.RequestSnapshot.TenantId.Should().Be(tenant.TenantId);
         run.RequestSnapshot.Vehicles.Should().ContainSingle(v => v.VehicleId == 1);
         run.RequestSnapshot.Stops.Select(s => s.LocationId).Should().BeEquivalentTo([1L, 2L]);
+    }
+
+    [Fact]
+    public async Task CompleteRun_endpoint_persists_solver_result_in_azure_mode() {
+        using var factory = new TestApiFactory(dispatchMode: "AzureServiceBus");
+
+        var tenant = factory.Get<ITenantContext>();
+        var db = factory.Get<PlannerDbContext>();
+        var controller = factory.Get<OptimizationController>();
+        controller.MockUserContext();
+        controller.Request.Headers["X-Optimization-Worker-Key"] = "test-worker-result-key";
+
+        DomainSeed.SeedSmallScenario(db, tenant.TenantId);
+        await db.SaveChangesAsync();
+
+        var solveResult = await controller.Solve();
+        solveResult.Should().BeOfType<OkObjectResult>();
+
+        var store = (TestApiFactory.InMemoryOptimizationRunStore)factory.Get<IOptimizationRunStore>();
+        var run = store.Runs.Values.Single();
+        var response = new OptimizeRouteResponse(
+            run.TenantId,
+            run.OptimizationRunId,
+            DateTime.UtcNow,
+            [],
+            0);
+
+        var result = await controller.CompleteRun(run.OptimizationRunId, response, CancellationToken.None);
+
+        result.Should().BeOfType<NoContentResult>();
+        store.Runs[run.OptimizationRunId].SolverResult.Should().Be(response);
+        store.Runs[run.OptimizationRunId].Status.Should().Be(OptimizationRunStatus.Succeeded);
     }
 
     private static void SeedOtherTenantSmallScenario(PlannerDbContext db, Guid tenantId) {

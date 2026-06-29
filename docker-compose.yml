@@ -49,6 +49,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5000;http://+:7085
       - Optimization__DispatchMode=${OPTIMIZATION_DISPATCH_MODE:-RabbitMq}
+      - OptimizationMessaging__Transport=${OPTIMIZATION_MESSAGING_TRANSPORT:-RabbitMQ}
+      - Optimization__WorkerResultApiKey=${OPTIMIZATION_WORKER_RESULT_API_KEY:-planner-dev-worker-result-key}
       - ConnectionStrings__PlannerDb=Server=sqlserver,1433;Database=PlannerDB;User Id=sa;Password=PlannerDevPass123;Encrypt=False;TrustServerCertificate=True;
       - SignalR__Server=http://planner-api:7085
       - SignalR__Client=http://localhost:7014
@@ -142,10 +144,22 @@ services:
         condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - Optimization__DispatchMode=${OPTIMIZATION_DISPATCH_MODE:-RabbitMq}
+      - OptimizationMessaging__Transport=${OPTIMIZATION_MESSAGING_TRANSPORT:-RabbitMQ}
       - RabbitMq__Host=rabbitmq
       - RabbitMq__User=planner
       - RabbitMq__Pass=planner
       - RabbitMq__Port=5672
+      - Cosmos__ConnectionString=AccountEndpoint=https://cosmosdb:8081/;AccountKey=${COSMOS_EMULATOR_KEY:-cGxhbm5lci1sb2NhbC1jb3Ntb3MtZW11bGF0b3ItZGV2ZWxvcG1lbnQta2V5LTAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMA==};DisableServerCertificateValidation=True;
+      - Cosmos__DatabaseName=planner
+      - Cosmos__OptimizationRunsContainerName=optimizationRuns
+      - Cosmos__ConnectionMode=Gateway
+      - Cosmos__RequestTimeoutSeconds=15
+      - Cosmos__DisableServerCertificateValidation=${COSMOS_DISABLE_SERVER_CERTIFICATE_VALIDATION:-true}
+      - ServiceBus__ConnectionString=Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;
+      - ServiceBus__OptimizationQueueName=optimization-jobs
+      - PlannerApi__BaseUrl=http://planner-api:5000
+      - Optimization__WorkerResultApiKey=${OPTIMIZATION_WORKER_RESULT_API_KEY:-planner-dev-worker-result-key}
       - SignalR__Server=http://planner-api:7085
       - SignalR__Client=http://localhost:7014
       - SignalR__Route=/hubs/planner

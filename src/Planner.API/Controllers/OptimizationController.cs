@@ -6,13 +6,18 @@ using Planner.Application.Features.Optimization;
 using Planner.Contracts.Optimization;
 using Planner.Contracts.OptimizationRuns;
 using Planner.Messaging.Optimization.Inputs;
+using Planner.Messaging.Optimization.Outputs;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Planner.API.Controllers;
 
 [ApiController]
 [Route("api/vrp")]
 [Authorize]
-public class OptimizationController(IMediator mediator) : PlannerControllerBase {
+public class OptimizationController(
+    IMediator mediator,
+    IConfiguration configuration) : PlannerControllerBase {
     /// <summary>
     /// Accept a route optimization request and dispatch it to the optimization worker.
     /// </summary>
@@ -72,8 +77,46 @@ public class OptimizationController(IMediator mediator) : PlannerControllerBase 
         };
     }
 
+    [HttpPost("runs/{optimizationRunId:guid}/result")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CompleteRun(
+        Guid optimizationRunId,
+        [FromBody] OptimizeRouteResponse response,
+        CancellationToken cancellationToken) {
+        if (!IsAuthorizedWorkerRequest()) {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        if (response.OptimizationRunId != optimizationRunId) {
+            return BadRequest("Route optimizationRunId does not match the response body.");
+        }
+
+        var result = await mediator.Send(
+            new CompleteOptimizationRunCommand(response),
+            cancellationToken);
+
+        return NoContentOrError(result);
+    }
+
     private Task<OptimizeRouteRequest> BuildRequestFromDomainAsync(int? searchTimeLimitSeconds = null) =>
         mediator.Send(
             new BuildOptimizationRequestQuery(searchTimeLimitSeconds),
             HttpContext?.RequestAborted ?? CancellationToken.None);
+
+    private bool IsAuthorizedWorkerRequest() {
+        var expectedApiKey = configuration["Optimization:WorkerResultApiKey"];
+        if (string.IsNullOrWhiteSpace(expectedApiKey)) {
+            return false;
+        }
+
+        if (!Request.Headers.TryGetValue("X-Optimization-Worker-Key", out var providedApiKey)) {
+            return false;
+        }
+
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedApiKey);
+        var providedBytes = Encoding.UTF8.GetBytes(providedApiKey.ToString());
+
+        return expectedBytes.Length == providedBytes.Length
+            && CryptographicOperations.FixedTimeEquals(expectedBytes, providedBytes);
+    }
 }
