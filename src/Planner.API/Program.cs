@@ -12,7 +12,6 @@ using Planner.Application.OptimizationRuns;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Coordinator;
 using Planner.Messaging;
-using Planner.Messaging.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,7 +115,7 @@ builder.Services
 
 // Messaging
 if (useAzureOptimizationDispatch) {
-    builder.Services.AddSingleton<IMessageBus, DisabledLegacyOptimizationMessageBus>();
+    builder.Services.AddAzureOptimizationMessaging();
 } else {
     builder.Services.AddMessagingBus();
 }
@@ -187,9 +186,10 @@ static void ValidateRequiredConfiguration(IConfiguration config) {
         "AzureAd:ClientId"
     };
 
-    var dispatchMode = config["Optimization:DispatchMode"] ?? "RabbitMq";
+    var dispatchMode = OptimizationDispatchMode(config);
     if (UseAzureServiceBusDispatch(config)) {
         requiredKeys.Add("ServiceBus:ConnectionString");
+        requiredKeys.Add("Optimization:WorkerResultApiKey");
 
         var hasCosmosConnectionString = !string.IsNullOrWhiteSpace(config["Cosmos:ConnectionString"]);
         var hasCosmosEndpointAndKey =
@@ -199,11 +199,11 @@ static void ValidateRequiredConfiguration(IConfiguration config) {
         if (!hasCosmosConnectionString && !hasCosmosEndpointAndKey) {
             requiredKeys.Add("Cosmos:ConnectionString or Cosmos:Endpoint plus Cosmos:Key");
         }
-    } else if (string.Equals(dispatchMode, "RabbitMq", StringComparison.OrdinalIgnoreCase)) {
+    } else if (IsRabbitMqDispatch(dispatchMode)) {
         requiredKeys.Add("RabbitMq:Host");
     } else {
         throw new InvalidOperationException(
-            $"Unsupported Optimization:DispatchMode '{dispatchMode}'. Supported values are RabbitMq and AzureServiceBus.");
+            $"Unsupported optimization dispatch mode '{dispatchMode}'. Supported values are RabbitMq, AzureServiceBus, and OptimizationMessaging:Transport values RabbitMQ or ServiceBus.");
     }
 
     var missing = requiredKeys
@@ -221,7 +221,20 @@ static bool UseAzureServiceBusDispatch(IConfiguration config) =>
     string.Equals(
         config["Optimization:DispatchMode"],
         "AzureServiceBus",
+        StringComparison.OrdinalIgnoreCase)
+    || string.Equals(
+        config["OptimizationMessaging:Transport"],
+        "ServiceBus",
         StringComparison.OrdinalIgnoreCase);
+
+static string OptimizationDispatchMode(IConfiguration config) =>
+    config["Optimization:DispatchMode"]
+    ?? config["OptimizationMessaging:Transport"]
+    ?? "RabbitMq";
+
+static bool IsRabbitMqDispatch(string dispatchMode) =>
+    string.Equals(dispatchMode, "RabbitMq", StringComparison.OrdinalIgnoreCase)
+    || string.Equals(dispatchMode, "RabbitMQ", StringComparison.OrdinalIgnoreCase);
 
 static bool UseAzureSignalRService(IConfiguration config, IHostEnvironment environment) =>
     environment.IsProduction() &&
@@ -249,13 +262,3 @@ static string[] GetAllowedCorsOrigins(IConfiguration config) {
 }
 
 public partial class Program { }
-
-internal sealed class DisabledLegacyOptimizationMessageBus : IMessageBus {
-    public Task PublishAsync<T>(string queueName, T message) =>
-        throw new InvalidOperationException(
-            "RabbitMQ optimization messaging is disabled because Optimization:DispatchMode is AzureServiceBus.");
-
-    public IDisposable Subscribe<T>(string queueName, Func<T, Task> onMessage) =>
-        throw new InvalidOperationException(
-            "RabbitMQ optimization messaging is disabled because Optimization:DispatchMode is AzureServiceBus.");
-}
