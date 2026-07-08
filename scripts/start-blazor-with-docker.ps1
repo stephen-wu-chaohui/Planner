@@ -88,6 +88,66 @@ function Start-BlazorDetached {
     return $process
 }
 
+function Stop-ExistingBlazorApp {
+    param(
+        [Parameter(Mandatory = $true)][int[]]$Ports,
+        [Parameter(Mandatory = $true)][string]$ProjectPath
+    )
+
+    $connections = @()
+    foreach ($port in $Ports) {
+        $connections += @(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)
+    }
+
+    if ($connections.Count -eq 0) {
+        return
+    }
+
+    $projectName = [System.IO.Path]::GetFileNameWithoutExtension($ProjectPath)
+    $processIds = $connections | Select-Object -ExpandProperty OwningProcess -Unique
+
+    foreach ($processId in $processIds) {
+        if ($processId -eq 0) {
+            continue
+        }
+
+        $matchingConnections = @($connections | Where-Object { $_.OwningProcess -eq $processId })
+        $matchingPorts = @($matchingConnections | Select-Object -ExpandProperty LocalPort -Unique | Sort-Object)
+        $matchingPortsText = $matchingPorts -join ", "
+
+        $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction SilentlyContinue
+        if ($null -eq $processInfo) {
+            throw "Port(s) $matchingPortsText are in use by PID $processId, but the process could not be inspected."
+        }
+
+        $commandLine = if ($null -ne $processInfo.CommandLine) { $processInfo.CommandLine } else { "" }
+        $isBlazorProcess =
+            $processInfo.Name -ieq "$projectName.exe" -or
+            ($processInfo.Name -ieq "dotnet.exe" -and $commandLine -match [regex]::Escape($projectName))
+
+        if (-not $isBlazorProcess) {
+            throw "Port(s) $matchingPortsText are already in use by PID $processId ($($processInfo.Name)), but it does not look like $projectName. Stop that process manually or free the port."
+        }
+
+        Write-Host "Stopping existing $projectName on port(s) $matchingPortsText. PID: $processId"
+        Stop-Process -Id $processId -Force
+        Wait-Process -Id $processId -Timeout 10 -ErrorAction SilentlyContinue
+    }
+
+    $remainingConnections = @()
+    foreach ($port in $Ports) {
+        $remainingConnections += @(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)
+    }
+
+    if ($remainingConnections.Count -gt 0) {
+        $remaining = $remainingConnections |
+            Select-Object LocalAddress, LocalPort, OwningProcess |
+            Format-Table -AutoSize |
+            Out-String
+        throw "Planner.BlazorApp port cleanup did not release all ports:`n$remaining"
+    }
+}
+
 function Wait-ForBlazor {
     param(
         [Parameter(Mandatory = $true)][string]$Url,
@@ -199,6 +259,8 @@ try {
     Write-Host "UI:  https://localhost:7014"
     Write-Host "API: http://localhost:7085"
     Write-Host ""
+
+    Stop-ExistingBlazorApp -Ports @(7014, 5212) -ProjectPath $blazorProject
 
     if ($DetachedBlazor) {
         $blazorProcess = Start-BlazorDetached -RepoRoot $repoRoot -ProjectPath $blazorProject
