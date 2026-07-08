@@ -6,8 +6,17 @@ WORKDIR /src
 ARG TARGETARCH=amd64
 
 # Copy project files required by Worker restore graph
+COPY src/Planner.Application/Planner.Application.csproj \
+     src/Planner.Application/
+
 COPY src/Planner.Contracts/Planner.Contracts.csproj \
      src/Planner.Contracts/
+
+COPY src/Planner.Domain/Planner.Domain.csproj \
+     src/Planner.Domain/
+
+COPY src/Planner.Infrastructure/Planner.Infrastructure.csproj \
+     src/Planner.Infrastructure/
 
 COPY src/Planner.Messaging/Planner.Messaging.csproj \
      src/Planner.Messaging/
@@ -51,7 +60,7 @@ RUN case "$TARGETARCH" in \
 # ============================
 # Runtime stage
 # ============================
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 # Rely on the built-in Microsoft user
 USER app

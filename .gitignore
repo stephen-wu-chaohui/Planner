@@ -3,17 +3,6 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
-# dotenv files
-.env
-.env.local
-.env.*.local
-.env.azure
-src/**/local.settings.json
-
-# Firebase credentials (sensitive)
-*firebase-credentials.json
-*-firebase-adminsdk-*.json
-
 # User-specific files
 *.rsuser
 *.suo
@@ -492,27 +481,52 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-/src/Shared
-/publish-api
-/publish-blazor
+
+################################################################################
+# Planner project-specific ignores
+################################################################################
+
+# Local environment files and secrets.
+# Shared examples should use committed *.example files instead.
+.env
+.env.local
+.env.*.local
+.env.azure
+src/**/local.settings.json
+/src/Credentials/
+*firebase-credentials.json
+*-firebase-adminsdk-*.json
+
+# Local-only PowerShell helpers.
+# Repo scripts under scripts/ are intentionally trackable; use *.local.ps1 for
+# private machine-specific variants.
 /PS deployment.ps1
+/setup-planner-cicd.ps1
+*.local.ps1
+
+# Local publish output and deployment archives.
+/publish-api/
+/publish-blazor/
 /publish-api.zip
 /publish-blazor.zip
-/setup-planner-cicd.ps1
-/temp
-/src/SharedXX
-/Properties
-/src/Planner.BlazorApp/Properties
-/src/Planner.API/Properties
-/src/Planner.Optimization.Worker/Properties
-/src/Planner.BlazorApp/wwwroot/data
-/aip
-*.ps1
-!/scripts/azure/*.ps1
-*.txt
+/temp/
+/aip/
+
+# Local/generated project folders.
+/src/Shared/
+/src/SharedXX/
+/Properties/
+/src/Planner.BlazorApp/Properties/
+/src/Planner.API/Properties/
+/src/Planner.Optimization.Worker/Properties/
+/src/Planner.BlazorApp/wwwroot/data/
 /tools/Planner.Tools.DbMigrator/Properties/launchSettings.json
-/src/Credentials
-AI prompts/
+
+# Generated infrastructure output.
 infra/main.json
 infra/.last-deployment-outputs.json
+
+# Local notes, prompt scratch space, and current-work docs.
+*.txt
+AI prompts/
 docs/current/*
