@@ -839,6 +839,10 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'https://${plannerHostName}'
             }
             {
+              name: 'Cors__AllowedOrigins__1'
+              value: 'https://${blazorApp.properties.defaultHostName}'
+            }
+            {
               name: 'RabbitMq__Host'
               value: rabbitMqApp.name
             }
