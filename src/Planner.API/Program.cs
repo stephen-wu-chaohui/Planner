@@ -39,6 +39,7 @@ builder.Logging.AddConsole();
 
 // Controllers (API only)
 builder.Services.AddControllers();
+builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(BlazorClientCorsPolicy, policy =>
@@ -167,6 +168,7 @@ app.UseAuthorization();
 // Custom tenant middleware (Ensure this is refactored to use Claims)
 app.UseMiddleware<TenantContextMiddleware>();
 
+app.MapOpenApi();
 app.MapControllers();
 app.MapHub<PlannerHub>(PlannerHub.Route).RequireAuthorization();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => true });
