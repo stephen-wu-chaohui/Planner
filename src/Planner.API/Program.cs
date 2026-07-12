@@ -12,6 +12,7 @@ using Planner.Application.OptimizationRuns;
 using Planner.Infrastructure;
 using Planner.Infrastructure.Coordinator;
 using Planner.Messaging;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -168,7 +169,11 @@ app.UseAuthorization();
 // Custom tenant middleware (Ensure this is refactored to use Claims)
 app.UseMiddleware<TenantContextMiddleware>();
 
-app.MapOpenApi();
+if (app.Environment.IsDevelopment()) {
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
 app.MapControllers();
 app.MapHub<PlannerHub>(PlannerHub.Route).RequireAuthorization();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => true });
