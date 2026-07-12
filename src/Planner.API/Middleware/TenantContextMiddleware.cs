@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Planner.Application;
 using Planner.Application.Persistence;
+using Planner.API.Auth;
 using System.Security;
 
 namespace Planner.API.Middleware;
@@ -10,9 +11,9 @@ namespace Planner.API.Middleware;
 public sealed class TenantContextMiddleware(RequestDelegate next, ILogger<TenantContextMiddleware> logger) {
     public async Task InvokeAsync(HttpContext context, ITenantContext tenantContext, IMemoryCache cache, IPlannerDbContext db) {
         if (context.User.Identity?.IsAuthenticated == true) {
-            var email = context.User.Identity?.Name;
+            var email = EntraUserIdentity.ResolveLogin(context.User);
             if (!string.IsNullOrEmpty(email)) {
-                var cacheKey = $"TenantMapping_{email.ToLower()}";
+                var cacheKey = $"TenantMapping_{email.ToLowerInvariant()}";
                 
                 // 1. Try to get the TenantId from the fast memory cache
                 if (!cache.TryGetValue(cacheKey, out Guid tenantId)) {

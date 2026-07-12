@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Planner.Application.Persistence;
+using Planner.API.Auth;
 
 namespace Planner.API.Hubs;
 
@@ -30,7 +31,7 @@ public sealed class PlannerHub(
     }
 
     private async Task<Guid> ResolveTenantIdAsync() {
-        var email = Context.User?.Identity?.Name;
+        var email = EntraUserIdentity.ResolveLogin(Context.User);
         if (string.IsNullOrWhiteSpace(email)) {
             return Guid.Empty;
         }
