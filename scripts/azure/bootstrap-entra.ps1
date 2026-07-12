@@ -121,13 +121,18 @@ Set-GraphApplication -ObjectId $apiApp.id -Body @{
 $apiApp = Get-AppByDisplayName -DisplayName $ApiAppDisplayName
 
 $blazorApp = Ensure-App -DisplayName $BlazorAppDisplayName
+$blazorDefaultHostName = az webapp list --resource-group $ResourceGroupName --query "[0].defaultHostName" -o tsv
+$blazorRedirectUris = @(
+    "https://$PlannerHostName/authentication/login-callback",
+    "https://localhost:7014/authentication/login-callback",
+    "http://localhost:5212/authentication/login-callback"
+)
+if (-not [string]::IsNullOrWhiteSpace($blazorDefaultHostName)) {
+    $blazorRedirectUris += "https://$($blazorDefaultHostName.Trim())/authentication/login-callback"
+}
 Set-GraphApplication -ObjectId $blazorApp.id -Body @{
     spa = @{
-        redirectUris = @(
-            "https://$PlannerHostName/authentication/login-callback",
-            "https://localhost:7014/authentication/login-callback",
-            "http://localhost:5212/authentication/login-callback"
-        )
+        redirectUris = $blazorRedirectUris
     }
     isFallbackPublicClient = $true
     requiredResourceAccess = @(
